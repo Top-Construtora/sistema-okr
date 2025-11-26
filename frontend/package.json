@@ -1,0 +1,21 @@
+{
+  "name": "sistema-okr-top-construtora",
+  "version": "1.0.0",
+  "description": "Sistema de Gestão OKR para TOP Construtora",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "serve": "vite preview --port 3000"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  },
+  "author": "TOP Construtora",
+  "license": "UNLICENSED",
+  "private": true
+}
