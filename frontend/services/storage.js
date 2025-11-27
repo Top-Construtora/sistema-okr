@@ -76,14 +76,18 @@ const StorageService = {
                 .from(entity)
                 .update(updatedItem)
                 .eq('id', id)
-                .select()
-                .single();
+                .select();
 
             if (error) throw error;
-            return data;
+
+            if (!data || data.length === 0) {
+                throw new Error(`Registro não encontrado ou sem permissão para atualizar. Verifique se você tem permissão de administrador.`);
+            }
+
+            return data[0];
         } catch (error) {
             console.error(`Erro ao atualizar ${entity}:`, error);
-            throw new Error(handleSupabaseError(error, `Erro ao atualizar ${entity}`));
+            throw error;
         }
     },
 

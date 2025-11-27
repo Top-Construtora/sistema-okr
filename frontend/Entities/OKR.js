@@ -62,10 +62,6 @@ class OKR {
             errors.push('Departamento é obrigatório');
         }
 
-        if (this.key_results.length === 0) {
-            errors.push('É necessário pelo menos um Key Result');
-        }
-
         return errors;
     }
 

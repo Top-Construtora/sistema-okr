@@ -94,27 +94,55 @@ class User {
             throw new Error('Já existe um usuário com este email');
         }
 
-        const dataToSave = {
-            nome: this.nome,
-            email: this.email,
-            departamento_id: this.departamento_id,
-            tipo: this.tipo,
-            ativo: this.ativo
-        };
-
-        // Só inclui senha se foi fornecida
-        if (this.senha) {
-            dataToSave.senha = this.senha;
-        }
-
         if (this.id) {
+            // UPDATE - apenas atualiza tabela users (senha não é armazenada aqui)
+            const dataToSave = {
+                nome: this.nome,
+                email: this.email,
+                departamento_id: this.departamento_id,
+                tipo: this.tipo,
+                ativo: this.ativo
+            };
+
             const result = await StorageService.update('users', this.id, dataToSave);
             Object.assign(this, result);
             return result;
         } else {
-            const result = await StorageService.create('users', dataToSave);
-            Object.assign(this, result);
-            return result;
+            // CREATE - cria usuário no Supabase Auth primeiro
+            if (!this.senha) {
+                throw new Error('Senha é obrigatória para novos usuários');
+            }
+
+            try {
+                // 1. Criar usuário no Supabase Auth
+                const { data: authData, error: authError } = await supabaseClient.auth.signUp({
+                    email: this.email,
+                    password: this.senha,
+                    options: {
+                        data: {
+                            nome: this.nome,
+                            tipo: this.tipo,
+                            departamento_id: this.departamento_id
+                        }
+                    }
+                });
+
+                if (authError) throw authError;
+
+                // 2. A trigger handle_new_user() no Supabase cria automaticamente o registro na tabela users
+                // Vamos buscar o usuário criado
+                await new Promise(resolve => setTimeout(resolve, 500)); // Pequeno delay para trigger processar
+
+                const createdUser = await User.getByEmail(this.email);
+                if (createdUser) {
+                    Object.assign(this, createdUser);
+                    return createdUser;
+                }
+
+                throw new Error('Usuário criado no Auth mas não encontrado na tabela users');
+            } catch (error) {
+                throw new Error('Erro ao criar usuário: ' + error.message);
+            }
         }
     }
 

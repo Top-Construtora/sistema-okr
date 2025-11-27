@@ -1,19 +1,20 @@
 // Layout - Gerencia estrutura da interface
 import { AuthService } from './services/auth.js';
 import { StorageService } from './services/storage.js';
+import { MiniCycle } from './Entities/MiniCycle.js';
 
 const Layout = {
     currentPage: 'dashboard',
     sidebarCollapsed: localStorage.getItem('sidebarCollapsed') === 'true',
 
     // Renderiza o layout completo
-    render() {
+    async render() {
         const app = document.getElementById('app');
         app.innerHTML = `
             <div class="app ${this.sidebarCollapsed ? 'sidebar-collapsed' : ''}">
                 ${this.renderSidebar()}
                 <div class="main">
-                    ${this.renderHeader()}
+                    <div id="header-container"></div>
                     <div class="content" id="content">
                         <!-- Conteúdo dinâmico das páginas -->
                     </div>
@@ -21,9 +22,19 @@ const Layout = {
             </div>
         `;
 
+        // Renderiza header de forma assíncrona
+        await this.updateHeader();
+
         this.attachEventListeners();
         this.initRouter();
         this.navigateFromURL();
+    },
+
+    async updateHeader() {
+        const headerContainer = document.getElementById('header-container');
+        if (headerContainer) {
+            headerContainer.innerHTML = await this.renderHeader();
+        }
     },
 
     // Inicializa o sistema de rotas
@@ -83,7 +94,9 @@ const Layout = {
             <div class="sidebar">
                 <div class="sidebar-brand">
                     <div class="brand-logo">
-                        <div class="brand-icon">TOP</div>
+                        <div class="brand-icon">
+                            <img src="/gio.png" alt="Logo" style="width:100%;height:100%;object-fit:contain;">
+                        </div>
                         <div class="brand-text">
                             <h1>TOP Construtora</h1>
                             <span>Sistema OKR</span>
@@ -153,37 +166,48 @@ const Layout = {
                         <span class="toggle-text">${this.sidebarCollapsed ? 'Expandir' : 'Recolher'}</span>
                     </button>
                 </div>
-
-                <div class="sidebar-footer">
-                    <div class="user-card">
-                        <div class="user-avatar">${this.getInitials(user?.nome || 'U')}</div>
-                        <div class="user-info">
-                            <h4>${user?.nome || 'Usuário'}</h4>
-                            <span>${user?.tipo === 'admin' ? 'Administrador' : 'Colaborador'}</span>
-                        </div>
-                    </div>
-                </div>
             </div>
         `;
     },
 
     // Renderiza header
-    renderHeader() {
+    async renderHeader() {
         const pageTitle = this.getPageTitle(this.currentPage);
         const pageSubtitle = this.getPageSubtitle(this.currentPage);
         const user = AuthService.getCurrentUser();
+        const currentMiniCycle = await MiniCycle.getCurrentActive();
+        const dateInfo = this.getDateInfo();
 
         return `
             <div class="header">
                 <div class="header-left">
-                    <button class="btn-icon sidebar-toggle-mobile" onclick="Layout.toggleSidebar()" title="Menu">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-                        </svg>
-                    </button>
                     <div>
                         <h1>${pageTitle}</h1>
                         ${pageSubtitle ? `<p>${pageSubtitle}</p>` : ''}
+                    </div>
+                </div>
+                <div class="header-center">
+                    <div class="header-date-info">
+                        <div class="current-date">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            ${dateInfo}
+                        </div>
+                        ${currentMiniCycle ? `
+                            <div class="minicycle-info">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                </svg>
+                                <span class="minicycle-name">${currentMiniCycle.nome}</span>
+                                <span class="minicycle-separator">•</span>
+                                <span class="minicycle-dates">${this.formatDate(currentMiniCycle.data_inicio)} - ${this.formatDate(currentMiniCycle.data_fim)}</span>
+                            </div>
+                        ` : `
+                            <div class="minicycle-info inactive">
+                                <span>Nenhum miniciclo ativo</span>
+                            </div>
+                        `}
                     </div>
                 </div>
                 <div class="header-right">
@@ -200,6 +224,25 @@ const Layout = {
                 </div>
             </div>
         `;
+    },
+
+    getDateInfo() {
+        const now = new Date();
+        const diasSemana = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+        const meses = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+
+        const diaSemana = diasSemana[now.getDay()];
+        const dia = now.getDate();
+        const mes = meses[now.getMonth()];
+        const ano = now.getFullYear();
+
+        return `${diaSemana}, ${dia} de ${mes} de ${ano}`;
+    },
+
+    formatDate(dateString) {
+        if (!dateString) return '';
+        const date = new Date(dateString + 'T00:00:00');
+        return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
     },
 
     // Pega iniciais do nome
@@ -250,10 +293,19 @@ const Layout = {
                 this.navigate(page);
             });
         });
+
+        // Fecha todos os menus ao clicar fora
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.action-menu')) {
+                document.querySelectorAll('.action-menu-dropdown').forEach(menu => {
+                    menu.classList.remove('show');
+                });
+            }
+        });
     },
 
     // Navega para uma página
-    navigate(page, updateURL = true) {
+    async navigate(page, updateURL = true) {
         this.currentPage = page;
 
         // Atualiza URL se necessário
@@ -274,10 +326,7 @@ const Layout = {
         });
 
         // Atualiza header
-        const header = document.querySelector('.header');
-        if (header) {
-            header.outerHTML = this.renderHeader();
-        }
+        await this.updateHeader();
 
         // Renderiza conteúdo da página
         const content = document.getElementById('content');

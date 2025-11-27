@@ -12,11 +12,7 @@ const ObjectivesPage = {
         const objectives = await StorageService.getObjectives();
 
         content.innerHTML = `
-            <div class="page-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;">
-                <div>
-                    <h2 style="font-size:20px;font-weight:700;color:var(--top-blue);margin-bottom:4px;">Objetivos Estratégicos</h2>
-                    <p style="color:var(--text-muted);font-size:13px;">${objectives.length} ${objectives.length === 1 ? 'objetivo cadastrado' : 'objetivos cadastrados'}</p>
-                </div>
+            <div style="display:flex;justify-content:flex-end;margin-bottom:24px;">
                 <button class="btn btn-primary" onclick="ObjectivesPage.openModal()">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -25,134 +21,18 @@ const ObjectivesPage = {
                 </button>
             </div>
 
-            <div style="margin-bottom:24px;">
-                <div class="filter-buttons">
-                    <button class="filter-btn ${this.currentFilter === 'all' ? 'active' : ''}" onclick="ObjectivesPage.filterByCategory('all')">
-                        Todos (${objectives.length})
-                    </button>
-                    <button class="filter-btn ${this.currentFilter === 'Execução' ? 'active' : ''}" onclick="ObjectivesPage.filterByCategory('Execução')">
-                        Execução (${objectives.filter(o => o.category === 'Execução').length})
-                    </button>
-                    <button class="filter-btn ${this.currentFilter === 'Crescimento' ? 'active' : ''}" onclick="ObjectivesPage.filterByCategory('Crescimento')">
-                        Crescimento (${objectives.filter(o => o.category === 'Crescimento').length})
-                    </button>
-                    <button class="filter-btn ${this.currentFilter === 'Melhoria' ? 'active' : ''}" onclick="ObjectivesPage.filterByCategory('Melhoria')">
-                        Melhoria (${objectives.filter(o => o.category === 'Melhoria').length})
-                    </button>
-                </div>
-            </div>
 
-            <div id="objectives-list"></div>
             <div id="objective-modal" style="display:none;"></div>
         `;
 
-        await this.renderList();
+        // Fecha menus ao clicar fora
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.action-menu')) {
+                this.closeAllMenus();
+            }
+        });
+
         this.addStyles();
-    },
-
-    async renderList() {
-        const container = document.getElementById('objectives-list');
-        let objectives = await StorageService.getObjectives();
-
-        // Filtro por categoria
-        if (this.currentFilter !== 'all') {
-            objectives = objectives.filter(o => o.category === this.currentFilter);
-        }
-
-        if (objectives.length === 0) {
-            container.innerHTML = `
-                <div class="card">
-                    <div class="card-body" style="text-align:center;padding:60px 20px;">
-                        <svg style="width:64px;height:64px;color:var(--text-muted);opacity:0.3;margin:0 auto 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>
-                        </svg>
-                        <p style="color:var(--text-muted);font-size:15px;margin-bottom:16px;">Nenhum objetivo encontrado nesta categoria</p>
-                    </div>
-                </div>
-            `;
-            return;
-        }
-
-        let html = '<div class="objectives-table">';
-
-        for (const obj of objectives) {
-            const linkedOKRs = await OKR.getByObjective(obj.id);
-            const avgProgress = linkedOKRs.length > 0
-                ? Math.round(linkedOKRs.reduce((sum, o) => sum + o.progress, 0) / linkedOKRs.length)
-                : 0;
-
-            const categoryColor = {
-                'Execução': 'var(--info)',
-                'Crescimento': 'var(--success)',
-                'Melhoria': 'var(--warning)'
-            };
-
-            html += `
-                <div class="objective-row">
-                    <div class="objective-main">
-                        <div class="objective-id">${obj.id}</div>
-                        <div class="objective-content">
-                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                                <span class="badge" style="background:${categoryColor[obj.category] || 'var(--text-muted)'}15;color:${categoryColor[obj.category] || 'var(--text-muted)'};">
-                                    ${obj.category}
-                                </span>
-                            </div>
-                            <h4 class="objective-text">${obj.text}</h4>
-                        </div>
-                    </div>
-                    <div class="objective-metrics">
-                        <div class="metric-item">
-                            <div class="metric-icon">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <div class="metric-value">${linkedOKRs.length}</div>
-                                <div class="metric-label">OKRs</div>
-                            </div>
-                        </div>
-                        <div class="metric-item">
-                            <div class="metric-icon">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
-                                </svg>
-                            </div>
-                            <div style="min-width:100px;">
-                                <div class="progress progress-sm" style="margin-bottom:4px;">
-                                    <div class="progress-bar" style="width:${avgProgress}%"></div>
-                                </div>
-                                <div class="metric-value" style="font-size:16px;">${avgProgress}%</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="objective-actions">
-                        <button class="btn btn-sm btn-secondary" onclick="ObjectivesPage.openModal(${obj.id})" title="Editar">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                            </svg>
-                        </button>
-                        <button class="btn btn-sm btn-danger" onclick="ObjectivesPage.deleteObjective(${obj.id})" title="Excluir" ${linkedOKRs.length > 0 ? 'disabled' : ''}>
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-            `;
-        }
-
-        html += '</div>';
-        container.innerHTML = html;
-    },
-
-    async filterByCategory(category) {
-        this.currentFilter = category;
-        await this.renderList();
-
-        // Atualiza botões
-        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-        event.target.classList.add('active');
     },
 
     async openModal(id = null) {
@@ -211,6 +91,15 @@ const ObjectivesPage = {
                                 Seja claro e específico. Este objetivo será usado como referência para criar OKRs.
                             </small>
                         </div>
+
+                        <div class="form-group" style="margin-top:16px;">
+                            <label class="form-label">Meta</label>
+                            <textarea id="obj-meta" class="form-control" rows="2"
+                                placeholder="Ex: < 5%, 75%, > 10%, etc.">${this.currentObjective ? this.currentObjective.meta || '' : ''}</textarea>
+                            <small style="color:var(--text-muted);font-size:11px;display:block;margin-top:4px;">
+                                Descreva a meta mensurável deste objetivo (opcional)
+                            </small>
+                        </div>
                     </div>
 
                     <div id="obj-error" class="error-message" style="display:none;margin-top:16px;"></div>
@@ -240,6 +129,7 @@ const ObjectivesPage = {
     async save() {
         const text = document.getElementById('obj-text').value.trim();
         const category = document.getElementById('obj-category').value;
+        const meta = document.getElementById('obj-meta').value.trim();
         const errorDiv = document.getElementById('obj-error');
 
         // Validações
@@ -256,7 +146,7 @@ const ObjectivesPage = {
         }
 
         try {
-            const objectiveData = { text, category };
+            const objectiveData = { text, category, meta };
 
             if (this.currentObjective) {
                 // Update
@@ -315,6 +205,21 @@ const ObjectivesPage = {
         }
     },
 
+    toggleMenu(event, objId) {
+        event.stopPropagation();
+        this.closeAllMenus();
+        const menu = document.getElementById(`obj-menu-${objId}`);
+        if (menu) {
+            menu.classList.toggle('show');
+        }
+    },
+
+    closeAllMenus() {
+        document.querySelectorAll('.action-menu-dropdown').forEach(menu => {
+            menu.classList.remove('show');
+        });
+    },
+
     addStyles() {
         if (document.getElementById('objectives-styles')) return;
 
@@ -350,67 +255,104 @@ const ObjectivesPage = {
                 border-color: var(--top-teal);
             }
 
-            .objectives-table {
+            /* Objectives Table Page */
+            .objectives-table-container {
+                background: white;
+                border-radius: 12px;
+                overflow: visible;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            }
+
+            .objectives-table-page {
+                width: 100%;
+                border-collapse: collapse;
+            }
+
+            .objectives-table-page tbody {
+                position: relative;
+            }
+
+            .objectives-table-page thead {
+                background: linear-gradient(135deg, var(--top-blue) 0%, #1a5570 100%);
+            }
+
+            .objectives-table-page thead th {
+                padding: 16px 20px;
+                text-align: left;
+                font-size: 13px;
+                font-weight: 600;
+                color: white;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            .objective-row-page {
+                border-bottom: 1px solid var(--border-light);
+                transition: all 0.2s ease;
+                position: relative;
+            }
+
+            .objective-row-page::before {
+                content: '';
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 4px;
+                height: 100%;
+                background: var(--top-teal);
+                transform: scaleY(0);
+                transition: transform 0.3s ease;
+            }
+
+            .objective-row-page:hover {
+                background: var(--bg-main);
+            }
+
+            .objective-row-page:hover::before {
+                transform: scaleY(1);
+            }
+
+            .objective-row-page:last-child {
+                border-bottom: none;
+            }
+
+            .objective-row-page td {
+                padding: 18px 20px;
+                vertical-align: middle;
+            }
+
+            .objective-row-page .actions-cell {
+                position: relative;
+                z-index: 10;
+            }
+
+            .objective-content-cell {
                 display: flex;
                 flex-direction: column;
-                gap: 12px;
+                gap: 10px;
             }
 
-            .objective-row {
-                background: var(--white);
-                border: 1px solid var(--border);
-                border-radius: var(--radius-lg);
-                padding: 20px;
-                display: flex;
-                align-items: center;
-                gap: 20px;
-                transition: all 0.2s;
-            }
-
-            .objective-row:hover {
-                box-shadow: var(--shadow-md);
-                border-color: var(--top-teal);
-            }
-
-            .objective-main {
-                flex: 1;
-                display: flex;
-                gap: 16px;
-                align-items: flex-start;
-            }
-
-            .objective-id {
-                width: 40px;
-                height: 40px;
-                border-radius: 50%;
-                background: var(--top-teal);
-                color: white;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-weight: 700;
-                font-size: 16px;
-                flex-shrink: 0;
-            }
-
-            .objective-content {
-                flex: 1;
-            }
-
-            .objective-text {
-                font-size: 15px;
+            .objective-text-page {
+                font-size: 14px;
                 font-weight: 600;
-                color: var(--top-blue);
+                color: var(--text-primary);
                 line-height: 1.5;
-                margin: 0;
             }
 
-            .objective-metrics {
-                display: flex;
-                gap: 24px;
+            .objective-category-badge {
+                display: inline-flex;
                 align-items: center;
-                padding-left: 24px;
-                border-left: 1px solid var(--border-light);
+                padding: 5px 12px;
+                border-radius: 6px;
+                font-size: 11px;
+                font-weight: 700;
+                width: fit-content;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            .meta-cell-page {
+                border-left: 2px solid var(--border-light);
             }
 
             .metric-item {

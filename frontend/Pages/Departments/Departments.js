@@ -11,11 +11,7 @@ const DepartmentsPage = {
         const departments = await Department.getAll();
 
         content.innerHTML = `
-            <div class="page-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;">
-                <div>
-                    <h2 style="font-size:20px;font-weight:700;color:var(--top-blue);margin-bottom:4px;">Lista de Departamentos</h2>
-                    <p style="color:var(--text-muted);font-size:13px;">${departments.length} ${departments.length === 1 ? 'departamento cadastrado' : 'departamentos cadastrados'}</p>
-                </div>
+            <div style="display:flex;justify-content:flex-end;margin-bottom:24px;">
                 <button class="btn btn-primary" onclick="DepartmentsPage.openModal()">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -37,67 +33,74 @@ const DepartmentsPage = {
                             </button>
                         </div>
                     ` : `
-                        <table class="data-table" style="width:100%;">
-                            <thead>
-                                <tr>
-                                    <th style="width:40%;">Nome</th>
-                                    <th style="width:20%;">Status</th>
-                                    <th style="width:20%;">Usuários</th>
-                                    <th style="width:20%;text-align:right;">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${departments.map(dept => {
-                                    const userCount = dept.getUserCount();
-                                    return `
+                        <div class="departments-table-container">
+                            <table class="departments-table">
+                                <thead>
                                     <tr>
-                                        <td>
-                                            <div style="display:flex;align-items:center;gap:12px;">
-                                                <div style="width:40px;height:40px;border-radius:8px;background:${dept.ativo ? 'var(--top-teal)' : 'var(--border)'};display:flex;align-items:center;justify-content:center;">
-                                                    <svg style="width:20px;height:20px;color:${dept.ativo ? 'white' : 'var(--text-muted)'};" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                                                    </svg>
-                                                </div>
-                                                <strong style="font-size:14px;${dept.ativo ? '' : 'color:var(--text-muted);'}">${dept.nome}</strong>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span class="badge ${dept.ativo ? 'badge-active' : 'badge-pending'}">
-                                                ${dept.ativo ? 'Ativo' : 'Inativo'}
-                                            </span>
-                                        </td>
-                                        <td style="color:var(--text-secondary);">
-                                            <svg style="width:16px;height:16px;display:inline;vertical-align:middle;margin-right:4px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-                                            </svg>
-                                            ${userCount} ${userCount === 1 ? 'usuário' : 'usuários'}
-                                        </td>
-                                        <td style="text-align:right;">
-                                            <button class="btn btn-sm btn-secondary" onclick="DepartmentsPage.edit('${dept.id}')">
-                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                                </svg>
-                                                Editar
-                                            </button>
-                                            <button class="btn btn-sm ${dept.ativo ? 'btn-danger' : 'btn-success'}"
-                                                onclick="DepartmentsPage.toggleStatus('${dept.id}')"
-                                                ${dept.ativo && userCount > 0 ? 'disabled title="Não é possível inativar departamento com usuários ativos"' : ''}>
-                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                                                </svg>
-                                                ${dept.ativo ? 'Inativar' : 'Ativar'}
-                                            </button>
-                                        </td>
+                                        <th style="width:70%;">Departamento</th>
+                                        <th style="width:30%;text-align:right;">Ações</th>
                                     </tr>
-                                `}).join('')}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    ${departments.map(dept => `
+                                        <tr class="dept-row ${!dept.ativo ? 'inactive' : ''}">
+                                            <td>
+                                                <div class="dept-info">
+                                                    <div class="dept-icon ${dept.ativo ? 'active' : 'inactive'}">
+                                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                                        </svg>
+                                                    </div>
+                                                    <div class="dept-details">
+                                                        <div class="dept-name">${dept.nome}</div>
+                                                        <div class="dept-status">
+                                                            <span class="status-dot ${dept.ativo ? 'active' : 'inactive'}"></span>
+                                                            ${dept.ativo ? 'Ativo' : 'Inativo'}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="actions-cell">
+                                                <div class="action-menu">
+                                                    <button class="action-menu-btn" onclick="DepartmentsPage.toggleMenu(event, '${dept.id}')" title="Ações">
+                                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+                                                        </svg>
+                                                    </button>
+                                                    <div class="action-menu-dropdown" id="dept-menu-${dept.id}">
+                                                        <button class="menu-item" onclick="DepartmentsPage.edit('${dept.id}'); DepartmentsPage.closeAllMenus();">
+                                                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                            </svg>
+                                                            Editar
+                                                        </button>
+                                                        <button class="menu-item ${dept.ativo ? 'warning' : 'success'}" onclick="DepartmentsPage.toggleStatus('${dept.id}'); DepartmentsPage.closeAllMenus();">
+                                                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                ${dept.ativo ? `
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                                                                ` : `
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                                `}
+                                                            </svg>
+                                                            ${dept.ativo ? 'Inativar' : 'Ativar'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
                     `}
                 </div>
             </div>
 
             <div id="dept-modal" style="display:none;"></div>
         `;
+
+        // Fecha menus ao clicar fora
+        document.addEventListener('click', () => this.closeAllMenus());
 
         this.addStyles();
     },
@@ -198,6 +201,21 @@ const DepartmentsPage = {
                 this.showToast(error.message, 'error');
             }
         }
+    },
+
+    toggleMenu(event, deptId) {
+        event.stopPropagation();
+        this.closeAllMenus();
+        const menu = document.getElementById(`dept-menu-${deptId}`);
+        if (menu) {
+            menu.classList.toggle('show');
+        }
+    },
+
+    closeAllMenus() {
+        document.querySelectorAll('.action-menu-dropdown').forEach(menu => {
+            menu.classList.remove('show');
+        });
     },
 
     showToast(message, type = 'success') {

@@ -3,12 +3,25 @@ import { supabaseClient } from '../../services/supabase.js';
 
 import { OKR, OKR_STATUS } from '../../Entities/OKR.js';
 import { Department } from '../../Entities/Department.js';
+import { Initiative } from '../../Entities/Initiative.js';
+import { User } from '../../Entities/User.js';
+
+// Importa uid diretamente se necessário
+const generateId = () => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+};
 // Página de OKRs - Gestão Completa
 const OKRsPage = {
     currentFilter: 'all',
     currentDepartment: 'all',
     currentOKR: null,
-    formKRs: [],
+    expandedOKRs: new Set(),
+    expandedKRs: new Set(),
+    currentInitiative: null,
 
     async render() {
         const content = document.getElementById('content');
@@ -61,12 +74,24 @@ const OKRsPage = {
             <div id="okr-modal" style="display:none;"></div>
         `;
 
+        // Fecha menus ao clicar fora
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.action-menu')) {
+                this.closeAllMenus();
+            }
+        });
+
         await this.renderList();
         this.addStyles();
     },
 
     async renderList() {
         const container = document.getElementById('okrs-list');
+        if (!container) {
+            console.warn('Container okrs-list não encontrado');
+            return;
+        }
+
         let okrs = await OKR.getAll();
 
         // Filtro por status
@@ -100,75 +125,224 @@ const OKRsPage = {
             return;
         }
 
-        container.innerHTML = okrs.map(okr => this.renderOKRCard(okr)).join('');
+        const cardsHTML = await Promise.all(okrs.map((okr, idx) => this.renderOKRCard(okr, idx)));
+        container.innerHTML = cardsHTML.join('');
     },
 
-    renderOKRCard(okr) {
-        const objective = okr.getObjective();
+    async renderOKRCard(okr, index) {
+        const objective = await okr.getObjective();
+        const isOKRExpanded = this.expandedOKRs.has(okr.id);
+        const okrIdentifier = `O${index + 1}`;
 
         return `
-            <div class="okr-card card" style="margin-bottom:20px;">
-                <div class="card-body">
-                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
-                        <div style="flex:1;">
-                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-                                <span class="badge ${OKR_STATUS[okr.status].badge}">${OKR_STATUS[okr.status].label}</span>
-                                <span class="badge badge-active">${okr.department}</span>
+            <div class="okr-accordion-card">
+                <div class="okr-accordion-header" onclick="OKRsPage.toggleOKRExpand('${okr.id}')">
+                    <div class="okr-header-left">
+                        <button class="expand-arrow ${isOKRExpanded ? 'expanded' : ''}">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        <div class="okr-info-wrapper">
+                            <div class="okr-main-line">
+                                <span class="okr-identifier">${okrIdentifier}</span>
+                                <h3 class="okr-title-header">${okr.title}</h3>
+                                <span class="kr-count">${okr.keyResults.length} KRs</span>
                             </div>
-                            <h3 style="font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:4px;">
-                                ${okr.title}
-                            </h3>
-                            <p style="font-size:13px;color:var(--text-muted);">
-                                Vinculado: ${objective ? objective.text : 'N/A'}
-                            </p>
-                        </div>
-                        <div style="display:flex;gap:8px;">
-                            <button class="btn btn-sm btn-secondary" onclick="OKRsPage.edit('${okr.id}')">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                </svg>
-                                Editar
-                            </button>
-                            <button class="btn btn-sm btn-danger" onclick="OKRsPage.delete('${okr.id}')">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                </svg>
-                            </button>
+                            <div class="okr-meta-line">
+                                <span class="okr-department">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                    </svg>
+                                    ${okr.department}
+                                </span>
+                                <span class="okr-separator">•</span>
+                                <span class="okr-objective">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>
+                                    </svg>
+                                    ${objective ? objective.text : 'N/A'}
+                                </span>
+                            </div>
                         </div>
                     </div>
+                    <div class="okr-header-right" onclick="event.stopPropagation();">
+                        <div class="action-menu">
+                            <button class="action-menu-btn-header" onclick="OKRsPage.toggleOKRMenu(event, '${okr.id}')" title="Ações">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+                                </svg>
+                            </button>
+                            <div class="action-menu-dropdown" id="okr-menu-${okr.id}">
+                                <button class="menu-item" onclick="OKRsPage.edit('${okr.id}'); OKRsPage.closeAllMenus();">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                    </svg>
+                                    Editar
+                                </button>
+                                <button class="menu-item danger" onclick="OKRsPage.delete('${okr.id}'); OKRsPage.closeAllMenus();">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                    Excluir
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                    <div class="kr-list">
-                        ${okr.keyResults.map((kr, idx) => `
-                            <div class="kr-item">
-                                <div class="kr-header">
-                                    <div style="display:flex;align-items:center;gap:12px;flex:1;">
-                                        <div class="kr-number">${idx + 1}</div>
-                                        <div style="flex:1;">
-                                            <div class="kr-title">${kr.title}</div>
-                                            <div class="kr-meta">
-                                                <span>Meta: ${kr.target} ${kr.metric}</span>
+                <div class="okr-accordion-body ${isOKRExpanded ? 'expanded' : ''}" data-okr-id="${okr.id}">
+                    <div class="krs-section">
+                        <div class="krs-section-header">
+                            <div class="section-title">
+                                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                                </svg>
+                                KR's
+                            </div>
+                            <button class="btn btn-sm btn-secondary" onclick="OKRsPage.addKR('${okr.id}')">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                                Novo KR
+                            </button>
+                        </div>
+
+                        <div class="kr-accordion-list">
+                            ${okr.keyResults.length === 0 ? `
+                                <div class="empty-krs">
+                                    <p style="color:var(--text-muted);font-size:14px;margin:0;">Nenhum Key Result cadastrado ainda</p>
+                                    <button class="btn btn-sm btn-primary" onclick="OKRsPage.addKR('${okr.id}')" style="margin-top:12px;">
+                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                        </svg>
+                                        Adicionar Primeiro KR
+                                    </button>
+                                </div>
+                            ` : await Promise.all(okr.keyResults.map(async (kr, idx) => {
+                                const initiatives = await Initiative.getByKeyResultId(kr.id);
+                                const isKRExpanded = this.expandedKRs.has(kr.id);
+                                const krStatus = kr.status || 'pending';
+                                const krStatusConfig = {
+                                    'pending': { label: 'PENDENTE', color: '#f59e0b', bg: '#fffbeb' },
+                                    'in_progress': { label: 'EM PROGRESSO', color: '#3b82f6', bg: '#eff6ff' },
+                                    'completed': { label: 'CONCLUÍDO', color: '#10b981', bg: '#f0fdf4' }
+                                };
+                                const statusInfo = krStatusConfig[krStatus] || krStatusConfig['pending'];
+
+                                return `
+                                <div class="kr-accordion-item">
+                                    <div class="kr-accordion-header" onclick="OKRsPage.toggleKRExpand('${kr.id}')">
+                                        <div class="kr-header-left">
+                                            <button class="expand-arrow-sm ${isKRExpanded ? 'expanded' : ''}">
+                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                                </svg>
+                                            </button>
+                                            <span class="kr-badge">KR${idx + 1}</span>
+                                            <span class="kr-title-text">${kr.title}</span>
+                                        </div>
+                                        <div class="kr-header-right" onclick="event.stopPropagation();">
+                                            <span class="kr-status-badge" style="background:${statusInfo.bg};color:${statusInfo.color};">
+                                                ${statusInfo.label}
+                                            </span>
+                                            <div class="action-menu">
+                                                <button class="action-menu-btn" onclick="OKRsPage.toggleKRMenu(event, '${kr.id}')" title="Ações">
+                                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+                                                    </svg>
+                                                </button>
+                                                <div class="action-menu-dropdown" id="kr-menu-${kr.id}">
+                                                    <button class="menu-item" onclick="OKRsPage.editKR('${okr.id}', '${kr.id}'); OKRsPage.closeAllMenus();">
+                                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                        </svg>
+                                                        Editar
+                                                    </button>
+                                                    <button class="menu-item danger" onclick="OKRsPage.deleteKR('${okr.id}', '${kr.id}'); OKRsPage.closeAllMenus();">
+                                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                        </svg>
+                                                        Excluir
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="kr-progress-value">${kr.progress}%</div>
-                                </div>
-                                <div class="kr-progress-bar">
-                                    <input type="range" class="kr-slider" min="0" max="100" value="${kr.progress}"
-                                        onchange="OKRsPage.updateKRProgress('${okr.id}', '${kr.id}', this.value)">
-                                    <div class="progress">
-                                        <div class="progress-bar" style="width:${kr.progress}%"></div>
+
+                                    <div class="kr-accordion-body ${isKRExpanded ? 'expanded' : ''}" data-kr-id="${kr.id}">
+                                        <div class="initiatives-section">
+                                            <div class="initiatives-section-header">
+                                                <div class="section-title">
+                                                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                                    </svg>
+                                                    Iniciativas
+                                                </div>
+                                                <button class="btn btn-sm btn-primary" onclick="OKRsPage.openInitiativeModal('${kr.id}')">
+                                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                                    </svg>
+                                                    Nova Iniciativa
+                                                </button>
+                                            </div>
+
+                                            ${initiatives.length === 0 ? `
+                                                <div class="empty-initiatives">
+                                                    <p>Nenhuma iniciativa cadastrada</p>
+                                                </div>
+                                            ` : `
+                                                <div class="initiatives-list">
+                                                    ${initiatives.map(init => `
+                                                        <div class="initiative-item ${init.concluida ? 'completed' : ''} ${init.isOverdue() ? 'overdue' : ''}">
+                                                            <label class="initiative-checkbox">
+                                                                <input type="checkbox" ${init.concluida ? 'checked' : ''}
+                                                                    onchange="OKRsPage.toggleInitiative('${init.id}')">
+                                                                <span class="checkmark"></span>
+                                                            </label>
+                                                            <div class="initiative-content">
+                                                                <div class="initiative-name">${init.nome}</div>
+                                                                ${init.responsavel || init.data_limite ? `
+                                                                    <div class="initiative-meta">
+                                                                        ${init.responsavel ? `
+                                                                            <span class="initiative-responsavel">
+                                                                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                                                                </svg>
+                                                                                ${init.responsavel.nome}
+                                                                            </span>
+                                                                        ` : ''}
+                                                                        ${init.data_limite ? `
+                                                                            <span class="initiative-deadline ${init.isOverdue() ? 'overdue' : ''}">
+                                                                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                                                                </svg>
+                                                                                ${this.formatDate(init.data_limite)}
+                                                                            </span>
+                                                                        ` : ''}
+                                                                    </div>
+                                                                ` : ''}
+                                                            </div>
+                                                            <div class="initiative-actions">
+                                                                <button class="btn-icon-sm" onclick="OKRsPage.openInitiativeModal('${kr.id}', '${init.id}')" title="Editar">
+                                                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                                    </svg>
+                                                                </button>
+                                                                <button class="btn-icon-sm delete" onclick="OKRsPage.deleteInitiative('${init.id}', '${init.nome}')" title="Excluir">
+                                                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                                    </svg>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    `).join('')}
+                                                </div>
+                                            `}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        `).join('')}
-                    </div>
-
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:16px;border-top:1px solid var(--border-light);">
-                        <div style="font-size:13px;color:var(--text-muted);">
-                            Progresso geral: <strong style="color:var(--top-teal);">${okr.progress}%</strong>
-                        </div>
-                        <div class="progress" style="flex:1;margin:0 20px;">
-                            <div class="progress-bar" style="width:${okr.progress}%"></div>
+                            `})).then(results => results.join(''))}
                         </div>
                     </div>
                 </div>
@@ -191,7 +365,6 @@ const OKRsPage = {
 
     async openModal(id = null) {
         this.currentOKR = id ? await OKR.getById(id) : null;
-        this.formKRs = this.currentOKR ? [...this.currentOKR.keyResults] : [this.createEmptyKR()];
 
         const modal = document.getElementById('okr-modal');
         const objectives = await StorageService.getObjectives();
@@ -199,63 +372,62 @@ const OKRsPage = {
 
         modal.innerHTML = `
             <div class="modal-overlay" onclick="OKRsPage.closeModal()"></div>
-            <div class="modal-content modal-large">
+            <div class="modal-content" style="max-width:600px;">
                 <div class="modal-header">
-                    <h3>${this.currentOKR ? 'Editar' : 'Novo'} OKR</h3>
-                    <button class="modal-close" onclick="OKRsPage.closeModal()">&times;</button>
+                    <div>
+                        <h3 style="margin:0;color:var(--top-blue);font-size:20px;">${this.currentOKR ? 'Editar' : 'Novo'} OKR</h3>
+                        <p style="margin:4px 0 0;color:var(--text-muted);font-size:13px;">
+                            ${this.currentOKR ? 'Atualize as informações do OKR' : 'Defina um novo OKR. Você poderá adicionar Key Results depois.'}
+                        </p>
+                    </div>
+                    <button class="modal-close" onclick="OKRsPage.closeModal()">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
                 </div>
-                <div class="modal-body" style="max-height:70vh;overflow-y:auto;">
-                    <div class="form-section">
-                        <h4 class="form-section-title">Informações Básicas</h4>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">Título do OKR *</label>
+                        <input type="text" id="okr-title" class="form-control"
+                            placeholder="Ex: Reduzir tempo de aprovação de projetos em 50%"
+                            value="${this.currentOKR ? this.currentOKR.title : ''}">
+                    </div>
 
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
                         <div class="form-group">
-                            <label class="form-label">Título do OKR *</label>
-                            <input type="text" id="okr-title" class="form-control"
-                                placeholder="Ex: Reduzir tempo de aprovação de projetos em 50%"
-                                value="${this.currentOKR ? this.currentOKR.title : ''}">
+                            <label class="form-label">Objetivo Estratégico *</label>
+                            <select id="okr-objective" class="form-control">
+                                <option value="">Selecione...</option>
+                                ${objectives.map(obj => `
+                                    <option value="${obj.id}" ${this.currentOKR && this.currentOKR.objectiveId === obj.id ? 'selected' : ''}>
+                                        ${obj.text}
+                                    </option>
+                                `).join('')}
+                            </select>
                         </div>
-
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-                            <div class="form-group">
-                                <label class="form-label">Objetivo Estratégico *</label>
-                                <select id="okr-objective" class="form-control">
-                                    <option value="">Selecione...</option>
-                                    ${objectives.map(obj => `
-                                        <option value="${obj.id}" ${this.currentOKR && this.currentOKR.objectiveId === obj.id ? 'selected' : ''}>
-                                            ${obj.text}
-                                        </option>
-                                    `).join('')}
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Departamento *</label>
-                                <select id="okr-department" class="form-control">
-                                    <option value="">Selecione...</option>
-                                    ${departments.map(dept => `
-                                        <option value="${dept.nome}" ${this.currentOKR && this.currentOKR.department === dept.nome ? 'selected' : ''}>
-                                            ${dept.nome}
-                                        </option>
-                                    `).join('')}
-                                </select>
-                            </div>
+                        <div class="form-group">
+                            <label class="form-label">Departamento *</label>
+                            <select id="okr-department" class="form-control">
+                                <option value="">Selecione...</option>
+                                ${departments.map(dept => `
+                                    <option value="${dept.nome}" ${this.currentOKR && this.currentOKR.department === dept.nome ? 'selected' : ''}>
+                                        ${dept.nome}
+                                    </option>
+                                `).join('')}
+                            </select>
                         </div>
                     </div>
 
-                    <div class="form-section">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                            <h4 class="form-section-title" style="margin:0;">Key Results *</h4>
-                            <button class="btn btn-sm btn-secondary" onclick="OKRsPage.addKR()">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                                </svg>
-                                Adicionar KR
-                            </button>
+                    ${!this.currentOKR ? `
+                        <div class="info-box" style="margin-top:16px;padding:12px 16px;background:var(--info-bg);border-left:3px solid var(--info);border-radius:6px;">
+                            <p style="margin:0;font-size:13px;color:var(--text-secondary);">
+                                💡 <strong>Dica:</strong> Após criar o OKR, você poderá adicionar Key Results clicando no botão "Novo KR".
+                            </p>
                         </div>
+                    ` : ''}
 
-                        <div id="krs-container"></div>
-                    </div>
-
-                    <div id="okr-error" class="error-message" style="display:none;"></div>
+                    <div id="okr-error" class="error-message" style="display:none;margin-top:16px;"></div>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" onclick="OKRsPage.closeModal()">Cancelar</button>
@@ -263,101 +435,21 @@ const OKRsPage = {
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                         </svg>
-                        Salvar OKR
+                        ${this.currentOKR ? 'Atualizar' : 'Criar'} OKR
                     </button>
                 </div>
             </div>
         `;
 
         modal.style.display = 'flex';
-        this.renderKRs();
-    },
-
-    createEmptyKR() {
-        return {
-            id: uid(),
-            title: '',
-            metric: '',
-            target: '',
-            progress: 0,
-            tasks: []
-        };
-    },
-
-    renderKRs() {
-        const container = document.getElementById('krs-container');
-
-        container.innerHTML = this.formKRs.map((kr, idx) => `
-            <div class="kr-form-item">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                    <strong style="color:var(--top-blue);">Key Result ${idx + 1}</strong>
-                    ${this.formKRs.length > 1 ? `
-                        <button class="btn btn-sm btn-danger" onclick="OKRsPage.removeKR(${idx})" type="button">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                            </svg>
-                        </button>
-                    ` : ''}
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Título do Key Result *</label>
-                    <input type="text" class="form-control"
-                        value="${kr.title}"
-                        onchange="OKRsPage.updateKR(${idx}, 'title', this.value)"
-                        placeholder="Ex: Diminuir tempo médio de 15 para 7 dias">
-                </div>
-
-                <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;">
-                    <div class="form-group">
-                        <label class="form-label">Métrica *</label>
-                        <input type="text" class="form-control"
-                            value="${kr.metric}"
-                            onchange="OKRsPage.updateKR(${idx}, 'metric', this.value)"
-                            placeholder="Ex: Dias, %, R$">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Meta *</label>
-                        <input type="text" class="form-control"
-                            value="${kr.target}"
-                            onchange="OKRsPage.updateKR(${idx}, 'target', this.value)"
-                            placeholder="Ex: 7">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Progresso</label>
-                        <input type="number" class="form-control" min="0" max="100"
-                            value="${kr.progress}"
-                            onchange="OKRsPage.updateKR(${idx}, 'progress', parseInt(this.value))"
-                            placeholder="0">
-                    </div>
-                </div>
-            </div>
-        `).join('');
-    },
-
-    updateKR(idx, field, value) {
-        this.formKRs[idx][field] = value;
-    },
-
-    addKR() {
-        this.formKRs.push(this.createEmptyKR());
-        this.renderKRs();
-    },
-
-    removeKR(idx) {
-        if (this.formKRs.length > 1) {
-            this.formKRs.splice(idx, 1);
-            this.renderKRs();
-        }
     },
 
     closeModal() {
         document.getElementById('okr-modal').style.display = 'none';
         this.currentOKR = null;
-        this.formKRs = [];
     },
 
-    save() {
+    async save() {
         const title = document.getElementById('okr-title').value.trim();
         const objectiveId = parseInt(document.getElementById('okr-objective').value);
         const department = document.getElementById('okr-department').value;
@@ -383,23 +475,21 @@ const OKRsPage = {
             return;
         }
 
-        const validKRs = this.formKRs.filter(kr => kr.title && kr.metric && kr.target);
-        if (validKRs.length === 0) {
-            errorDiv.textContent = 'Adicione pelo menos um Key Result válido';
-            errorDiv.style.display = 'block';
-            return;
-        }
-
         try {
             const okr = this.currentOKR || new OKR();
             okr.title = title;
             okr.objectiveId = objectiveId;
             okr.department = department;
-            okr.keyResults = validKRs;
-            okr.save();
+
+            // Se for novo OKR, cria com array vazio de KRs
+            if (!this.currentOKR) {
+                okr.keyResults = [];
+            }
+
+            await okr.save();
 
             this.closeModal();
-            this.render();
+            await this.renderList();
             DepartmentsPage.showToast(`OKR ${this.currentOKR ? 'atualizado' : 'criado'} com sucesso!`, 'success');
         } catch (error) {
             errorDiv.textContent = error.message;
@@ -428,6 +518,394 @@ const OKRsPage = {
             okr.updateKeyResultProgress(krId, parseInt(progress));
             this.render();
         }
+    },
+
+    toggleOKRExpand(okrId) {
+        const container = document.querySelector(`.okr-accordion-body[data-okr-id="${okrId}"]`);
+        const arrow = document.querySelector(`.okr-accordion-header button.expand-arrow`);
+
+        if (!container) return;
+
+        if (this.expandedOKRs.has(okrId)) {
+            this.expandedOKRs.delete(okrId);
+            container.classList.remove('expanded');
+        } else {
+            this.expandedOKRs.add(okrId);
+            container.classList.add('expanded');
+        }
+    },
+
+    toggleKRExpand(krId) {
+        const container = document.querySelector(`.kr-accordion-body[data-kr-id="${krId}"]`);
+
+        if (!container) return;
+
+        if (this.expandedKRs.has(krId)) {
+            this.expandedKRs.delete(krId);
+            container.classList.remove('expanded');
+        } else {
+            this.expandedKRs.add(krId);
+            container.classList.add('expanded');
+        }
+    },
+
+    toggleOKRMenu(event, okrId) {
+        event.stopPropagation();
+        this.closeAllMenus();
+        const menu = document.getElementById(`okr-menu-${okrId}`);
+        if (menu) menu.classList.toggle('show');
+    },
+
+    toggleKRMenu(event, krId) {
+        event.stopPropagation();
+        this.closeAllMenus();
+        const menu = document.getElementById(`kr-menu-${krId}`);
+        if (menu) menu.classList.toggle('show');
+    },
+
+    closeAllMenus() {
+        document.querySelectorAll('.action-menu-dropdown').forEach(menu => {
+            menu.classList.remove('show');
+        });
+    },
+
+    async addKR(okrId) {
+        const okr = await OKR.getById(okrId);
+        if (!okr) {
+            DepartmentsPage.showToast('OKR não encontrado', 'error');
+            return;
+        }
+
+        const modal = document.createElement('div');
+        modal.id = 'kr-modal';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:1000;';
+
+        modal.innerHTML = `
+            <div class="modal-overlay" onclick="OKRsPage.closeKRModal()"></div>
+            <div class="modal-content" style="max-width:600px;">
+                <div class="modal-header">
+                    <h3>Novo Key Result</h3>
+                    <button class="modal-close" onclick="OKRsPage.closeKRModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="kr-okr-id" value="${okrId}">
+
+                    <div class="form-group">
+                        <label class="form-label">Título do Key Result *</label>
+                        <input type="text" id="kr-title" class="form-control"
+                            placeholder="Ex: Aumentar NPS para 85 pontos">
+                    </div>
+
+                    <div class="form-group" style="margin-top:16px;">
+                        <label class="form-label">Status *</label>
+                        <select id="kr-status" class="form-control">
+                            <option value="pending">Pendente</option>
+                            <option value="in_progress">Em Progresso</option>
+                            <option value="completed">Concluído</option>
+                        </select>
+                    </div>
+
+                    <div id="kr-error" class="error-message" style="display:none;margin-top:16px;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="OKRsPage.closeKRModal()">Cancelar</button>
+                    <button class="btn btn-primary" onclick="OKRsPage.saveNewKR()">Criar Key Result</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+    },
+
+    async editKR(okrId, krId) {
+        const okr = await OKR.getById(okrId);
+        if (!okr) return;
+
+        const kr = okr.keyResults.find(k => k.id === krId);
+        if (!kr) return;
+
+        const modal = document.createElement('div');
+        modal.id = 'kr-modal';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:1000;';
+
+        modal.innerHTML = `
+            <div class="modal-overlay" onclick="OKRsPage.closeKRModal()"></div>
+            <div class="modal-content" style="max-width:600px;">
+                <div class="modal-header">
+                    <h3>Editar Key Result</h3>
+                    <button class="modal-close" onclick="OKRsPage.closeKRModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="kr-okr-id" value="${okrId}">
+                    <input type="hidden" id="kr-id" value="${krId}">
+
+                    <div class="form-group">
+                        <label class="form-label">Título do Key Result *</label>
+                        <input type="text" id="kr-title" class="form-control"
+                            value="${kr.title}">
+                    </div>
+
+                    <div class="form-group" style="margin-top:16px;">
+                        <label class="form-label">Status *</label>
+                        <select id="kr-status" class="form-control">
+                            <option value="pending" ${kr.status === 'pending' ? 'selected' : ''}>Pendente</option>
+                            <option value="in_progress" ${kr.status === 'in_progress' ? 'selected' : ''}>Em Progresso</option>
+                            <option value="completed" ${kr.status === 'completed' ? 'selected' : ''}>Concluído</option>
+                        </select>
+                    </div>
+
+                    <div id="kr-error" class="error-message" style="display:none;margin-top:16px;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="OKRsPage.closeKRModal()">Cancelar</button>
+                    <button class="btn btn-primary" onclick="OKRsPage.saveEditKR()">Atualizar Key Result</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+    },
+
+    closeKRModal() {
+        const modal = document.getElementById('kr-modal');
+        if (modal) modal.remove();
+    },
+
+    async saveNewKR() {
+        const okrId = document.getElementById('kr-okr-id').value;
+        const title = document.getElementById('kr-title').value.trim();
+        const status = document.getElementById('kr-status').value;
+        const errorDiv = document.getElementById('kr-error');
+
+        if (!title) {
+            errorDiv.textContent = 'Título do Key Result é obrigatório';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        try {
+            const okr = await OKR.getById(okrId);
+            if (!okr) throw new Error('OKR não encontrado');
+
+            const newKR = {
+                id: generateId(),
+                title: title,
+                status: status,
+                target: 100,
+                metric: '%',
+                progress: 0
+            };
+
+            okr.keyResults.push(newKR);
+            await okr.save();
+
+            this.closeKRModal();
+            await this.renderList();
+            DepartmentsPage.showToast('Key Result criado com sucesso!', 'success');
+        } catch (error) {
+            errorDiv.textContent = error.message;
+            errorDiv.style.display = 'block';
+        }
+    },
+
+    async saveEditKR() {
+        const okrId = document.getElementById('kr-okr-id').value;
+        const krId = document.getElementById('kr-id').value;
+        const title = document.getElementById('kr-title').value.trim();
+        const status = document.getElementById('kr-status').value;
+        const errorDiv = document.getElementById('kr-error');
+
+        if (!title) {
+            errorDiv.textContent = 'Título do Key Result é obrigatório';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        try {
+            const okr = await OKR.getById(okrId);
+            if (!okr) throw new Error('OKR não encontrado');
+
+            const kr = okr.keyResults.find(k => k.id === krId);
+            if (!kr) throw new Error('Key Result não encontrado');
+
+            kr.title = title;
+            kr.status = status;
+
+            await okr.save();
+
+            this.closeKRModal();
+            await this.renderList();
+            DepartmentsPage.showToast('Key Result atualizado com sucesso!', 'success');
+        } catch (error) {
+            errorDiv.textContent = error.message;
+            errorDiv.style.display = 'block';
+        }
+    },
+
+    async deleteKR(okrId, krId) {
+        if (!confirm('Deseja realmente excluir este Key Result?\n\nTodas as iniciativas vinculadas também serão excluídas.')) {
+            return;
+        }
+
+        try {
+            const okr = await OKR.getById(okrId);
+            if (!okr) throw new Error('OKR não encontrado');
+
+            okr.keyResults = okr.keyResults.filter(kr => kr.id !== krId);
+            await okr.save();
+
+            await this.renderList();
+            DepartmentsPage.showToast('Key Result excluído com sucesso!', 'success');
+        } catch (error) {
+            DepartmentsPage.showToast(error.message || 'Erro ao excluir Key Result', 'error');
+        }
+    },
+
+    async openInitiativeModal(keyResultId, initiativeId = null) {
+        this.currentInitiative = initiativeId ? await Initiative.getById(initiativeId) : null;
+        this.currentInitiative = this.currentInitiative || { key_result_id: keyResultId };
+
+        const users = await User.getAll();
+        const modal = document.createElement('div');
+        modal.id = 'initiative-modal';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:1000;';
+
+        modal.innerHTML = `
+            <div class="modal-overlay" onclick="OKRsPage.closeInitiativeModal()"></div>
+            <div class="modal-content" style="max-width:600px;">
+                <div class="modal-header">
+                    <h3>${initiativeId ? 'Editar' : 'Nova'} Iniciativa</h3>
+                    <button class="modal-close" onclick="OKRsPage.closeInitiativeModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="init-kr-id" value="${keyResultId}">
+
+                    <div class="form-group">
+                        <label class="form-label">Nome da Iniciativa *</label>
+                        <input type="text" id="init-nome" class="form-control"
+                            placeholder="Ex: Implementar novo sistema de aprovações"
+                            value="${this.currentInitiative.nome || ''}">
+                    </div>
+
+                    <div class="form-group" style="margin-top:16px;">
+                        <label class="form-label">Descrição</label>
+                        <textarea id="init-descricao" class="form-control" rows="3"
+                            placeholder="Detalhes sobre a iniciativa (opcional)">${this.currentInitiative.descricao || ''}</textarea>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
+                        <div class="form-group">
+                            <label class="form-label">Responsável</label>
+                            <select id="init-responsavel" class="form-control">
+                                <option value="">Sem responsável</option>
+                                ${users.map(user => `
+                                    <option value="${user.id}" ${this.currentInitiative.responsavel_id === user.id ? 'selected' : ''}>
+                                        ${user.nome}
+                                    </option>
+                                `).join('')}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Data Limite</label>
+                            <input type="date" id="init-data-limite" class="form-control"
+                                value="${this.currentInitiative.data_limite || ''}">
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top:16px;">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                            <input type="checkbox" id="init-concluida" ${this.currentInitiative.concluida ? 'checked' : ''}>
+                            <span>Marcar como concluída</span>
+                        </label>
+                    </div>
+
+                    <div id="init-error" class="error-message" style="display:none;margin-top:16px;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="OKRsPage.closeInitiativeModal()">Cancelar</button>
+                    <button class="btn btn-primary" onclick="OKRsPage.saveInitiative()">
+                        ${initiativeId ? 'Atualizar' : 'Criar'} Iniciativa
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+    },
+
+    closeInitiativeModal() {
+        const modal = document.getElementById('initiative-modal');
+        if (modal) modal.remove();
+        this.currentInitiative = null;
+    },
+
+    async saveInitiative() {
+        const keyResultId = document.getElementById('init-kr-id').value;
+        const nome = document.getElementById('init-nome').value.trim();
+        const descricao = document.getElementById('init-descricao').value.trim();
+        const responsavelId = document.getElementById('init-responsavel').value || null;
+        const dataLimite = document.getElementById('init-data-limite').value || null;
+        const concluida = document.getElementById('init-concluida').checked;
+        const errorDiv = document.getElementById('init-error');
+
+        errorDiv.style.display = 'none';
+
+        if (!nome) {
+            errorDiv.textContent = 'Nome da iniciativa é obrigatório';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        try {
+            const initiative = this.currentInitiative.id ? await Initiative.getById(this.currentInitiative.id) : new Initiative();
+
+            initiative.key_result_id = keyResultId;
+            initiative.nome = nome;
+            initiative.descricao = descricao;
+            initiative.responsavel_id = responsavelId;
+            initiative.data_limite = dataLimite;
+            initiative.concluida = concluida;
+
+            await initiative.save();
+
+            this.closeInitiativeModal();
+            await this.renderList();
+            DepartmentsPage.showToast(`Iniciativa ${this.currentInitiative.id ? 'atualizada' : 'criada'} com sucesso!`, 'success');
+        } catch (error) {
+            errorDiv.textContent = error.message;
+            errorDiv.style.display = 'block';
+        }
+    },
+
+    async toggleInitiative(id) {
+        try {
+            const initiative = await Initiative.getById(id);
+            await initiative.toggleComplete();
+            await this.renderList();
+        } catch (error) {
+            DepartmentsPage.showToast('Erro ao atualizar iniciativa', 'error');
+        }
+    },
+
+    async deleteInitiative(id, nome) {
+        if (!confirm(`Tem certeza que deseja excluir a iniciativa "${nome}"?`)) {
+            return;
+        }
+
+        try {
+            const initiative = await Initiative.getById(id);
+            await initiative.delete();
+            await this.renderList();
+            DepartmentsPage.showToast('Iniciativa excluída com sucesso!', 'success');
+        } catch (error) {
+            DepartmentsPage.showToast(error.message || 'Erro ao excluir iniciativa', 'error');
+        }
+    },
+
+    formatDate(dateString) {
+        if (!dateString) return '';
+        const date = new Date(dateString + 'T00:00:00');
+        return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
     },
 
     addStyles() {
@@ -562,6 +1040,591 @@ const OKRsPage = {
                 border-radius: var(--radius);
                 border: 1px solid var(--border);
                 margin-bottom: 12px;
+            }
+
+            /* OKR Accordion Styles */
+            .okr-accordion-card {
+                margin-bottom: 16px;
+                border-radius: 12px;
+                overflow: visible;
+                border: 1px solid var(--border);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                transition: all 0.3s ease;
+            }
+
+            .okr-accordion-card:hover {
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                transform: translateY(-2px);
+            }
+
+            .okr-accordion-header {
+                background: linear-gradient(135deg, var(--top-blue) 0%, #1a5570 100%);
+                padding: 16px 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                position: relative;
+                border-radius: 12px 12px 0 0;
+            }
+
+            .okr-accordion-header::after {
+                content: '';
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                height: 2px;
+                background: var(--top-teal);
+                transform: scaleX(0);
+                transition: transform 0.3s ease;
+            }
+
+            .okr-accordion-header:hover::after {
+                transform: scaleX(1);
+            }
+
+            .okr-accordion-header:hover {
+                background: linear-gradient(135deg, #1a5570 0%, var(--top-blue) 100%);
+            }
+
+            .okr-header-left {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                flex: 1;
+            }
+
+            .okr-info-wrapper {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                flex: 1;
+            }
+
+            .okr-main-line {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+
+            .okr-meta-line {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 12px;
+                color: rgba(255, 255, 255, 0.85);
+            }
+
+            .okr-department,
+            .okr-objective {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+            }
+
+            .okr-department svg,
+            .okr-objective svg {
+                flex-shrink: 0;
+            }
+
+            .okr-separator {
+                color: rgba(255, 255, 255, 0.5);
+                margin: 0 4px;
+            }
+
+            .expand-arrow {
+                width: 24px;
+                height: 24px;
+                background: none;
+                border: none;
+                color: white;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: transform 0.3s ease;
+            }
+
+            .expand-arrow.expanded {
+                transform: rotate(180deg);
+            }
+
+            .expand-arrow svg {
+                width: 18px;
+                height: 18px;
+            }
+
+            .expand-arrow-sm {
+                width: 20px;
+                height: 20px;
+                background: none;
+                border: none;
+                color: var(--text-secondary);
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: transform 0.3s ease;
+            }
+
+            .expand-arrow-sm.expanded {
+                transform: rotate(180deg);
+            }
+
+            .expand-arrow-sm svg {
+                width: 16px;
+                height: 16px;
+            }
+
+            .okr-identifier {
+                background: white;
+                color: var(--top-blue);
+                padding: 4px 10px;
+                border-radius: 6px;
+                font-size: 13px;
+                font-weight: 700;
+            }
+
+            .okr-title-header {
+                color: white;
+                font-size: 16px;
+                font-weight: 600;
+                margin: 0;
+            }
+
+            .kr-count {
+                color: rgba(255,255,255,0.8);
+                font-size: 13px;
+            }
+
+            .okr-header-right {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                position: relative;
+                z-index: 10;
+            }
+
+            .action-menu-btn-header {
+                width: 32px;
+                height: 32px;
+                border-radius: 6px;
+                border: none;
+                background: rgba(255,255,255,0.2);
+                color: white;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+
+            .action-menu-btn-header:hover {
+                background: rgba(255,255,255,0.3);
+            }
+
+            .action-menu-btn-header svg {
+                width: 18px;
+                height: 18px;
+            }
+
+            .okr-accordion-body {
+                max-height: 0;
+                overflow: visible;
+                opacity: 0;
+                transition: max-height 0.4s ease, opacity 0.3s ease;
+                background: white;
+            }
+
+            .okr-accordion-body.expanded {
+                max-height: 5000px;
+                opacity: 1;
+            }
+
+            /* KRs Section */
+            .krs-section {
+                padding: 20px;
+            }
+
+            .krs-section-header,
+            .initiatives-section-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 16px;
+                padding-bottom: 12px;
+                border-bottom: 2px solid var(--border-light);
+            }
+
+            .section-title {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 14px;
+                font-weight: 600;
+                color: var(--top-blue);
+            }
+
+            .section-title svg {
+                color: var(--top-teal);
+            }
+
+            /* KR Accordion */
+            .kr-accordion-list {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .empty-krs {
+                padding: 40px 20px;
+                text-align: center;
+                background: var(--bg-main);
+                border-radius: 8px;
+                border: 2px dashed var(--border);
+            }
+
+            .kr-accordion-item {
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                overflow: visible;
+                background: white;
+                transition: all 0.2s ease;
+                position: relative;
+            }
+
+            .kr-accordion-item:hover {
+                border-color: var(--top-teal);
+                box-shadow: 0 2px 8px rgba(18, 176, 160, 0.1);
+            }
+
+            .kr-accordion-header {
+                background: var(--bg-main);
+                padding: 14px 16px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+
+            .kr-accordion-header:hover {
+                background: var(--bg-hover);
+            }
+
+            .kr-header-left {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                flex: 1;
+            }
+
+            .kr-badge {
+                background: var(--top-teal);
+                color: white;
+                padding: 4px 10px;
+                border-radius: 6px;
+                font-size: 12px;
+                font-weight: 700;
+            }
+
+            .kr-title-text {
+                font-size: 14px;
+                font-weight: 600;
+                color: var(--text-primary);
+                flex: 1;
+            }
+
+            .kr-header-right {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                position: relative;
+                z-index: 10;
+            }
+
+            .kr-status-badge {
+                padding: 4px 12px;
+                border-radius: 6px;
+                font-size: 11px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            .kr-accordion-body {
+                max-height: 0;
+                overflow: visible;
+                opacity: 0;
+                transition: max-height 0.4s ease, opacity 0.3s ease;
+                background: white;
+            }
+
+            .kr-accordion-body.expanded {
+                max-height: 2000px;
+                opacity: 1;
+            }
+
+            /* Initiatives Section */
+            .initiatives-section {
+                padding: 16px;
+            }
+
+            .initiatives-section-header {
+                margin-top: 0;
+            }
+
+            /* Initiatives Styles */
+            .initiatives-container {
+                max-height: 0;
+                overflow: hidden;
+                opacity: 0;
+                transition: max-height 0.4s ease, opacity 0.3s ease;
+            }
+
+            .initiatives-container.expanded {
+                max-height: 2000px;
+                opacity: 1;
+            }
+
+            .initiatives-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 12px 0 8px;
+                border-top: 1px solid var(--border-light);
+                margin-top: 12px;
+            }
+
+            .initiatives-list {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                margin-top: 12px;
+            }
+
+            .empty-initiatives {
+                padding: 24px;
+                text-align: center;
+                background: var(--bg-main);
+                border-radius: 8px;
+                border: 2px dashed var(--border);
+            }
+
+            .empty-initiatives p {
+                color: var(--text-muted);
+                font-size: 13px;
+                margin: 0;
+            }
+
+            .initiative-item {
+                display: flex;
+                align-items: flex-start;
+                gap: 12px;
+                padding: 12px;
+                background: white;
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                transition: all 0.2s ease;
+            }
+
+            .initiative-item:hover {
+                border-color: var(--top-teal);
+                box-shadow: 0 2px 8px rgba(18, 176, 160, 0.1);
+            }
+
+            .initiative-item.completed {
+                background: var(--success-bg);
+                border-color: var(--success);
+            }
+
+            .initiative-item.completed .initiative-name {
+                color: var(--success);
+            }
+
+            .initiative-item.overdue:not(.completed) {
+                border-color: var(--danger);
+                background: var(--danger-bg);
+            }
+
+            .initiative-checkbox {
+                display: flex;
+                align-items: center;
+                cursor: pointer;
+                position: relative;
+            }
+
+            .initiative-checkbox input {
+                position: absolute;
+                opacity: 0;
+                cursor: pointer;
+            }
+
+            .initiative-checkbox .checkmark {
+                width: 20px;
+                height: 20px;
+                border: 2px solid var(--border);
+                border-radius: 4px;
+                background: white;
+                transition: all 0.2s ease;
+            }
+
+            .initiative-checkbox input:checked ~ .checkmark {
+                background: var(--success);
+                border-color: var(--success);
+            }
+
+            .initiative-checkbox input:checked ~ .checkmark::after {
+                content: '';
+                position: absolute;
+                left: 6px;
+                top: 2px;
+                width: 5px;
+                height: 10px;
+                border: solid white;
+                border-width: 0 2px 2px 0;
+                transform: rotate(45deg);
+            }
+
+            .initiative-content {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .initiative-name {
+                font-size: 14px;
+                font-weight: 600;
+                color: var(--text-primary);
+                margin-bottom: 4px;
+            }
+
+            .initiative-desc {
+                font-size: 12px;
+                color: var(--text-secondary);
+                margin-bottom: 8px;
+            }
+
+            .initiative-meta {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                flex-wrap: wrap;
+                font-size: 12px;
+            }
+
+            .initiative-responsavel,
+            .initiative-deadline {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                color: var(--text-muted);
+            }
+
+            .initiative-deadline.overdue {
+                color: var(--danger);
+                font-weight: 600;
+            }
+
+            .initiative-actions {
+                display: flex;
+                gap: 4px;
+            }
+
+            .btn-icon-sm {
+                width: 28px;
+                height: 28px;
+                border-radius: 6px;
+                border: none;
+                background: var(--bg-main);
+                color: var(--text-secondary);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+
+            .btn-icon-sm:hover {
+                background: var(--top-blue);
+                color: white;
+            }
+
+            .btn-icon-sm.delete:hover {
+                background: var(--danger);
+                color: white;
+            }
+
+            .btn-icon-sm svg {
+                width: 14px;
+                height: 14px;
+            }
+
+            /* Responsividade */
+            @media (max-width: 768px) {
+                .okr-accordion-header {
+                    padding: 12px 16px;
+                }
+
+                .okr-header-left {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 8px;
+                }
+
+                .okr-info-wrapper {
+                    width: 100%;
+                }
+
+                .okr-main-line {
+                    flex-wrap: wrap;
+                }
+
+                .okr-meta-line {
+                    font-size: 11px;
+                    flex-wrap: wrap;
+                }
+
+                .okr-title-header {
+                    font-size: 14px;
+                }
+
+                .kr-count {
+                    font-size: 12px;
+                }
+
+                .kr-accordion-header {
+                    padding: 12px;
+                }
+
+                .kr-header-left {
+                    flex-wrap: wrap;
+                }
+
+                .kr-title-text {
+                    font-size: 13px;
+                    width: 100%;
+                }
+
+                .kr-status-badge {
+                    font-size: 10px;
+                    padding: 3px 8px;
+                }
+
+                .initiatives-section {
+                    padding: 12px;
+                }
+
+                .initiative-item {
+                    flex-direction: column;
+                    gap: 8px;
+                }
+
+                .initiative-actions {
+                    width: 100%;
+                    justify-content: flex-end;
+                }
             }
         `;
         document.head.appendChild(style);

@@ -34,8 +34,13 @@ const ApprovalPage = {
 
         let html = '<div class="kanban-columns">';
 
-        columns.forEach(col => {
+        for (const col of columns) {
             const items = okrs.filter(okr => okr.status === col.key);
+            const cardsHTML = items.length === 0 ? `
+                <div class="kanban-empty">
+                    <p>Nenhum OKR neste estágio</p>
+                </div>
+            ` : (await Promise.all(items.map(okr => this.renderKanbanCard(okr, col.key)))).join('');
 
             html += `
                 <div class="kanban-column">
@@ -47,22 +52,18 @@ const ApprovalPage = {
                         </div>
                     </div>
                     <div class="kanban-column-body">
-                        ${items.length === 0 ? `
-                            <div class="kanban-empty">
-                                <p>Nenhum OKR neste estágio</p>
-                            </div>
-                        ` : items.map(okr => this.renderKanbanCard(okr, col.key)).join('')}
+                        ${cardsHTML}
                     </div>
                 </div>
             `;
-        });
+        }
 
         html += '</div>';
         container.innerHTML = html;
     },
 
-    renderKanbanCard(okr, currentStatus) {
-        const objective = okr.getObjective();
+    async renderKanbanCard(okr, currentStatus) {
+        const objective = await okr.getObjective();
 
         return `
             <div class="kanban-card">
@@ -78,7 +79,7 @@ const ApprovalPage = {
                         <svg style="width:14px;height:14px;display:inline;vertical-align:middle;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>
                         </svg>
-                        ${objective ? objective.text.substring(0, 50) + '...' : 'N/A'}
+                        ${objective && objective.text ? (objective.text.length > 50 ? objective.text.substring(0, 50) + '...' : objective.text) : 'N/A'}
                     </div>
 
                     <div class="kanban-card-krs">

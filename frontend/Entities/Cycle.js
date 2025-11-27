@@ -132,7 +132,10 @@ class Cycle {
             .order('ordem', { ascending: true });
 
         if (error) throw error;
-        return data || [];
+
+        // Importa MiniCycle dinamicamente para evitar circular dependency
+        const { MiniCycle } = await import('./MiniCycle.js');
+        return (data || []).map(mc => new MiniCycle(mc));
     }
 
     // Obter contagem de miniciclos

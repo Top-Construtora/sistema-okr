@@ -65,7 +65,9 @@ const App = {
             <div class="login-container">
                 <div class="login-card">
                     <div class="login-header">
-                        <div class="brand-icon">TOP</div>
+                        <div class="brand-icon">
+                            <img src="/gio.png" alt="Logo" style="width:100%;height:100%;object-fit:contain;">
+                        </div>
                         <h1>TOP Construtora</h1>
                         <p>Sistema de Gestão OKR</p>
                     </div>
@@ -83,12 +85,6 @@ const App = {
                             Entrar
                         </button>
                     </form>
-                    <div class="login-footer">
-                        <small>Usuário padrão: admin@topconstrutora.com.br / admin123</small>
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="App.populateExample()" style="margin-top:12px;width:100%;">
-                            Carregar Dados de Exemplo
-                        </button>
-                    </div>
                 </div>
             </div>
         `;

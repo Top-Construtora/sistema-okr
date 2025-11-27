@@ -13,11 +13,7 @@ const UsersPage = {
         const departments = await Department.getActive();
 
         content.innerHTML = `
-            <div class="page-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;">
-                <div>
-                    <h2 style="font-size:20px;font-weight:700;color:var(--top-blue);margin-bottom:4px;">Gestão de Usuários</h2>
-                    <p style="color:var(--text-muted);font-size:13px;">${users.length} ${users.length === 1 ? 'usuário cadastrado' : 'usuários cadastrados'}</p>
-                </div>
+            <div style="display:flex;justify-content:flex-end;margin-bottom:24px;">
                 <button class="btn btn-primary" onclick="UsersPage.openModal()">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -39,68 +35,95 @@ const UsersPage = {
                             </button>
                         </div>
                     ` : `
-                        <table class="data-table" style="width:100%;">
-                            <thead>
-                                <tr>
-                                    <th style="width:30%;">Nome</th>
-                                    <th style="width:25%;">Email</th>
-                                    <th style="width:20%;">Departamento</th>
-                                    <th style="width:12%;">Tipo</th>
-                                    <th style="width:13%;text-align:right;">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${users.map(user => {
-                                    const dept = user.getDepartment();
-                                    return `
+                        <div class="users-table-container">
+                            <table class="users-table">
+                                <thead>
                                     <tr>
-                                        <td>
-                                            <div style="display:flex;align-items:center;gap:12px;">
-                                                <div style="width:40px;height:40px;border-radius:8px;background:${user.ativo ? 'var(--top-gold)' : 'var(--border)'};display:flex;align-items:center;justify-content:center;color:${user.ativo ? 'var(--top-blue)' : 'var(--text-muted)'};font-weight:700;font-size:14px;">
-                                                    ${user.nome.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
-                                                </div>
-                                                <div>
-                                                    <strong style="font-size:14px;display:block;${user.ativo ? '' : 'color:var(--text-muted);'}">${user.nome}</strong>
-                                                    <span class="badge ${user.ativo ? 'badge-active' : 'badge-pending'}" style="font-size:10px;margin-top:2px;">
-                                                        ${user.ativo ? 'Ativo' : 'Inativo'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td style="color:var(--text-secondary);font-size:13px;">${user.email}</td>
-                                        <td>
-                                            <span class="badge badge-active" style="background:var(--top-blue);color:white;">
-                                                ${dept ? dept.nome : 'N/A'}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            ${user.tipo === 'admin' ? `
-                                                <span class="badge badge-cycle">Admin</span>
-                                            ` : `
-                                                <span class="badge badge-active">Colaborador</span>
-                                            `}
-                                        </td>
-                                        <td style="text-align:right;">
-                                            <button class="btn btn-sm btn-secondary" onclick="UsersPage.edit('${user.id}')">
-                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                                </svg>
-                                            </button>
-                                            <button class="btn btn-sm ${user.ativo ? 'btn-danger' : 'btn-success'}"
-                                                onclick="UsersPage.toggleStatus('${user.id}')">
-                                                ${user.ativo ? 'Inativar' : 'Ativar'}
-                                            </button>
-                                        </td>
+                                        <th style="width:32%;">Usuário</th>
+                                        <th style="width:26%;">Email</th>
+                                        <th style="width:16%;">Departamento</th>
+                                        <th style="width:10%;">Tipo</th>
+                                        <th style="width:16%;text-align:right;">Ações</th>
                                     </tr>
-                                `}).join('')}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    ${users.map(user => {
+                                        const dept = departments.find(d => d.id === user.departamento_id);
+                                        return `
+                                        <tr class="user-row ${!user.ativo ? 'inactive' : ''}">
+                                            <td>
+                                                <div class="user-info">
+                                                    <div class="user-avatar ${user.ativo ? 'active' : 'inactive'}">
+                                                        ${user.nome.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
+                                                    </div>
+                                                    <div class="user-details">
+                                                        <div class="user-name">${user.nome}</div>
+                                                        <div class="user-status">
+                                                            <span class="status-dot ${user.ativo ? 'active' : 'inactive'}"></span>
+                                                            ${user.ativo ? 'Ativo' : 'Inativo'}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="user-email">${user.email}</td>
+                                            <td>
+                                                <span class="dept-badge">
+                                                    ${dept ? dept.nome : 'N/A'}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="type-badge ${user.tipo === 'admin' ? 'admin' : 'colaborador'}">
+                                                    ${user.tipo === 'admin' ? 'Admin' : 'Colab.'}
+                                                </span>
+                                            </td>
+                                            <td class="actions-cell">
+                                                <div class="action-menu">
+                                                    <button class="action-menu-btn" onclick="UsersPage.toggleMenu(event, '${user.id}')" title="Ações">
+                                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+                                                        </svg>
+                                                    </button>
+                                                    <div class="action-menu-dropdown" id="menu-${user.id}">
+                                                        <button class="menu-item" onclick="UsersPage.edit('${user.id}'); UsersPage.closeAllMenus();">
+                                                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                            </svg>
+                                                            Editar
+                                                        </button>
+                                                        <button class="menu-item ${user.ativo ? 'warning' : 'success'}" onclick="UsersPage.toggleStatus('${user.id}'); UsersPage.closeAllMenus();">
+                                                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                ${user.ativo ? `
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                                                                ` : `
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                                `}
+                                                            </svg>
+                                                            ${user.ativo ? 'Inativar' : 'Ativar'}
+                                                        </button>
+                                                        <button class="menu-item danger" onclick="UsersPage.deleteUser('${user.id}', '${user.nome}'); UsersPage.closeAllMenus();">
+                                                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                            </svg>
+                                                            Excluir
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    `}).join('')}
+                                </tbody>
+                            </table>
+                        </div>
                     `}
                 </div>
             </div>
 
             <div id="user-modal" style="display:none;"></div>
+            <div id="delete-confirmation-modal" style="display:none;"></div>
         `;
+
+        // Fecha menus ao clicar fora
+        document.addEventListener('click', () => this.closeAllMenus());
     },
 
     async openModal(id = null) {
@@ -232,7 +255,7 @@ const UsersPage = {
         this.currentUser = null;
     },
 
-    save() {
+    async save() {
         const nome = document.getElementById('user-nome').value.trim();
         const email = document.getElementById('user-email').value.trim();
         const departamentoId = document.getElementById('user-departamento').value;
@@ -264,12 +287,12 @@ const UsersPage = {
             const user = this.currentUser || new User();
             user.nome = nome;
             user.email = email;
-            user.departamentoId = departamentoId;
+            user.departamento_id = departamentoId;
             user.tipo = tipo;
             if (senha) {
                 user.senha = senha;
             }
-            user.save();
+            await user.save();
 
             this.closeModal();
             this.render();
@@ -284,21 +307,95 @@ const UsersPage = {
         this.openModal(id);
     },
 
-    toggleStatus(id) {
-        const user = User.getById(id);
+    async toggleStatus(id) {
+        const user = await User.getById(id);
         if (!user) return;
 
         const action = user.ativo ? 'inativar' : 'ativar';
 
         if (confirm(`Deseja realmente ${action} o usuário "${user.nome}"?`)) {
             try {
-                User.toggleActive(id);
-                this.render();
+                await User.toggleActive(id);
+                await this.render();
                 DepartmentsPage.showToast(`Usuário ${user.ativo ? 'inativado' : 'ativado'} com sucesso!`, 'success');
             } catch (error) {
                 DepartmentsPage.showToast(error.message, 'error');
             }
         }
+    },
+
+    deleteUser(id, nome) {
+        this.openDeleteConfirmationModal(id, nome);
+    },
+
+    openDeleteConfirmationModal(id, nome) {
+        const modal = document.getElementById('delete-confirmation-modal');
+
+        modal.innerHTML = `
+            <div class="modal-overlay" onclick="UsersPage.closeDeleteConfirmationModal()"></div>
+            <div class="modal-content delete-confirmation-modal" style="max-width:420px;">
+                <div class="delete-confirmation-header">
+                    <div class="delete-icon">
+                        <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                    </div>
+                    <h3 style="margin:0 0 8px 0;color:var(--danger);font-size:20px;font-weight:700;">Excluir Usuário</h3>
+                    <p style="margin:0;font-size:15px;color:var(--text-secondary);">Deseja excluir permanentemente:</p>
+                </div>
+
+                <div class="modal-body" style="padding:0 32px 24px;">
+                    <div style="background:var(--bg-main);padding:16px;border-radius:8px;border-left:4px solid var(--danger);margin-bottom:20px;">
+                        <strong style="font-size:16px;color:var(--top-blue);">${nome}</strong>
+                    </div>
+                    <p style="margin:0;font-size:13px;color:var(--text-muted);text-align:center;">
+                        Esta ação não pode ser desfeita.
+                    </p>
+                </div>
+
+                <div class="modal-footer" style="gap:12px;padding:0 32px 32px;">
+                    <button class="btn btn-secondary" onclick="UsersPage.closeDeleteConfirmationModal()" style="flex:1;">
+                        Cancelar
+                    </button>
+                    <button class="btn btn-danger" onclick="UsersPage.confirmDelete('${id}')" style="flex:1;">
+                        Excluir
+                    </button>
+                </div>
+            </div>
+        `;
+
+        modal.style.display = 'flex';
+    },
+
+    closeDeleteConfirmationModal() {
+        document.getElementById('delete-confirmation-modal').style.display = 'none';
+    },
+
+    async confirmDelete(id) {
+        try {
+            await User.delete(id);
+            this.closeDeleteConfirmationModal();
+            await this.render();
+            DepartmentsPage.showToast('Usuário excluído com sucesso!', 'success');
+        } catch (error) {
+            this.closeDeleteConfirmationModal();
+            DepartmentsPage.showToast(error.message || 'Erro ao excluir usuário', 'error');
+        }
+    },
+
+    toggleMenu(event, userId) {
+        event.stopPropagation();
+        this.closeAllMenus();
+        const menu = document.getElementById(`menu-${userId}`);
+        if (menu) {
+            menu.classList.toggle('show');
+        }
+    },
+
+    closeAllMenus() {
+        document.querySelectorAll('.action-menu-dropdown').forEach(menu => {
+            menu.classList.remove('show');
+        });
     }
 };
 

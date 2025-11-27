@@ -67,7 +67,7 @@ const CyclesPage = {
                 <div class="card cycle-card" style="margin-bottom:20px;">
                     <div class="card-header" style="background:${isCurrentlyActive ? 'var(--success-bg)' : 'var(--bg-main)'};border-bottom:2px solid ${isCurrentlyActive ? 'var(--success)' : 'var(--border)'};">
                         <div style="display:flex;align-items:center;gap:12px;flex:1;">
-                            <button class="btn-icon" onclick="CyclesPage.toggleExpand('${cycle.id}')" style="color:var(--top-teal);">
+                            <button class="btn-icon" onclick="CyclesPage.toggleExpand('${cycle.id}')" style="color:var(--top-teal);" data-toggle-btn="${cycle.id}">
                                 <svg style="width:20px;height:20px;transform:rotate(${isExpanded ? '90' : '0'}deg);transition:transform 0.3s;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                                 </svg>
@@ -115,20 +115,22 @@ const CyclesPage = {
                         </div>
                     </div>
 
-                    ${isExpanded && miniCycles.length > 0 ? `
-                        <div class="card-body">
-                            <div class="minicycles-grid">
-                                ${await this.renderMiniCycles(miniCycles)}
+                    <div class="minicycles-container ${isExpanded ? 'expanded' : ''}" data-cycle-id="${cycle.id}">
+                        ${miniCycles.length > 0 ? `
+                            <div class="card-body">
+                                <div class="minicycles-grid">
+                                    ${await this.renderMiniCycles(miniCycles)}
+                                </div>
                             </div>
-                        </div>
-                    ` : isExpanded ? `
-                        <div class="card-body" style="text-align:center;padding:40px;color:var(--text-muted);">
-                            <p>Nenhum miniciclo criado ainda.</p>
-                            <button class="btn btn-sm btn-primary" onclick="CyclesPage.openMiniCycleModal('${cycle.id}')" style="margin-top:12px;">
-                                Criar Primeiro Miniciclo
-                            </button>
-                        </div>
-                    ` : ''}
+                        ` : `
+                            <div class="card-body" style="text-align:center;padding:40px;color:var(--text-muted);">
+                                <p>Nenhum miniciclo criado ainda.</p>
+                                <button class="btn btn-sm btn-primary" onclick="CyclesPage.openMiniCycleModal('${cycle.id}')" style="margin-top:12px;">
+                                    Criar Primeiro Miniciclo
+                                </button>
+                            </div>
+                        `}
+                    </div>
                 </div>
             `;
         }
@@ -188,13 +190,18 @@ const CyclesPage = {
                     </div>
 
                     <div class="minicycle-footer">
-                        <button class="btn btn-sm btn-secondary" onclick="CyclesPage.openMiniCycleModal('${mini.cycle_id}', '${mini.id}')">
+                        <button class="btn btn-sm btn-secondary" onclick="CyclesPage.openMiniCycleModal('${mini.cycle_id}', '${mini.id}')" title="Editar miniciclo">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                             </svg>
                         </button>
-                        <button class="btn btn-sm ${mini.ativo ? 'btn-danger' : 'btn-success'}" onclick="CyclesPage.toggleMiniCycle('${mini.id}')">
+                        <button class="btn btn-sm ${mini.ativo ? 'btn-danger' : 'btn-success'}" onclick="CyclesPage.toggleMiniCycle('${mini.id}')" title="${mini.ativo ? 'Inativar' : 'Ativar'} miniciclo">
                             ${mini.ativo ? 'Inativar' : 'Ativar'}
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="CyclesPage.deleteMiniCycle('${mini.id}', '${mini.nome}')" title="Deletar miniciclo" style="margin-left:auto;">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
                         </button>
                     </div>
                 </div>
@@ -205,12 +212,21 @@ const CyclesPage = {
     },
 
     toggleExpand(cycleId) {
+        const container = document.querySelector(`.minicycles-container[data-cycle-id="${cycleId}"]`);
+        const button = document.querySelector(`[data-toggle-btn="${cycleId}"]`);
+        const arrow = button?.querySelector('svg');
+
+        if (!container) return;
+
         if (this.expandedCycles.has(cycleId)) {
             this.expandedCycles.delete(cycleId);
+            container.classList.remove('expanded');
+            if (arrow) arrow.style.transform = 'rotate(0deg)';
         } else {
             this.expandedCycles.add(cycleId);
+            container.classList.add('expanded');
+            if (arrow) arrow.style.transform = 'rotate(90deg)';
         }
-        this.renderList();
     },
 
     async openCycleModal(id = null) {
@@ -518,6 +534,21 @@ const CyclesPage = {
         }
     },
 
+    async deleteMiniCycle(id, nome) {
+        if (!confirm(`Tem certeza que deseja excluir o miniciclo "${nome}"?\n\nEsta ação não pode ser desfeita.`)) {
+            return;
+        }
+
+        try {
+            const mini = await MiniCycle.getById(id);
+            await mini.delete();
+            DepartmentsPage.showToast('Miniciclo excluído com sucesso!', 'success');
+            await this.renderList();
+        } catch (error) {
+            DepartmentsPage.showToast(error.message || 'Erro ao excluir miniciclo', 'error');
+        }
+    },
+
     formatDate(dateString) {
         if (!dateString) return '';
         const date = new Date(dateString + 'T00:00:00');
@@ -530,63 +561,173 @@ const CyclesPage = {
         const style = document.createElement('style');
         style.id = 'cycles-styles';
         style.textContent = `
+            /* Animações suaves */
+            @keyframes slideDown {
+                from {
+                    opacity: 0;
+                    transform: translateY(-10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+
+            @keyframes scaleIn {
+                from {
+                    opacity: 0;
+                    transform: scale(0.95);
+                }
+                to {
+                    opacity: 1;
+                    transform: scale(1);
+                }
+            }
+
             .cycle-card {
-                transition: all 0.3s ease;
+                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                transform-origin: top;
+                position: relative;
+                overflow: hidden;
+            }
+
+            .cycle-card::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(135deg, rgba(18, 176, 160, 0.05) 0%, rgba(30, 96, 118, 0.05) 100%);
+                opacity: 0;
+                transition: opacity 0.4s ease;
+                pointer-events: none;
             }
 
             .cycle-card:hover {
-                box-shadow: var(--shadow-lg);
+                box-shadow: 0 10px 40px rgba(18, 176, 160, 0.15);
+                transform: translateY(-2px);
+            }
+
+            .cycle-card:hover::before {
+                opacity: 1;
+            }
+
+            .cycle-card .card-header {
+                transition: all 0.3s ease;
             }
 
             .btn-icon {
                 background: none;
                 border: none;
                 cursor: pointer;
-                padding: 4px;
+                padding: 8px;
                 border-radius: var(--radius);
-                transition: all 0.2s;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
             }
 
             .btn-icon:hover {
                 background: var(--bg-hover);
+                transform: scale(1.1);
+            }
+
+            .btn-icon:active {
+                transform: scale(0.95);
+            }
+
+            .btn-icon svg {
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            .minicycles-container {
+                max-height: 0;
+                overflow: hidden;
+                opacity: 0;
+                transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                            opacity 0.3s ease;
+            }
+
+            .minicycles-container.expanded {
+                max-height: 5000px;
+                opacity: 1;
             }
 
             .minicycles-grid {
                 display: grid;
                 grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
                 gap: 16px;
-                padding: 4px;
+                padding: 16px 4px;
             }
 
             .minicycle-card {
                 background: var(--white);
-                border: 1px solid var(--border);
-                border-radius: var(--radius);
+                border: 2px solid var(--border);
+                border-radius: 12px;
                 padding: 16px;
-                transition: all 0.2s;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                position: relative;
+                overflow: hidden;
+            }
+
+            .minicycle-card::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 4px;
+                height: 100%;
+                background: var(--top-teal);
+                transform: scaleY(0);
+                transition: transform 0.3s ease;
+                transform-origin: top;
+            }
+
+            .minicycle-card:hover::before {
+                transform: scaleY(1);
             }
 
             .minicycle-card:hover {
-                box-shadow: var(--shadow-md);
+                box-shadow: 0 8px 24px rgba(18, 176, 160, 0.2);
                 border-color: var(--top-teal);
+                transform: translateY(-4px);
             }
 
             .minicycle-card.current-active {
                 border: 2px solid var(--success);
-                background: var(--success-bg);
+                background: linear-gradient(135deg, var(--success-bg) 0%, rgba(34, 197, 94, 0.05) 100%);
+                box-shadow: 0 4px 16px rgba(34, 197, 94, 0.2);
+            }
+
+            .minicycle-card.current-active::before {
+                background: var(--success);
+                transform: scaleY(1);
             }
 
             .minicycle-ordem {
-                width: 32px;
-                height: 32px;
+                width: 36px;
+                height: 36px;
                 border-radius: 50%;
-                background: var(--top-teal);
+                background: linear-gradient(135deg, var(--top-teal) 0%, #0d9488 100%);
                 color: white;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 font-weight: 700;
-                font-size: 14px;
+                font-size: 15px;
+                box-shadow: 0 4px 12px rgba(18, 176, 160, 0.3);
+                transition: box-shadow 0.3s ease;
+            }
+
+            .minicycle-card:hover .minicycle-ordem {
+                box-shadow: 0 6px 16px rgba(18, 176, 160, 0.4);
             }
 
             .minicycle-header {
@@ -603,9 +744,22 @@ const CyclesPage = {
             .minicycle-footer {
                 display: flex;
                 gap: 8px;
-                justify-content: flex-end;
+                justify-content: flex-start;
                 padding-top: 12px;
                 border-top: 1px solid var(--border-light);
+            }
+
+            .minicycle-footer .btn {
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            .minicycle-footer .btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            }
+
+            .minicycle-footer .btn:active {
+                transform: translateY(0);
             }
 
             .form-section {
@@ -628,6 +782,50 @@ const CyclesPage = {
                 display: flex;
                 align-items: center;
                 gap: 8px;
+            }
+
+            /* Melhorias na barra de progresso */
+            .progress {
+                background: var(--bg-main);
+                border-radius: 100px;
+                overflow: hidden;
+                position: relative;
+            }
+
+            .progress-bar {
+                background: linear-gradient(90deg, var(--top-teal) 0%, #0d9488 100%);
+                transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+                position: relative;
+                overflow: hidden;
+            }
+
+            .progress-bar::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                right: 0;
+                background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+                animation: shimmer 2s infinite;
+            }
+
+            @keyframes shimmer {
+                0% { transform: translateX(-100%); }
+                100% { transform: translateX(100%); }
+            }
+
+            /* Badges melhorados */
+            .badge {
+                transition: all 0.3s ease;
+            }
+
+            .badge-success {
+                box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+            }
+
+            .badge-active {
+                box-shadow: 0 2px 8px rgba(18, 176, 160, 0.3);
             }
         `;
         document.head.appendChild(style);

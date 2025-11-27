@@ -1,0 +1,35 @@
+NOVO LAYOUT BASEADO NA IMAGEM DE REFERÊNCIA:
+
+1. OKR Header (fundo verde escuro #1e6076):
+   - Seta para expandir/colapsar
+   - Badge O1, O2, O3 (identificador)
+   - Título do OKR
+   - Contador "X KRs"
+   - Menu de três pontinhos
+
+2. Corpo do OKR (expandível):
+   - Seção "KR's" com ícone de chave
+   - Botão "+ Novo KR"
+
+3. Lista de KRs:
+   - Cada KR tem:
+     - Seta para expandir
+     - Badge verde "KR1", "KR2", etc
+     - Título do KR
+     - Badge de status (PENDENTE, EM PROGRESSO, CONCLUÍDO)
+     - Menu de três pontinhos
+
+4. Corpo do KR (expandível):
+   - Seção "Iniciativas" com ícone de lista
+   - Botão "+ Nova Iniciativa"
+   - Lista de iniciativas com:
+     - Checkbox
+     - Nome
+     - Responsável (ícone pessoa)
+     - Data limite (ícone calendário)
+     - Menu de três pontinhos
+
+Removido:
+- Slider de progresso dos KRs
+- Barra de progresso geral do OKR
+- Meta e métrica dos KRs
