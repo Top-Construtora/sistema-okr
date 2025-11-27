@@ -1,5 +1,6 @@
 import { StorageService, uid } from '../../services/storage.js';
 import { supabaseClient } from '../../services/supabase.js';
+import { AuthService } from '../../services/auth.js';
 
 import { OKR, OKR_STATUS } from '../../Entities/OKR.js';
 import { Department } from '../../Entities/Department.js';
@@ -25,14 +26,28 @@ const OKRsPage = {
 
     async render() {
         const content = document.getElementById('content');
-        const okrs = await OKR.getAll();
+        const currentUser = AuthService.getCurrentUser();
+        const isAdmin = currentUser && currentUser.tipo === 'admin';
+        const userDepartmentName = currentUser?.departamento?.nome || null;
+
+        // Se for colaborador, força o filtro pelo departamento do usuário
+        if (!isAdmin && userDepartmentName) {
+            this.currentDepartment = userDepartmentName;
+        }
+
+        let okrs = await OKR.getAll();
         const departments = await Department.getActive();
+
+        // Se for colaborador, filtra apenas OKRs do seu departamento
+        if (!isAdmin && userDepartmentName) {
+            okrs = okrs.filter(o => o.department === userDepartmentName);
+        }
 
         content.innerHTML = `
             <div class="page-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
                 <div>
                     <h2 style="font-size:20px;font-weight:700;color:var(--top-blue);margin-bottom:4px;">Gestão de OKRs</h2>
-                    <p style="color:var(--text-muted);font-size:13px;">${okrs.length} ${okrs.length === 1 ? 'OKR cadastrado' : 'OKRs cadastrados'}</p>
+                    <p style="color:var(--text-muted);font-size:13px;">${okrs.length} ${okrs.length === 1 ? 'OKR cadastrado' : 'OKRs cadastrados'}${!isAdmin ? ` - ${userDepartmentName}` : ''}</p>
                 </div>
                 <button class="btn btn-primary" onclick="OKRsPage.openModal()">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -58,6 +73,7 @@ const OKRsPage = {
                     </button>
                 </div>
 
+                ${isAdmin ? `
                 <div style="margin-left:auto;">
                     <select id="dept-filter" class="form-control" onchange="OKRsPage.filterByDepartment(this.value)" style="min-width:200px;">
                         <option value="all">Todos os Departamentos</option>
@@ -68,6 +84,7 @@ const OKRsPage = {
                         `).join('')}
                     </select>
                 </div>
+                ` : ''}
             </div>
 
             <div id="okrs-list"></div>
@@ -92,7 +109,16 @@ const OKRsPage = {
             return;
         }
 
+        const currentUser = AuthService.getCurrentUser();
+        const isAdmin = currentUser && currentUser.tipo === 'admin';
+        const userDepartmentName = currentUser?.departamento?.nome || null;
+
         let okrs = await OKR.getAll();
+
+        // Se for colaborador, filtra apenas OKRs do seu departamento
+        if (!isAdmin && userDepartmentName) {
+            okrs = okrs.filter(o => o.department === userDepartmentName);
+        }
 
         // Filtro por status
         if (this.currentFilter === 'pending') {
@@ -103,8 +129,8 @@ const OKRsPage = {
             okrs = okrs.filter(o => o.status === 'completed' || o.status === 'homologated');
         }
 
-        // Filtro por departamento
-        if (this.currentDepartment !== 'all') {
+        // Filtro por departamento (apenas admin pode filtrar por outros departamentos)
+        if (isAdmin && this.currentDepartment !== 'all') {
             okrs = okrs.filter(o => o.department === this.currentDepartment);
         }
 
@@ -427,6 +453,9 @@ const OKRsPage = {
         const modal = document.getElementById('okr-modal');
         const objectives = await StorageService.getObjectives();
         const departments = await Department.getActive();
+        const currentUser = AuthService.getCurrentUser();
+        const isAdmin = currentUser && currentUser.tipo === 'admin';
+        const userDepartmentName = currentUser?.departamento?.nome || null;
 
         modal.innerHTML = `
             <div class="modal-overlay" onclick="OKRsPage.closeModal()"></div>
@@ -466,14 +495,20 @@ const OKRsPage = {
                         </div>
                         <div class="form-group">
                             <label class="form-label">Departamento *</label>
-                            <select id="okr-department" class="form-control">
-                                <option value="">Selecione...</option>
-                                ${departments.map(dept => `
-                                    <option value="${dept.nome}" ${this.currentOKR && this.currentOKR.department === dept.nome ? 'selected' : ''}>
-                                        ${dept.nome}
-                                    </option>
-                                `).join('')}
-                            </select>
+                            ${isAdmin ? `
+                                <select id="okr-department" class="form-control">
+                                    <option value="">Selecione...</option>
+                                    ${departments.map(dept => `
+                                        <option value="${dept.nome}" ${this.currentOKR && this.currentOKR.department === dept.nome ? 'selected' : ''}>
+                                            ${dept.nome}
+                                        </option>
+                                    `).join('')}
+                                </select>
+                            ` : `
+                                <input type="text" id="okr-department-display" class="form-control" value="${userDepartmentName}" disabled style="background:var(--bg-main);cursor:not-allowed;">
+                                <input type="hidden" id="okr-department" value="${userDepartmentName}">
+                                <small style="color:var(--text-muted);font-size:11px;display:block;margin-top:4px;">OKR será criado para seu departamento</small>
+                            `}
                         </div>
                     </div>
 
