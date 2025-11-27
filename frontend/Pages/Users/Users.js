@@ -385,17 +385,16 @@ const UsersPage = {
 
     toggleMenu(event, userId) {
         event.stopPropagation();
-        this.closeAllMenus();
+        window.closeAllDropdownMenus();
         const menu = document.getElementById(`menu-${userId}`);
         if (menu) {
+            window.positionDropdownMenu(event.currentTarget, `menu-${userId}`);
             menu.classList.toggle('show');
         }
     },
 
     closeAllMenus() {
-        document.querySelectorAll('.action-menu-dropdown').forEach(menu => {
-            menu.classList.remove('show');
-        });
+        window.closeAllDropdownMenus();
     }
 };
 

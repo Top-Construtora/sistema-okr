@@ -16,6 +16,11 @@ import { Department } from './Entities/Department.js'
 import { User } from './Entities/User.js'
 import { OKR, OKR_STATUS } from './Entities/OKR.js'
 import './Entities/KeyResult.js'
+import { Initiative } from './Entities/Initiative.js'
+
+// 2.5 Importa Components
+import { Modal } from './Components/Modal.js'
+import { InitiativeManager } from './Components/InitiativeManager.js'
 
 // 3. Importa Layout
 import { Layout } from './Layout.js'
@@ -39,6 +44,9 @@ window.Department = Department;
 window.User = User;
 window.OKR = OKR;
 window.OKR_STATUS = OKR_STATUS;
+window.Initiative = Initiative;
+window.Modal = Modal;
+window.InitiativeManager = InitiativeManager;
 window.Layout = Layout;
 window.DashboardPage = DashboardPage;
 window.ObjectivesPage = ObjectivesPage;

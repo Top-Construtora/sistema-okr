@@ -2306,8 +2306,13 @@
 .users-table-container {
     background: white;
     border-radius: 12px;
-    overflow: hidden;
+    overflow: visible;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.users-table {
+    border-radius: 12px;
+    overflow: hidden;
 }
 
 .users-table {
@@ -2496,9 +2501,7 @@
 }
 
 .action-menu-dropdown {
-    position: absolute;
-    top: calc(100% + 4px);
-    right: 0;
+    position: fixed;
     background: white;
     border-radius: 8px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
@@ -2507,8 +2510,8 @@
     opacity: 0;
     visibility: hidden;
     transform: translateY(-10px);
-    transition: all 0.2s ease;
-    z-index: 1000;
+    transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
+    z-index: 9999;
     overflow: hidden;
 }
 
@@ -2608,13 +2611,15 @@
 .departments-table-container {
     background: white;
     border-radius: 12px;
-    overflow: hidden;
+    overflow: visible;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .departments-table {
     width: 100%;
     border-collapse: collapse;
+    border-radius: 12px;
+    overflow: hidden;
 }
 
 .departments-table thead {

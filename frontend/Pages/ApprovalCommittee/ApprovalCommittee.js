@@ -2,6 +2,7 @@ import { StorageService, uid } from '../../services/storage.js';
 import { supabaseClient } from '../../services/supabase.js';
 
 import { OKR, OKR_STATUS } from '../../Entities/OKR.js';
+import { Modal } from '../../Components/Modal.js';
 // Página do Comitê de Aprovação - Kanban
 const ApprovalPage = {
     async render() {
@@ -148,7 +149,16 @@ const ApprovalPage = {
 
         let comment = '';
         if (newStatus === 'adjust') {
-            comment = prompt('Digite o motivo dos ajustes solicitados:');
+            comment = await Modal.prompt({
+                title: 'Solicitar Ajustes',
+                message: 'Descreva os ajustes necessários para este OKR. Seja específico para ajudar o colaborador a entender o que precisa ser modificado.',
+                placeholder: 'Ex: O Key Result 2 precisa ter uma meta mais desafiadora. Sugiro aumentar de 80% para 95%...',
+                confirmLabel: 'Solicitar Ajuste',
+                cancelLabel: 'Cancelar',
+                required: true,
+                maxLength: 500
+            });
+
             if (!comment) return; // Cancelou
         }
 

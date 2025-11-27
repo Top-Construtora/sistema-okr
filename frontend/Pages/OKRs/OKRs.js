@@ -134,8 +134,31 @@ const OKRsPage = {
         const isOKRExpanded = this.expandedOKRs.has(okr.id);
         const okrIdentifier = `O${index + 1}`;
 
+        // Configuração de status do OKR
+        const okrStatusConfig = {
+            'pending': { label: 'Pendente', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)', icon: '⏳' },
+            'adjust': { label: 'Ajustes Solicitados', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.15)', icon: '⚠️' },
+            'approved': { label: 'Em Andamento', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.15)', icon: '▶️' },
+            'completed': { label: 'Concluído', color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)', icon: '✅' },
+            'homologated': { label: 'Homologado', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.15)', icon: '🏆' }
+        };
+        const statusInfo = okrStatusConfig[okr.status] || okrStatusConfig['pending'];
+
         return `
-            <div class="okr-accordion-card">
+            <div class="okr-accordion-card ${okr.status === 'adjust' ? 'okr-needs-adjustment' : ''}">
+                ${okr.status === 'adjust' && okr.committee_comment ? `
+                    <div class="okr-adjustment-banner">
+                        <div class="adjustment-icon">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                        </div>
+                        <div class="adjustment-content">
+                            <strong>Ajustes Solicitados pelo Comitê:</strong>
+                            <p>${okr.committee_comment}</p>
+                        </div>
+                    </div>
+                ` : ''}
                 <div class="okr-accordion-header" onclick="OKRsPage.toggleOKRExpand('${okr.id}')">
                     <div class="okr-header-left">
                         <button class="expand-arrow ${isOKRExpanded ? 'expanded' : ''}">
@@ -147,6 +170,9 @@ const OKRsPage = {
                             <div class="okr-main-line">
                                 <span class="okr-identifier">${okrIdentifier}</span>
                                 <h3 class="okr-title-header">${okr.title}</h3>
+                                <span class="okr-status-badge" style="background:${statusInfo.bg};color:${statusInfo.color};">
+                                    ${statusInfo.label}
+                                </span>
                                 <span class="kr-count">${okr.keyResults.length} KRs</span>
                             </div>
                             <div class="okr-meta-line">
@@ -163,6 +189,12 @@ const OKRsPage = {
                                     </svg>
                                     ${objective ? objective.text : 'N/A'}
                                 </span>
+                            </div>
+                            <div class="okr-progress-line">
+                                <div class="okr-progress-bar-header">
+                                    <div class="okr-progress-fill" style="width: ${okr.progress || 0}%"></div>
+                                </div>
+                                <span class="okr-progress-text">${okr.progress || 0}%</span>
                             </div>
                         </div>
                     </div>
@@ -239,8 +271,18 @@ const OKRsPage = {
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                                 </svg>
                                             </button>
-                                            <span class="kr-badge">KR${idx + 1}</span>
-                                            <span class="kr-title-text">${kr.title}</span>
+                                            <div class="kr-info-section">
+                                                <div class="kr-title-line">
+                                                    <span class="kr-badge">KR${idx + 1}</span>
+                                                    <span class="kr-title-text">${kr.title}</span>
+                                                </div>
+                                                <div class="kr-progress-line-header">
+                                                    <div class="kr-progress-bar-small">
+                                                        <div class="kr-progress-fill-small" style="width: ${kr.progress || 0}%"></div>
+                                                    </div>
+                                                    <span class="kr-progress-text-small">${kr.progress || 0}%</span>
+                                                </div>
+                                            </div>
                                         </div>
                                         <div class="kr-header-right" onclick="event.stopPropagation();">
                                             <span class="kr-status-badge" style="background:${statusInfo.bg};color:${statusInfo.color};">
@@ -301,7 +343,23 @@ const OKRsPage = {
                                                                 <span class="checkmark"></span>
                                                             </label>
                                                             <div class="initiative-content">
-                                                                <div class="initiative-name">${init.nome}</div>
+                                                                <div class="initiative-header-row">
+                                                                    <div class="initiative-name">${init.nome}</div>
+                                                                    <div class="initiative-progress-inline">
+                                                                        <input
+                                                                            type="range"
+                                                                            min="0"
+                                                                            max="100"
+                                                                            value="${init.progress || 0}"
+                                                                            class="initiative-progress-slider-inline"
+                                                                            id="slider-${init.id}"
+                                                                            style="background: linear-gradient(to right, var(--top-teal) ${init.progress || 0}%, var(--bg-main) ${init.progress || 0}%);"
+                                                                            oninput="OKRsPage.updateInitiativeProgressPreview('${init.id}', this.value)"
+                                                                            onchange="OKRsPage.updateInitiativeProgress('${init.id}', this.value)"
+                                                                        >
+                                                                        <span class="progress-value-inline" id="progress-value-${init.id}">${init.progress || 0}%</span>
+                                                                    </div>
+                                                                </div>
                                                                 ${init.responsavel || init.data_limite ? `
                                                                     <div class="initiative-meta">
                                                                         ${init.responsavel ? `
@@ -551,22 +609,26 @@ const OKRsPage = {
 
     toggleOKRMenu(event, okrId) {
         event.stopPropagation();
-        this.closeAllMenus();
+        window.closeAllDropdownMenus();
         const menu = document.getElementById(`okr-menu-${okrId}`);
-        if (menu) menu.classList.toggle('show');
+        if (menu) {
+            window.positionDropdownMenu(event.currentTarget, `okr-menu-${okrId}`);
+            menu.classList.toggle('show');
+        }
     },
 
     toggleKRMenu(event, krId) {
         event.stopPropagation();
-        this.closeAllMenus();
+        window.closeAllDropdownMenus();
         const menu = document.getElementById(`kr-menu-${krId}`);
-        if (menu) menu.classList.toggle('show');
+        if (menu) {
+            window.positionDropdownMenu(event.currentTarget, `kr-menu-${krId}`);
+            menu.classList.toggle('show');
+        }
     },
 
     closeAllMenus() {
-        document.querySelectorAll('.action-menu-dropdown').forEach(menu => {
-            menu.classList.remove('show');
-        });
+        window.closeAllDropdownMenus();
     },
 
     async addKR(okrId) {
@@ -813,6 +875,31 @@ const OKRsPage = {
                     </div>
 
                     <div class="form-group" style="margin-top:16px;">
+                        <label class="form-label">Progresso: <span id="init-progress-display">${this.currentInitiative.progress || 0}</span>%</label>
+                        <input
+                            type="range"
+                            id="init-progress"
+                            class="form-control-range initiative-progress-slider"
+                            min="0"
+                            max="100"
+                            value="${this.currentInitiative.progress || 0}"
+                            oninput="
+                                document.getElementById('init-progress-display').textContent = this.value;
+                                const bar = document.getElementById('init-progress-bar');
+                                if (bar) bar.style.width = this.value + '%';
+                            "
+                            style="width:100%;margin-top:8px;"
+                        >
+                        <div class="progress-bar-container" style="margin-top:8px;">
+                            <div
+                                id="init-progress-bar"
+                                class="progress-bar"
+                                style="width: ${this.currentInitiative.progress || 0}%"
+                            ></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top:16px;">
                         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
                             <input type="checkbox" id="init-concluida" ${this.currentInitiative.concluida ? 'checked' : ''}>
                             <span>Marcar como concluída</span>
@@ -845,6 +932,7 @@ const OKRsPage = {
         const descricao = document.getElementById('init-descricao').value.trim();
         const responsavelId = document.getElementById('init-responsavel').value || null;
         const dataLimite = document.getElementById('init-data-limite').value || null;
+        const progress = parseInt(document.getElementById('init-progress').value, 10) || 0;
         const concluida = document.getElementById('init-concluida').checked;
         const errorDiv = document.getElementById('init-error');
 
@@ -864,6 +952,7 @@ const OKRsPage = {
             initiative.descricao = descricao;
             initiative.responsavel_id = responsavelId;
             initiative.data_limite = dataLimite;
+            initiative.progress = progress;
             initiative.concluida = concluida;
 
             await initiative.save();
@@ -899,6 +988,41 @@ const OKRsPage = {
             DepartmentsPage.showToast('Iniciativa excluída com sucesso!', 'success');
         } catch (error) {
             DepartmentsPage.showToast(error.message || 'Erro ao excluir iniciativa', 'error');
+        }
+    },
+
+    // Atualiza o preview do progresso (enquanto arrasta o slider)
+    updateInitiativeProgressPreview(id, value) {
+        const progressValue = document.getElementById(`progress-value-${id}`);
+        if (progressValue) {
+            progressValue.textContent = `${value}%`;
+        }
+
+        // Atualiza o background do slider
+        const slider = document.getElementById(`slider-${id}`);
+        if (slider) {
+            slider.style.background = `linear-gradient(to right, var(--top-teal) ${value}%, var(--bg-main) ${value}%)`;
+        }
+    },
+
+    // Salva o progresso no banco (quando solta o slider)
+    async updateInitiativeProgress(id, value) {
+        try {
+            const initiative = await Initiative.getById(id);
+            if (!initiative) {
+                console.error('Iniciativa não encontrada:', id);
+                return;
+            }
+
+            await initiative.updateProgress(parseInt(value));
+
+            // Recarrega a lista para mostrar os progressos recalculados do KR e OKR
+            await this.renderList();
+
+            DepartmentsPage.showToast(`Progresso atualizado para ${value}%`, 'success');
+        } catch (error) {
+            console.error('Erro ao atualizar progresso:', error);
+            DepartmentsPage.showToast('Erro ao atualizar progresso', 'error');
         }
     },
 
@@ -1054,6 +1178,71 @@ const OKRsPage = {
 
             .okr-accordion-card:hover {
                 box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            }
+
+            .okr-accordion-card.okr-needs-adjustment {
+                border-color: #fca5a5;
+                box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
+            }
+
+            .okr-adjustment-banner {
+                display: flex;
+                align-items: flex-start;
+                gap: 12px;
+                padding: 14px 20px;
+                background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+                border-bottom: 1px solid #fecaca;
+                border-radius: 12px 12px 0 0;
+            }
+
+            .okr-needs-adjustment .okr-accordion-header {
+                border-radius: 0;
+            }
+
+            .adjustment-icon {
+                flex-shrink: 0;
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                background: #fee2e2;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #dc2626;
+            }
+
+            .adjustment-icon svg {
+                width: 18px;
+                height: 18px;
+            }
+
+            .adjustment-content {
+                flex: 1;
+            }
+
+            .adjustment-content strong {
+                display: block;
+                font-size: 13px;
+                font-weight: 600;
+                color: #dc2626;
+                margin-bottom: 4px;
+            }
+
+            .adjustment-content p {
+                font-size: 13px;
+                color: #991b1b;
+                margin: 0;
+                line-height: 1.5;
+            }
+
+            .okr-status-badge {
+                padding: 4px 10px;
+                border-radius: 6px;
+                font-size: 10px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.3px;
+                white-space: nowrap;
                 transform: translateY(-2px);
             }
 
@@ -1132,6 +1321,39 @@ const OKRsPage = {
             .okr-separator {
                 color: rgba(255, 255, 255, 0.5);
                 margin: 0 4px;
+            }
+
+            .okr-progress-line {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-top: 8px;
+            }
+
+            .okr-progress-bar-header {
+                flex: 1;
+                height: 8px;
+                background: rgba(255, 255, 255, 0.2);
+                border-radius: 10px;
+                overflow: hidden;
+                box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+            }
+
+            .okr-progress-fill {
+                height: 100%;
+                background: linear-gradient(90deg, #fff 0%, rgba(255, 255, 255, 0.85) 100%);
+                border-radius: 10px;
+                transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+            }
+
+            .okr-progress-text {
+                font-size: 14px;
+                font-weight: 700;
+                color: white;
+                min-width: 45px;
+                text-align: right;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
             }
 
             .expand-arrow {
@@ -1321,6 +1543,19 @@ const OKRsPage = {
                 flex: 1;
             }
 
+            .kr-info-section {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                flex: 1;
+            }
+
+            .kr-title-line {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
             .kr-badge {
                 background: var(--top-teal);
                 color: white;
@@ -1328,6 +1563,7 @@ const OKRsPage = {
                 border-radius: 6px;
                 font-size: 12px;
                 font-weight: 700;
+                flex-shrink: 0;
             }
 
             .kr-title-text {
@@ -1335,6 +1571,39 @@ const OKRsPage = {
                 font-weight: 600;
                 color: var(--text-primary);
                 flex: 1;
+            }
+
+            .kr-progress-line-header {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding-left: 46px;
+            }
+
+            .kr-progress-bar-small {
+                flex: 1;
+                max-width: 200px;
+                height: 6px;
+                background: var(--border-light);
+                border-radius: 10px;
+                overflow: hidden;
+                box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+            }
+
+            .kr-progress-fill-small {
+                height: 100%;
+                background: linear-gradient(90deg, var(--top-teal) 0%, #13a692 100%);
+                border-radius: 10px;
+                transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            }
+
+            .kr-progress-text-small {
+                font-size: 12px;
+                font-weight: 700;
+                color: var(--text-secondary);
+                min-width: 40px;
+                text-align: right;
             }
 
             .kr-header-right {
@@ -1422,31 +1691,65 @@ const OKRsPage = {
             .initiative-item {
                 display: flex;
                 align-items: flex-start;
-                gap: 12px;
-                padding: 12px;
-                background: white;
-                border: 1px solid var(--border);
-                border-radius: 8px;
-                transition: all 0.2s ease;
+                gap: 14px;
+                padding: 16px;
+                background: linear-gradient(to bottom, #ffffff, #fafbfc);
+                border: 1.5px solid var(--border);
+                border-radius: 10px;
+                transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+                position: relative;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            }
+
+            .initiative-item::before {
+                content: '';
+                position: absolute;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                width: 4px;
+                background: var(--top-teal);
+                border-radius: 10px 0 0 10px;
+                opacity: 0;
+                transition: opacity 0.25s ease;
             }
 
             .initiative-item:hover {
                 border-color: var(--top-teal);
-                box-shadow: 0 2px 8px rgba(18, 176, 160, 0.1);
+                box-shadow: 0 4px 12px rgba(18, 176, 160, 0.15), 0 2px 4px rgba(0, 0, 0, 0.05);
+                transform: translateY(-2px);
+            }
+
+            .initiative-item:hover::before {
+                opacity: 1;
             }
 
             .initiative-item.completed {
-                background: var(--success-bg);
+                background: linear-gradient(to bottom, #f0fdf4, #dcfce7);
                 border-color: var(--success);
+                box-shadow: 0 1px 3px rgba(34, 197, 94, 0.08);
+            }
+
+            .initiative-item.completed::before {
+                background: var(--success);
+                opacity: 1;
             }
 
             .initiative-item.completed .initiative-name {
                 color: var(--success);
+                text-decoration: line-through;
+                text-decoration-thickness: 1.5px;
             }
 
             .initiative-item.overdue:not(.completed) {
                 border-color: var(--danger);
-                background: var(--danger-bg);
+                background: linear-gradient(to bottom, #fef2f2, #fee2e2);
+                box-shadow: 0 1px 3px rgba(239, 68, 68, 0.08);
+            }
+
+            .initiative-item.overdue:not(.completed)::before {
+                background: var(--danger);
+                opacity: 1;
             }
 
             .initiative-checkbox {
@@ -1493,11 +1796,112 @@ const OKRsPage = {
                 min-width: 0;
             }
 
+            .initiative-header-row {
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                margin-bottom: 6px;
+            }
+
             .initiative-name {
                 font-size: 14px;
                 font-weight: 600;
+                color: #1f2937;
+                flex: 1;
+                min-width: 0;
+                line-height: 1.4;
+            }
+
+            .initiative-progress-inline {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                flex-shrink: 0;
+            }
+
+            .initiative-progress-slider-inline {
+                width: 120px;
+                height: 6px;
+                -webkit-appearance: none;
+                appearance: none;
+                border-radius: 3px;
+                outline: none;
+                cursor: pointer;
+            }
+
+            .initiative-progress-slider-inline::-webkit-slider-runnable-track {
+                width: 100%;
+                height: 6px;
+                border-radius: 3px;
+                background: transparent;
+            }
+
+            .initiative-progress-slider-inline::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                appearance: none;
+                width: 16px;
+                height: 16px;
+                background: white;
+                border: 3px solid var(--top-teal);
+                border-radius: 50%;
+                cursor: grab;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+                transition: all 0.15s;
+                margin-top: -5px;
+            }
+
+            .initiative-progress-slider-inline::-webkit-slider-thumb:hover {
+                border-color: var(--top-blue);
+                transform: scale(1.15);
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+            }
+
+            .initiative-progress-slider-inline::-webkit-slider-thumb:active {
+                cursor: grabbing;
+                transform: scale(1.05);
+            }
+
+            .initiative-progress-slider-inline::-moz-range-track {
+                width: 100%;
+                height: 6px;
+                border-radius: 3px;
+                background: var(--bg-main);
+            }
+
+            .initiative-progress-slider-inline::-moz-range-progress {
+                height: 6px;
+                border-radius: 3px;
+                background: var(--top-teal);
+            }
+
+            .initiative-progress-slider-inline::-moz-range-thumb {
+                width: 16px;
+                height: 16px;
+                background: white;
+                border: 3px solid var(--top-teal);
+                border-radius: 50%;
+                cursor: grab;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+                transition: all 0.15s;
+            }
+
+            .initiative-progress-slider-inline::-moz-range-thumb:hover {
+                border-color: var(--top-blue);
+                transform: scale(1.15);
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+            }
+
+            .initiative-progress-slider-inline::-moz-range-thumb:active {
+                cursor: grabbing;
+                transform: scale(1.05);
+            }
+
+            .progress-value-inline {
+                font-size: 13px;
+                font-weight: 600;
                 color: var(--text-primary);
-                margin-bottom: 4px;
+                min-width: 40px;
+                text-align: right;
             }
 
             .initiative-desc {
@@ -1525,6 +1929,117 @@ const OKRsPage = {
             .initiative-deadline.overdue {
                 color: var(--danger);
                 font-weight: 600;
+            }
+
+            .initiative-progress-section {
+                margin-top: 12px;
+                padding-top: 12px;
+                border-top: 1px solid var(--border);
+            }
+
+            .progress-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 6px;
+            }
+
+            .progress-label {
+                font-size: 12px;
+                color: var(--text-muted);
+                font-weight: 500;
+            }
+
+            .progress-value {
+                font-size: 13px;
+                color: var(--text-primary);
+                font-weight: 600;
+            }
+
+            .progress-bar-container {
+                height: 6px;
+                background: var(--bg-main);
+                border-radius: 3px;
+                overflow: hidden;
+                margin-bottom: 8px;
+            }
+
+            .progress-bar {
+                height: 100%;
+                background: var(--top-teal);
+                transition: width 0.3s ease;
+                border-radius: 3px;
+            }
+
+            .initiative-progress-slider {
+                width: 100%;
+                height: 8px;
+                -webkit-appearance: none;
+                appearance: none;
+                background: var(--bg-main);
+                border-radius: 4px;
+                outline: none;
+                margin: 8px 0;
+                cursor: pointer;
+            }
+
+            .initiative-progress-slider::-webkit-slider-runnable-track {
+                width: 100%;
+                height: 8px;
+                background: var(--bg-main);
+                border-radius: 4px;
+            }
+
+            .initiative-progress-slider::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                appearance: none;
+                width: 20px;
+                height: 20px;
+                background: var(--top-teal);
+                border: 3px solid white;
+                border-radius: 50%;
+                cursor: pointer;
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+                transition: all 0.2s;
+                margin-top: -6px;
+            }
+
+            .initiative-progress-slider::-webkit-slider-thumb:hover {
+                background: var(--top-blue);
+                transform: scale(1.15);
+                box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+            }
+
+            .initiative-progress-slider::-webkit-slider-thumb:active {
+                transform: scale(1.05);
+            }
+
+            .initiative-progress-slider::-moz-range-track {
+                width: 100%;
+                height: 8px;
+                background: var(--bg-main);
+                border-radius: 4px;
+            }
+
+            .initiative-progress-slider::-moz-range-thumb {
+                width: 20px;
+                height: 20px;
+                background: var(--top-teal);
+                border: 3px solid white;
+                border-radius: 50%;
+                cursor: pointer;
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+                transition: all 0.2s;
+            }
+
+            .initiative-progress-slider::-moz-range-thumb:hover {
+                background: var(--top-blue);
+                transform: scale(1.15);
+                box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+            }
+
+            .initiative-progress-slider::-moz-range-thumb:active {
+                transform: scale(1.05);
             }
 
             .initiative-actions {
@@ -1586,6 +2101,19 @@ const OKRsPage = {
                     flex-wrap: wrap;
                 }
 
+                .okr-progress-line {
+                    margin-top: 6px;
+                }
+
+                .okr-progress-bar-header {
+                    height: 6px;
+                }
+
+                .okr-progress-text {
+                    font-size: 12px;
+                    min-width: 38px;
+                }
+
                 .okr-title-header {
                     font-size: 14px;
                 }
@@ -1602,9 +2130,24 @@ const OKRsPage = {
                     flex-wrap: wrap;
                 }
 
+                .kr-info-section {
+                    width: 100%;
+                }
+
+                .kr-title-line {
+                    width: 100%;
+                }
+
                 .kr-title-text {
                     font-size: 13px;
-                    width: 100%;
+                }
+
+                .kr-progress-line-header {
+                    padding-left: 0;
+                }
+
+                .kr-progress-bar-small {
+                    max-width: 100%;
                 }
 
                 .kr-status-badge {

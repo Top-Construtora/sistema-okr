@@ -205,17 +205,16 @@ const DepartmentsPage = {
 
     toggleMenu(event, deptId) {
         event.stopPropagation();
-        this.closeAllMenus();
+        window.closeAllDropdownMenus();
         const menu = document.getElementById(`dept-menu-${deptId}`);
         if (menu) {
+            window.positionDropdownMenu(event.currentTarget, `dept-menu-${deptId}`);
             menu.classList.toggle('show');
         }
     },
 
     closeAllMenus() {
-        document.querySelectorAll('.action-menu-dropdown').forEach(menu => {
-            menu.classList.remove('show');
-        });
+        window.closeAllDropdownMenus();
     },
 
     showToast(message, type = 'success') {
