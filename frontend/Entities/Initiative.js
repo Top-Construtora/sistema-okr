@@ -12,6 +12,8 @@ class Initiative {
         this.progress = data.progress !== undefined ? data.progress : 0;
         this.concluida = data.concluida !== undefined ? data.concluida : false;
         this.position = data.position || 0;
+        this.comment = data.comment ?? '';
+        this.evidence = (data.evidence && Array.isArray(data.evidence)) ? data.evidence : [];
         this.created_at = data.created_at || null;
         this.updated_at = data.updated_at || null;
         // Dados do responsável (quando vem de join)
@@ -91,7 +93,9 @@ class Initiative {
             data_limite: this.data_limite,
             progress: this.progress,
             concluida: this.concluida,
-            position: this.position
+            position: this.position,
+            comment: this.comment || null,
+            evidence: this.evidence || []
         };
 
         if (this.id) {

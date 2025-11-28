@@ -261,7 +261,7 @@ const Layout = {
     getPageTitle(page) {
         const titles = {
             dashboard: 'Dashboard',
-            okrs: "Gestão de O's",
+            okrs: "Gestão de OKRs",
             cycles: 'Gestão de Ciclos',
             objectives: 'Objetivos Estratégicos',
             approval: 'Comitê de Aprovação',

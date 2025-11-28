@@ -475,6 +475,47 @@ const OKRsPage = {
                                                                                 ` : ''}
                                                                             </div>
                                                                         ` : ''}
+                                                                        ${(init.comment && init.comment.trim()) || (init.evidence && Array.isArray(init.evidence) && init.evidence.length > 0) ? `
+                                                                            <div class="initiative-extra-info">
+                                                                                ${init.comment && init.comment.trim() ? `
+                                                                                    <div class="init-comment-section">
+                                                                                        <span class="init-info-label">
+                                                                                            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
+                                                                                            </svg>
+                                                                                            Comentário:
+                                                                                        </span>
+                                                                                        <p class="init-comment-text">${init.comment}</p>
+                                                                                    </div>
+                                                                                ` : ''}
+                                                                                ${init.evidence && Array.isArray(init.evidence) && init.evidence.length > 0 ? `
+                                                                                    <div class="init-evidence-section">
+                                                                                        <span class="init-info-label">
+                                                                                            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                                                                            </svg>
+                                                                                            Medições/Evidências (${init.evidence.length}):
+                                                                                        </span>
+                                                                                        <div class="init-evidence-list">
+                                                                                            ${init.evidence.map((ev, idx) => `
+                                                                                                <div class="init-evidence-item">
+                                                                                                    ${ev.type === 'text'
+                                                                                                        ? `<span class="init-evidence-text">${ev.content}</span>`
+                                                                                                        : `<a href="${ev.content}" target="_blank" class="init-evidence-file">
+                                                                                                            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                                                                                            </svg>
+                                                                                                            ${ev.name || 'Arquivo'}
+                                                                                                        </a>`
+                                                                                                    }
+                                                                                                </div>
+                                                                                                ${idx < init.evidence.length - 1 ? '<span class="init-evidence-separator">•</span>' : ''}
+                                                                                            `).join('')}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                ` : ''}
+                                                                            </div>
+                                                                        ` : ''}
                                                                     </div>
                                                                     <div class="initiative-actions">
                                                                         <button class="btn-icon-sm" onclick="OKRsPage.openInitiativeModal('${kr.id}', '${init.id}')" title="Editar">
@@ -1257,6 +1298,55 @@ const OKRsPage = {
                         </label>
                     </div>
 
+                    <div class="form-group" style="margin-top:16px;">
+                        <label class="form-label">Comentário</label>
+                        <textarea id="init-comment" class="form-control" rows="3"
+                            placeholder="Adicione observações ou comentários sobre esta iniciativa...">${this.currentInitiative.comment ?? ''}</textarea>
+                    </div>
+
+                    <div class="form-group" style="margin-top:16px;">
+                        <label class="form-label">Medições e Evidências</label>
+                        <div id="init-evidence-list" class="evidence-list">
+                            ${(this.currentInitiative.evidence && Array.isArray(this.currentInitiative.evidence) ? this.currentInitiative.evidence : []).map((ev, idx) => `
+                                <div class="evidence-item" data-index="${idx}">
+                                    <div class="evidence-item-header">
+                                        <span class="evidence-type-badge ${ev.type}">${ev.type === 'text' ? 'Texto' : 'Arquivo'}</span>
+                                        <button type="button" class="btn-icon-sm delete" onclick="OKRsPage.removeInitEvidenceField(${idx})" title="Remover">
+                                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    ${ev.type === 'text'
+                                        ? `<textarea class="form-control evidence-content" rows="2" placeholder="Descrição da evidência...">${ev.content}</textarea>`
+                                        : `<div class="existing-file-display">
+                                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                            </svg>
+                                            <span class="existing-file-name">${ev.name || 'Arquivo'}</span>
+                                            <a href="${ev.content}" target="_blank" class="btn btn-xs btn-secondary">Ver</a>
+                                        </div>
+                                        <input type="hidden" class="evidence-content" value="${ev.content}">
+                                        <input type="hidden" class="evidence-filename" value="${ev.name || ''}">`
+                                    }
+                                    <input type="hidden" class="evidence-type-input" value="${ev.type}">
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="evidence-add-section" style="margin-top:8px;">
+                            <select id="init-evidence-type" class="form-control" style="width:auto;display:inline-block;margin-right:8px;">
+                                <option value="text">Texto</option>
+                                <option value="file">Arquivo</option>
+                            </select>
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="OKRsPage.addInitEvidenceField()">
+                                + Adicionar Evidência
+                            </button>
+                        </div>
+                        <small style="color:var(--text-muted);font-size:11px;display:block;margin-top:4px;">
+                            Adicione textos descritivos ou faça upload de arquivos (PDF, imagens, documentos)
+                        </small>
+                    </div>
+
                     <div id="init-error" class="error-message" style="display:none;margin-top:16px;"></div>
                 </div>
                 <div class="modal-footer">
@@ -1277,6 +1367,156 @@ const OKRsPage = {
         this.currentInitiative = null;
     },
 
+    // Funções para gerenciar evidências de iniciativas
+    addInitEvidenceField() {
+        const type = document.getElementById('init-evidence-type').value;
+        const list = document.getElementById('init-evidence-list');
+        const index = list.querySelectorAll('.evidence-item').length;
+
+        const item = document.createElement('div');
+        item.className = 'evidence-item';
+        item.dataset.index = index;
+        item.innerHTML = `
+            <div class="evidence-item-header">
+                <span class="evidence-type-badge ${type}">${type === 'text' ? 'Texto' : 'Arquivo'}</span>
+                <button type="button" class="btn-icon-sm delete" onclick="OKRsPage.removeInitEvidenceField(${index})" title="Remover">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            ${type === 'text'
+                ? `<textarea class="form-control evidence-content" rows="2" placeholder="Descrição da evidência..."></textarea>`
+                : `<div class="file-upload-wrapper">
+                    <input type="file" class="evidence-file-input" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif" onchange="OKRsPage.handleInitFileSelect(${index}, this)">
+                    <label class="file-upload-label">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                        </svg>
+                        <span>Clique para selecionar arquivo ou arraste aqui</span>
+                    </label>
+                    <div class="file-selected" style="display:none;">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span class="file-name"></span>
+                        <span class="file-size"></span>
+                    </div>
+                </div>`
+            }
+            <input type="hidden" class="evidence-type-input" value="${type}">
+        `;
+
+        list.appendChild(item);
+    },
+
+    handleInitFileSelect(index, input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        const item = document.querySelector(`#init-evidence-list .evidence-item[data-index="${index}"]`);
+        if (!item) return;
+
+        const wrapper = item.querySelector('.file-upload-wrapper');
+        const label = wrapper.querySelector('.file-upload-label');
+        const selected = wrapper.querySelector('.file-selected');
+        const fileName = selected.querySelector('.file-name');
+        const fileSize = selected.querySelector('.file-size');
+
+        if (file.size > 10 * 1024 * 1024) {
+            alert('Arquivo muito grande. Máximo permitido: 10MB');
+            input.value = '';
+            return;
+        }
+
+        label.style.display = 'none';
+        selected.style.display = 'flex';
+        fileName.textContent = file.name;
+        fileSize.textContent = this.formatFileSize(file.size);
+
+        item.dataset.file = 'pending';
+        item.fileObject = file;
+    },
+
+    removeInitEvidenceField(index) {
+        const list = document.getElementById('init-evidence-list');
+        const item = list.querySelector(`.evidence-item[data-index="${index}"]`);
+        if (item) item.remove();
+    },
+
+    async collectInitEvidence(initId) {
+        const list = document.getElementById('init-evidence-list');
+        if (!list) return [];
+
+        const items = list.querySelectorAll('.evidence-item');
+        const evidence = [];
+
+        for (const item of items) {
+            const type = item.querySelector('.evidence-type-input')?.value || 'text';
+
+            if (type === 'text') {
+                const content = item.querySelector('.evidence-content')?.value?.trim() ||
+                               item.querySelector('textarea.evidence-content')?.value?.trim() || '';
+                if (content) {
+                    evidence.push({ type: 'text', content });
+                }
+            } else if (type === 'file') {
+                const existingUrl = item.querySelector('.evidence-content')?.value;
+                const existingName = item.querySelector('.evidence-filename')?.value;
+
+                if (item.fileObject) {
+                    try {
+                        const uploaded = await this.uploadInitFile(item.fileObject, initId);
+                        evidence.push({
+                            type: 'file',
+                            content: uploaded.url,
+                            name: uploaded.name,
+                            size: uploaded.size,
+                            path: uploaded.path
+                        });
+                    } catch (error) {
+                        console.error('Erro ao fazer upload:', error);
+                        DepartmentsPage.showToast('Erro ao fazer upload do arquivo', 'error');
+                    }
+                } else if (existingUrl) {
+                    evidence.push({
+                        type: 'file',
+                        content: existingUrl,
+                        name: existingName || 'arquivo'
+                    });
+                }
+            }
+        }
+
+        return evidence;
+    },
+
+    async uploadInitFile(file, initId) {
+        const timestamp = Date.now();
+        const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const filePath = `init_${initId}/${timestamp}_${safeName}`;
+
+        const { data, error } = await supabaseClient.storage
+            .from('evidencias')
+            .upload(filePath, file);
+
+        if (error) {
+            console.error('Erro no upload:', error);
+            throw error;
+        }
+
+        const { data: urlData } = supabaseClient.storage
+            .from('evidencias')
+            .getPublicUrl(filePath);
+
+        return {
+            url: urlData.publicUrl,
+            name: file.name,
+            size: file.size,
+            path: filePath
+        };
+    },
+
     async saveInitiative() {
         const keyResultId = document.getElementById('init-kr-id').value;
         const nome = document.getElementById('init-nome').value.trim();
@@ -1285,6 +1525,7 @@ const OKRsPage = {
         const dataLimite = document.getElementById('init-data-limite').value || null;
         const progress = parseInt(document.getElementById('init-progress').value, 10) || 0;
         const concluida = document.getElementById('init-concluida').checked;
+        const comment = document.getElementById('init-comment')?.value.trim() || '';
         const errorDiv = document.getElementById('init-error');
 
         errorDiv.style.display = 'none';
@@ -1297,6 +1538,8 @@ const OKRsPage = {
 
         try {
             const initiative = this.currentInitiative.id ? await Initiative.getById(this.currentInitiative.id) : new Initiative();
+            const initId = initiative.id || generateId();
+            const evidence = await this.collectInitEvidence(initId);
 
             initiative.key_result_id = keyResultId;
             initiative.nome = nome;
@@ -1305,6 +1548,8 @@ const OKRsPage = {
             initiative.data_limite = dataLimite;
             initiative.progress = progress;
             initiative.concluida = concluida;
+            initiative.comment = comment;
+            initiative.evidence = evidence;
 
             await initiative.save();
 
@@ -2409,6 +2654,91 @@ const OKRsPage = {
             .initiative-actions {
                 display: flex;
                 gap: 4px;
+            }
+
+            /* Initiative Comment and Evidence Display */
+            .initiative-extra-info {
+                margin-top: 10px;
+                padding-top: 10px;
+                border-top: 1px dashed var(--border);
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .init-info-label {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                font-size: 11px;
+                font-weight: 600;
+                color: var(--text-muted);
+                text-transform: uppercase;
+                letter-spacing: 0.3px;
+            }
+
+            .init-info-label svg {
+                opacity: 0.7;
+            }
+
+            .init-comment-section {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+
+            .init-comment-text {
+                margin: 0;
+                font-size: 13px;
+                color: var(--text-secondary);
+                line-height: 1.5;
+                padding-left: 16px;
+            }
+
+            .init-evidence-section {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+
+            .init-evidence-list {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 4px;
+                padding-left: 16px;
+            }
+
+            .init-evidence-item {
+                display: inline;
+            }
+
+            .init-evidence-text {
+                font-size: 13px;
+                color: var(--text-secondary);
+            }
+
+            .init-evidence-file {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                font-size: 12px;
+                color: var(--top-teal);
+                text-decoration: none;
+                padding: 2px 8px;
+                background: var(--success-bg);
+                border-radius: 4px;
+                transition: all 0.2s;
+            }
+
+            .init-evidence-file:hover {
+                background: var(--top-teal);
+                color: white;
+            }
+
+            .init-evidence-separator {
+                color: var(--text-muted);
+                font-size: 10px;
             }
 
             .btn-icon-sm {
