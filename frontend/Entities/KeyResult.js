@@ -7,6 +7,8 @@ class KeyResult {
         this.target = data.target || '';
         this.progress = data.progress || 0;
         this.tasks = data.tasks || [];
+        this.comment = data.comment ?? '';
+        this.evidence = (data.evidence && Array.isArray(data.evidence)) ? data.evidence : []; // Array de { type: 'text'|'link', content: string }
     }
 
     // Validações
@@ -60,7 +62,9 @@ class KeyResult {
             metric: this.metric,
             target: this.target,
             progress: this.progress,
-            tasks: this.tasks
+            tasks: this.tasks,
+            comment: this.comment,
+            evidence: this.evidence
         };
     }
 

@@ -132,11 +132,14 @@ class OKR {
                     const krs = this.key_results.map((kr, idx) => ({
                         okr_id: this.id,
                         title: kr.title,
-                        metric: kr.metric,
-                        target: kr.target,
+                        metric: kr.metric || '%',
+                        target: kr.target || '100',
                         progress: kr.progress || 0,
                         tasks: kr.tasks || [],
-                        position: idx
+                        position: idx,
+                        status: kr.status || 'pending',
+                        comment: kr.comment || null,
+                        evidence: kr.evidence || []
                     }));
 
                     const { error: krError } = await supabaseClient
@@ -161,11 +164,14 @@ class OKR {
                     const krs = this.key_results.map((kr, idx) => ({
                         okr_id: this.id,
                         title: kr.title,
-                        metric: kr.metric,
-                        target: kr.target,
+                        metric: kr.metric || '%',
+                        target: kr.target || '100',
                         progress: kr.progress || 0,
                         tasks: kr.tasks || [],
-                        position: idx
+                        position: idx,
+                        status: kr.status || 'pending',
+                        comment: kr.comment || null,
+                        evidence: kr.evidence || []
                     }));
 
                     const { error: krError } = await supabaseClient

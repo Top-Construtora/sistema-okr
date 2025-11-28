@@ -2,6 +2,7 @@ import { StorageService } from '../../services/storage.js';
 import { supabaseClient } from '../../services/supabase.js';
 import { Cycle } from '../../Entities/Cycle.js';
 import { MiniCycle } from '../../Entities/MiniCycle.js';
+import { AuthService } from '../../services/auth.js';
 
 // Página de Gestão de Ciclos
 const CyclesPage = {
@@ -12,6 +13,7 @@ const CyclesPage = {
     async render() {
         const content = document.getElementById('content');
         const cycles = await Cycle.getAll();
+        const isAdmin = AuthService.isAdmin();
 
         content.innerHTML = `
             <div class="page-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;">
@@ -19,12 +21,14 @@ const CyclesPage = {
                     <h2 style="font-size:20px;font-weight:700;color:var(--top-blue);margin-bottom:4px;">Gestão de Ciclos</h2>
                     <p style="color:var(--text-muted);font-size:13px;">${cycles.length} ${cycles.length === 1 ? 'ciclo cadastrado' : 'ciclos cadastrados'}</p>
                 </div>
+                ${isAdmin ? `
                 <button class="btn btn-primary" onclick="CyclesPage.openCycleModal()">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                     </svg>
                     Novo Ciclo
                 </button>
+                ` : ''}
             </div>
 
             <div id="cycles-list"></div>
@@ -39,6 +43,7 @@ const CyclesPage = {
     async renderList() {
         const container = document.getElementById('cycles-list');
         const cycles = await Cycle.getAll();
+        const isAdmin = AuthService.isAdmin();
 
         if (cycles.length === 0) {
             container.innerHTML = `
@@ -48,9 +53,11 @@ const CyclesPage = {
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                         </svg>
                         <p style="color:var(--text-muted);font-size:15px;margin-bottom:16px;">Nenhum ciclo encontrado</p>
+                        ${isAdmin ? `
                         <button class="btn btn-primary" onclick="CyclesPage.openCycleModal()">
                             Criar primeiro ciclo
                         </button>
+                        ` : ''}
                     </div>
                 </div>
             `;
@@ -97,6 +104,7 @@ const CyclesPage = {
                                 </div>
                             </div>
                         </div>
+                        ${isAdmin ? `
                         <div style="display:flex;gap:8px;">
                             <button class="btn btn-sm btn-secondary" onclick="CyclesPage.openMiniCycleModal('${cycle.id}')">
                                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -113,6 +121,7 @@ const CyclesPage = {
                                 ${cycle.ativo ? 'Inativar' : 'Ativar'}
                             </button>
                         </div>
+                        ` : ''}
                     </div>
 
                     <div class="minicycles-container ${isExpanded ? 'expanded' : ''}" data-cycle-id="${cycle.id}">
@@ -125,9 +134,11 @@ const CyclesPage = {
                         ` : `
                             <div class="card-body" style="text-align:center;padding:40px;color:var(--text-muted);">
                                 <p>Nenhum miniciclo criado ainda.</p>
+                                ${isAdmin ? `
                                 <button class="btn btn-sm btn-primary" onclick="CyclesPage.openMiniCycleModal('${cycle.id}')" style="margin-top:12px;">
                                     Criar Primeiro Miniciclo
                                 </button>
+                                ` : ''}
                             </div>
                         `}
                     </div>
@@ -140,6 +151,7 @@ const CyclesPage = {
 
     async renderMiniCycles(miniCycles) {
         let html = '';
+        const isAdmin = AuthService.isAdmin();
 
         for (const mini of miniCycles) {
             const okrsCount = await mini.getOKRsCount();
@@ -189,6 +201,7 @@ const CyclesPage = {
                         </div>
                     </div>
 
+                    ${isAdmin ? `
                     <div class="minicycle-footer">
                         <button class="btn btn-sm btn-secondary" onclick="CyclesPage.openMiniCycleModal('${mini.cycle_id}', '${mini.id}')" title="Editar miniciclo">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -204,6 +217,7 @@ const CyclesPage = {
                             </svg>
                         </button>
                     </div>
+                    ` : ''}
                 </div>
             `;
         }

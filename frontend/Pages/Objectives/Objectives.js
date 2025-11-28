@@ -1,6 +1,7 @@
 import { StorageService } from '../../services/storage.js';
 import { supabaseClient } from '../../services/supabase.js';
 import { OKR } from '../../Entities/OKR.js';
+import { AuthService } from '../../services/auth.js';
 
 // Página de Gestão de Objetivos Estratégicos
 const ObjectivesPage = {
@@ -10,6 +11,7 @@ const ObjectivesPage = {
     async render() {
         const content = document.getElementById('content');
         const objectives = await StorageService.getObjectives();
+        const isAdmin = AuthService.isAdmin();
 
         content.innerHTML = `
             <div class="page-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
@@ -17,12 +19,14 @@ const ObjectivesPage = {
                     <h2 style="font-size:20px;font-weight:700;color:var(--top-blue);margin-bottom:4px;">Objetivos Estratégicos</h2>
                     <p style="color:var(--text-muted);font-size:13px;">${objectives.length} ${objectives.length === 1 ? 'objetivo cadastrado' : 'objetivos cadastrados'}</p>
                 </div>
+                ${isAdmin ? `
                 <button class="btn btn-primary" onclick="ObjectivesPage.openModal()">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                     </svg>
                     Novo Objetivo
                 </button>
+                ` : ''}
             </div>
 
             <div class="filter-buttons" style="margin-bottom:24px;">
@@ -59,6 +63,7 @@ const ObjectivesPage = {
         const container = document.getElementById('objectives-list');
         if (!container) return;
 
+        const isAdmin = AuthService.isAdmin();
         let objectives = await StorageService.getObjectives();
 
         // Filtro por categoria
@@ -76,9 +81,11 @@ const ObjectivesPage = {
                         <p style="color:var(--text-muted);font-size:15px;margin-bottom:16px;">
                             ${this.currentFilter === 'all' ? 'Nenhum objetivo cadastrado' : `Nenhum objetivo da categoria "${this.currentFilter}"`}
                         </p>
+                        ${isAdmin ? `
                         <button class="btn btn-primary" onclick="ObjectivesPage.openModal()">
                             Criar primeiro objetivo
                         </button>
+                        ` : ''}
                     </div>
                 </div>
             `;
@@ -132,10 +139,11 @@ const ObjectivesPage = {
                             </div>
                             <div>
                                 <div class="metric-value">${okrCount}</div>
-                                <div class="metric-label">${okrCount === 1 ? 'OKR' : 'OKRs'}</div>
+                                <div class="metric-label">${okrCount === 1 ? 'Título' : "Títulos"}</div>
                             </div>
                         </div>
                     </td>
+                    ${isAdmin ? `
                     <td class="actions-cell" style="text-align:right;">
                         <div class="action-menu">
                             <button class="action-menu-btn" onclick="ObjectivesPage.toggleMenu(event, '${obj.id}')" title="Ações">
@@ -159,6 +167,7 @@ const ObjectivesPage = {
                             </div>
                         </div>
                     </td>
+                    ` : '<td></td>'}
                 </tr>
             `;
         }).join('');
@@ -170,8 +179,8 @@ const ObjectivesPage = {
                         <tr>
                             <th class="col-category">Categoria</th>
                             <th class="col-objective">Objetivo</th>
-                            <th class="col-okrs">OKRs Vinculados</th>
-                            <th class="col-actions">Ações</th>
+                            <th class="col-okrs">O's Vinculados</th>
+                            ${isAdmin ? '<th class="col-actions">Ações</th>' : '<th></th>'}
                         </tr>
                     </thead>
                     <tbody>

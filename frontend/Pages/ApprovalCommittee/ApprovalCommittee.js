@@ -71,7 +71,7 @@ const ApprovalPage = {
                 <div class="kanban-card-header">
                     <div>
                         <div class="kanban-card-dept">${okr.department}</div>
-                        <div class="kanban-card-title">${okr.title}</div>
+                        <div class="kanban-card-title">O: ${okr.title}</div>
                     </div>
                 </div>
 
@@ -166,7 +166,7 @@ const ApprovalPage = {
         await okr.save();
 
         await this.render();
-        DepartmentsPage.showToast('Status do OKR atualizado com sucesso!', 'success');
+        DepartmentsPage.showToast('Status do O atualizado com sucesso!', 'success');
     },
 
     addStyles() {

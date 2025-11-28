@@ -46,14 +46,14 @@ const OKRsPage = {
         content.innerHTML = `
             <div class="page-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
                 <div>
-                    <h2 style="font-size:20px;font-weight:700;color:var(--top-blue);margin-bottom:4px;">Gestão de OKRs</h2>
-                    <p style="color:var(--text-muted);font-size:13px;">${okrs.length} ${okrs.length === 1 ? 'OKR cadastrado' : 'OKRs cadastrados'}${!isAdmin ? ` - ${userDepartmentName}` : ''}</p>
+                    <h2 style="font-size:20px;font-weight:700;color:var(--top-blue);margin-bottom:4px;">Gestão de O's</h2>
+                    <p style="color:var(--text-muted);font-size:13px;">${okrs.length} ${okrs.length === 1 ? 'O cadastrado' : "O's cadastrados"}${!isAdmin ? ` - ${userDepartmentName}` : ''}</p>
                 </div>
                 <button class="btn btn-primary" onclick="OKRsPage.openModal()">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                     </svg>
-                    Novo OKR
+                    Novo O
                 </button>
             </div>
 
@@ -143,7 +143,7 @@ const OKRsPage = {
                         </svg>
                         <p style="color:var(--text-muted);font-size:15px;margin-bottom:16px;">Nenhum OKR encontrado</p>
                         <button class="btn btn-primary" onclick="OKRsPage.openModal()">
-                            Criar primeiro OKR
+                            Criar primeiro O
                         </button>
                     </div>
                 </div>
@@ -195,7 +195,7 @@ const OKRsPage = {
                         <div class="okr-info-wrapper">
                             <div class="okr-main-line">
                                 <span class="okr-identifier">${okrIdentifier}</span>
-                                <h3 class="okr-title-header">${okr.title}</h3>
+                                <h3 class="okr-title-header">O: ${okr.title}</h3>
                                 <span class="okr-status-badge" style="background:${statusInfo.bg};color:${statusInfo.color};">
                                     ${statusInfo.label}
                                 </span>
@@ -339,90 +339,148 @@ const OKRsPage = {
                                     </div>
 
                                     <div class="kr-accordion-body ${isKRExpanded ? 'expanded' : ''}" data-kr-id="${kr.id}">
-                                        <div class="initiatives-section">
-                                            <div class="initiatives-section-header">
-                                                <div class="section-title">
-                                                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                                                    </svg>
-                                                    Iniciativas
+                                        <div class="kr-body-content">
+                                            <!-- Comentário e Evidências lado a lado -->
+                                            <div class="kr-top-row">
+                                                <!-- Seção de Comentário -->
+                                                <div class="kr-detail-section">
+                                                    <div class="kr-detail-header">
+                                                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
+                                                        </svg>
+                                                        <span>Comentário</span>
+                                                    </div>
+                                                    <div class="kr-detail-body">
+                                                        ${kr.comment && kr.comment.trim()
+                                                            ? `<p class="kr-comment-text">${kr.comment}</p>`
+                                                            : `<p class="kr-empty-text">Nenhum comentário adicionado</p>`
+                                                        }
+                                                    </div>
                                                 </div>
-                                                <button class="btn btn-sm btn-primary" onclick="OKRsPage.openInitiativeModal('${kr.id}')">
-                                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                                                    </svg>
-                                                    Nova Iniciativa
-                                                </button>
+
+                                                <!-- Seção de Evidências -->
+                                                <div class="kr-detail-section">
+                                                    <div class="kr-detail-header">
+                                                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                                        </svg>
+                                                        <span>Evidências</span>
+                                                        ${kr.evidence && Array.isArray(kr.evidence) && kr.evidence.length > 0
+                                                            ? `<span class="kr-count-badge">${kr.evidence.length}</span>`
+                                                            : ''
+                                                        }
+                                                    </div>
+                                                    <div class="kr-detail-body">
+                                                        ${kr.evidence && Array.isArray(kr.evidence) && kr.evidence.length > 0 ? `
+                                                            <div class="kr-evidence-list">
+                                                                ${kr.evidence.map(ev => ev.type === 'text'
+                                                                    ? `<p class="kr-evidence-text">${ev.content}</p>`
+                                                                    : `<div class="kr-evidence-card link">
+                                                                        <div class="evidence-card-icon">
+                                                                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                                                                            </svg>
+                                                                        </div>
+                                                                        <div class="evidence-card-content">
+                                                                            <a href="${ev.content}" target="_blank" rel="noopener noreferrer" class="evidence-card-link">${ev.content}</a>
+                                                                        </div>
+                                                                    </div>`
+                                                                ).join('')}
+                                                            </div>
+                                                        ` : `
+                                                            <p class="kr-empty-text">Nenhuma evidência adicionada</p>
+                                                        `}
+                                                    </div>
+                                                </div>
                                             </div>
 
-                                            ${initiatives.length === 0 ? `
-                                                <div class="empty-initiatives">
-                                                    <p>Nenhuma iniciativa cadastrada</p>
+                                            <!-- Seção de Iniciativas -->
+                                            <div class="kr-detail-section">
+                                                <div class="kr-detail-header">
+                                                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                                    </svg>
+                                                    <span>Iniciativas</span>
+                                                    ${initiatives.length > 0
+                                                        ? `<span class="kr-count-badge">${initiatives.length}</span>`
+                                                        : ''
+                                                    }
+                                                    <button class="btn btn-xs btn-primary" onclick="OKRsPage.openInitiativeModal('${kr.id}')" style="margin-left:auto;">
+                                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                                        </svg>
+                                                        Nova
+                                                    </button>
                                                 </div>
-                                            ` : `
-                                                <div class="initiatives-list">
-                                                    ${initiatives.map(init => `
-                                                        <div class="initiative-item ${init.concluida ? 'completed' : ''} ${init.isOverdue() ? 'overdue' : ''}">
-                                                            <label class="initiative-checkbox">
-                                                                <input type="checkbox" ${init.concluida ? 'checked' : ''}
-                                                                    onchange="OKRsPage.toggleInitiative('${init.id}')">
-                                                                <span class="checkmark"></span>
-                                                            </label>
-                                                            <div class="initiative-content">
-                                                                <div class="initiative-header-row">
-                                                                    <div class="initiative-name">${init.nome}</div>
-                                                                    <div class="initiative-progress-inline">
-                                                                        <input
-                                                                            type="range"
-                                                                            min="0"
-                                                                            max="100"
-                                                                            value="${init.progress || 0}"
-                                                                            class="initiative-progress-slider-inline"
-                                                                            id="slider-${init.id}"
-                                                                            style="background: linear-gradient(to right, var(--top-teal) ${init.progress || 0}%, var(--bg-main) ${init.progress || 0}%);"
-                                                                            oninput="OKRsPage.updateInitiativeProgressPreview('${init.id}', this.value)"
-                                                                            onchange="OKRsPage.updateInitiativeProgress('${init.id}', this.value)"
-                                                                        >
-                                                                        <span class="progress-value-inline" id="progress-value-${init.id}">${init.progress || 0}%</span>
+                                                <div class="kr-detail-body">
+                                                    ${initiatives.length === 0 ? `
+                                                        <p class="kr-empty-text">Nenhuma iniciativa cadastrada</p>
+                                                    ` : `
+                                                        <div class="initiatives-list">
+                                                            ${initiatives.map(init => `
+                                                                <div class="initiative-item ${init.concluida ? 'completed' : ''} ${init.isOverdue() ? 'overdue' : ''}">
+                                                                    <label class="initiative-checkbox">
+                                                                        <input type="checkbox" ${init.concluida ? 'checked' : ''}
+                                                                            onchange="OKRsPage.toggleInitiative('${init.id}')">
+                                                                        <span class="checkmark"></span>
+                                                                    </label>
+                                                                    <div class="initiative-content">
+                                                                        <div class="initiative-header-row">
+                                                                            <div class="initiative-name">${init.nome}</div>
+                                                                            <div class="initiative-progress-inline">
+                                                                                <input
+                                                                                    type="range"
+                                                                                    min="0"
+                                                                                    max="100"
+                                                                                    value="${init.progress || 0}"
+                                                                                    class="initiative-progress-slider-inline"
+                                                                                    id="slider-${init.id}"
+                                                                                    style="background: linear-gradient(to right, var(--top-teal) ${init.progress || 0}%, var(--bg-main) ${init.progress || 0}%);"
+                                                                                    oninput="OKRsPage.updateInitiativeProgressPreview('${init.id}', this.value)"
+                                                                                    onchange="OKRsPage.updateInitiativeProgress('${init.id}', this.value)"
+                                                                                >
+                                                                                <span class="progress-value-inline" id="progress-value-${init.id}">${init.progress || 0}%</span>
+                                                                            </div>
+                                                                        </div>
+                                                                        ${init.responsavel || init.data_limite ? `
+                                                                            <div class="initiative-meta">
+                                                                                ${init.responsavel ? `
+                                                                                    <span class="initiative-responsavel">
+                                                                                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                                                                        </svg>
+                                                                                        ${init.responsavel.nome}
+                                                                                    </span>
+                                                                                ` : ''}
+                                                                                ${init.data_limite ? `
+                                                                                    <span class="initiative-deadline ${init.isOverdue() ? 'overdue' : ''}">
+                                                                                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                                                                        </svg>
+                                                                                        ${this.formatDate(init.data_limite)}
+                                                                                    </span>
+                                                                                ` : ''}
+                                                                            </div>
+                                                                        ` : ''}
+                                                                    </div>
+                                                                    <div class="initiative-actions">
+                                                                        <button class="btn-icon-sm" onclick="OKRsPage.openInitiativeModal('${kr.id}', '${init.id}')" title="Editar">
+                                                                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                                            </svg>
+                                                                        </button>
+                                                                        <button class="btn-icon-sm delete" onclick="OKRsPage.deleteInitiative('${init.id}', '${init.nome}')" title="Excluir">
+                                                                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                                            </svg>
+                                                                        </button>
                                                                     </div>
                                                                 </div>
-                                                                ${init.responsavel || init.data_limite ? `
-                                                                    <div class="initiative-meta">
-                                                                        ${init.responsavel ? `
-                                                                            <span class="initiative-responsavel">
-                                                                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                                                                                </svg>
-                                                                                ${init.responsavel.nome}
-                                                                            </span>
-                                                                        ` : ''}
-                                                                        ${init.data_limite ? `
-                                                                            <span class="initiative-deadline ${init.isOverdue() ? 'overdue' : ''}">
-                                                                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                                                                </svg>
-                                                                                ${this.formatDate(init.data_limite)}
-                                                                            </span>
-                                                                        ` : ''}
-                                                                    </div>
-                                                                ` : ''}
-                                                            </div>
-                                                            <div class="initiative-actions">
-                                                                <button class="btn-icon-sm" onclick="OKRsPage.openInitiativeModal('${kr.id}', '${init.id}')" title="Editar">
-                                                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                                                    </svg>
-                                                                </button>
-                                                                <button class="btn-icon-sm delete" onclick="OKRsPage.deleteInitiative('${init.id}', '${init.nome}')" title="Excluir">
-                                                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                                                    </svg>
-                                                                </button>
-                                                            </div>
+                                                            `).join('')}
                                                         </div>
-                                                    `).join('')}
+                                                    `}
                                                 </div>
-                                            `}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -462,9 +520,9 @@ const OKRsPage = {
             <div class="modal-content" style="max-width:600px;">
                 <div class="modal-header">
                     <div>
-                        <h3 style="margin:0;color:var(--top-blue);font-size:20px;">${this.currentOKR ? 'Editar' : 'Novo'} OKR</h3>
+                        <h3 style="margin:0;color:var(--top-blue);font-size:20px;">${this.currentOKR ? 'Editar' : 'Novo'} O</h3>
                         <p style="margin:4px 0 0;color:var(--text-muted);font-size:13px;">
-                            ${this.currentOKR ? 'Atualize as informações do OKR' : 'Defina um novo OKR. Você poderá adicionar Key Results depois.'}
+                            ${this.currentOKR ? 'Atualize as informações do O' : 'Defina um novo O. Você poderá adicionar Key Results depois.'}
                         </p>
                     </div>
                     <button class="modal-close" onclick="OKRsPage.closeModal()">
@@ -475,7 +533,7 @@ const OKRsPage = {
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
-                        <label class="form-label">Título do OKR *</label>
+                        <label class="form-label">Título do O *</label>
                         <input type="text" id="okr-title" class="form-control"
                             placeholder="Ex: Reduzir tempo de aprovação de projetos em 50%"
                             value="${this.currentOKR ? this.currentOKR.title : ''}">
@@ -507,7 +565,7 @@ const OKRsPage = {
                             ` : `
                                 <input type="text" id="okr-department-display" class="form-control" value="${userDepartmentName}" disabled style="background:var(--bg-main);cursor:not-allowed;">
                                 <input type="hidden" id="okr-department" value="${userDepartmentName}">
-                                <small style="color:var(--text-muted);font-size:11px;display:block;margin-top:4px;">OKR será criado para seu departamento</small>
+                                <small style="color:var(--text-muted);font-size:11px;display:block;margin-top:4px;">O será criado para seu departamento</small>
                             `}
                         </div>
                     </div>
@@ -515,7 +573,7 @@ const OKRsPage = {
                     ${!this.currentOKR ? `
                         <div class="info-box" style="margin-top:16px;padding:12px 16px;background:var(--info-bg);border-left:3px solid var(--info);border-radius:6px;">
                             <p style="margin:0;font-size:13px;color:var(--text-secondary);">
-                                💡 <strong>Dica:</strong> Após criar o OKR, você poderá adicionar Key Results clicando no botão "Novo KR".
+                                💡 <strong>Dica:</strong> Após criar o O, você poderá adicionar Key Results clicando no botão "Novo KR".
                             </p>
                         </div>
                     ` : ''}
@@ -528,7 +586,7 @@ const OKRsPage = {
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                         </svg>
-                        ${this.currentOKR ? 'Atualizar' : 'Criar'} OKR
+                        ${this.currentOKR ? 'Atualizar' : 'Criar'} O
                     </button>
                 </div>
             </div>
@@ -551,7 +609,7 @@ const OKRsPage = {
         errorDiv.style.display = 'none';
 
         if (!title) {
-            errorDiv.textContent = 'Título do OKR é obrigatório';
+            errorDiv.textContent = 'Título do O é obrigatório';
             errorDiv.style.display = 'block';
             return;
         }
@@ -598,10 +656,10 @@ const OKRsPage = {
         const okr = OKR.getById(id);
         if (!okr) return;
 
-        if (confirm(`Deseja realmente excluir o OKR "${okr.title}"?`)) {
+        if (confirm(`Deseja realmente excluir o O "${okr.title}"?`)) {
             OKR.delete(id);
             this.render();
-            DepartmentsPage.showToast('OKR excluído com sucesso!', 'success');
+            DepartmentsPage.showToast('O excluído com sucesso!', 'success');
         }
     },
 
@@ -679,7 +737,7 @@ const OKRsPage = {
 
         modal.innerHTML = `
             <div class="modal-overlay" onclick="OKRsPage.closeKRModal()"></div>
-            <div class="modal-content" style="max-width:600px;">
+            <div class="modal-content" style="max-width:700px;">
                 <div class="modal-header">
                     <h3>Novo Key Result</h3>
                     <button class="modal-close" onclick="OKRsPage.closeKRModal()">&times;</button>
@@ -700,6 +758,29 @@ const OKRsPage = {
                             <option value="in_progress">Em Progresso</option>
                             <option value="completed">Concluído</option>
                         </select>
+                    </div>
+
+                    <div class="form-group" style="margin-top:16px;">
+                        <label class="form-label">Comentário</label>
+                        <textarea id="kr-comment" class="form-control" rows="3"
+                            placeholder="Adicione observações ou comentários sobre este KR..."></textarea>
+                    </div>
+
+                    <div class="form-group" style="margin-top:16px;">
+                        <label class="form-label">Evidências</label>
+                        <div id="kr-evidence-list" class="evidence-list"></div>
+                        <div class="evidence-add-section" style="margin-top:8px;">
+                            <select id="kr-evidence-type" class="form-control" style="width:auto;display:inline-block;margin-right:8px;">
+                                <option value="text">Texto</option>
+                                <option value="link">Link (URL)</option>
+                            </select>
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="OKRsPage.addEvidenceField()">
+                                + Adicionar Evidência
+                            </button>
+                        </div>
+                        <small style="color:var(--text-muted);font-size:11px;display:block;margin-top:4px;">
+                            Adicione textos descritivos ou links para arquivos/documentos
+                        </small>
                     </div>
 
                     <div id="kr-error" class="error-message" style="display:none;margin-top:16px;"></div>
@@ -725,9 +806,11 @@ const OKRsPage = {
         modal.id = 'kr-modal';
         modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:1000;';
 
+        const existingEvidence = (kr.evidence && Array.isArray(kr.evidence)) ? kr.evidence : [];
+
         modal.innerHTML = `
             <div class="modal-overlay" onclick="OKRsPage.closeKRModal()"></div>
-            <div class="modal-content" style="max-width:600px;">
+            <div class="modal-content" style="max-width:700px;">
                 <div class="modal-header">
                     <h3>Editar Key Result</h3>
                     <button class="modal-close" onclick="OKRsPage.closeKRModal()">&times;</button>
@@ -751,6 +834,47 @@ const OKRsPage = {
                         </select>
                     </div>
 
+                    <div class="form-group" style="margin-top:16px;">
+                        <label class="form-label">Comentário</label>
+                        <textarea id="kr-comment" class="form-control" rows="3"
+                            placeholder="Adicione observações ou comentários sobre este KR...">${kr.comment ?? ''}</textarea>
+                    </div>
+
+                    <div class="form-group" style="margin-top:16px;">
+                        <label class="form-label">Evidências</label>
+                        <div id="kr-evidence-list" class="evidence-list">
+                            ${existingEvidence.map((ev, idx) => `
+                                <div class="evidence-item" data-index="${idx}">
+                                    <div class="evidence-item-header">
+                                        <span class="evidence-type-badge ${ev.type}">${ev.type === 'text' ? 'Texto' : 'Link'}</span>
+                                        <button type="button" class="btn-icon-sm delete" onclick="OKRsPage.removeEvidenceField(${idx})" title="Remover">
+                                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    ${ev.type === 'text'
+                                        ? `<textarea class="form-control evidence-content" rows="2" placeholder="Descrição da evidência...">${ev.content}</textarea>`
+                                        : `<input type="url" class="form-control evidence-content" value="${ev.content}" placeholder="https://...">`
+                                    }
+                                    <input type="hidden" class="evidence-type-input" value="${ev.type}">
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="evidence-add-section" style="margin-top:8px;">
+                            <select id="kr-evidence-type" class="form-control" style="width:auto;display:inline-block;margin-right:8px;">
+                                <option value="text">Texto</option>
+                                <option value="link">Link (URL)</option>
+                            </select>
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="OKRsPage.addEvidenceField()">
+                                + Adicionar Evidência
+                            </button>
+                        </div>
+                        <small style="color:var(--text-muted);font-size:11px;display:block;margin-top:4px;">
+                            Adicione textos descritivos ou links para arquivos/documentos
+                        </small>
+                    </div>
+
                     <div id="kr-error" class="error-message" style="display:none;margin-top:16px;"></div>
                 </div>
                 <div class="modal-footer">
@@ -768,10 +892,64 @@ const OKRsPage = {
         if (modal) modal.remove();
     },
 
+    // Funções para gerenciar evidências
+    addEvidenceField() {
+        const type = document.getElementById('kr-evidence-type').value;
+        const list = document.getElementById('kr-evidence-list');
+        const index = list.querySelectorAll('.evidence-item').length;
+
+        const item = document.createElement('div');
+        item.className = 'evidence-item';
+        item.dataset.index = index;
+        item.innerHTML = `
+            <div class="evidence-item-header">
+                <span class="evidence-type-badge ${type}">${type === 'text' ? 'Texto' : 'Link'}</span>
+                <button type="button" class="btn-icon-sm delete" onclick="OKRsPage.removeEvidenceField(${index})" title="Remover">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            ${type === 'text'
+                ? `<textarea class="form-control evidence-content" rows="2" placeholder="Descrição da evidência..."></textarea>`
+                : `<input type="url" class="form-control evidence-content" placeholder="https://...">`
+            }
+            <input type="hidden" class="evidence-type-input" value="${type}">
+        `;
+        list.appendChild(item);
+    },
+
+    removeEvidenceField(index) {
+        const list = document.getElementById('kr-evidence-list');
+        const item = list.querySelector(`.evidence-item[data-index="${index}"]`);
+        if (item) item.remove();
+    },
+
+    collectEvidence() {
+        const list = document.getElementById('kr-evidence-list');
+        if (!list) return [];
+
+        const items = list.querySelectorAll('.evidence-item');
+        const evidence = [];
+
+        items.forEach(item => {
+            const type = item.querySelector('.evidence-type-input')?.value || 'text';
+            const content = item.querySelector('.evidence-content')?.value?.trim() || '';
+
+            if (content) {
+                evidence.push({ type, content });
+            }
+        });
+
+        return evidence;
+    },
+
     async saveNewKR() {
         const okrId = document.getElementById('kr-okr-id').value;
         const title = document.getElementById('kr-title').value.trim();
         const status = document.getElementById('kr-status').value;
+        const comment = document.getElementById('kr-comment')?.value.trim() || '';
+        const evidence = this.collectEvidence();
         const errorDiv = document.getElementById('kr-error');
 
         if (!title) {
@@ -790,7 +968,9 @@ const OKRsPage = {
                 status: status,
                 target: 100,
                 metric: '%',
-                progress: 0
+                progress: 0,
+                comment: comment,
+                evidence: evidence
             };
 
             okr.keyResults.push(newKR);
@@ -810,6 +990,8 @@ const OKRsPage = {
         const krId = document.getElementById('kr-id').value;
         const title = document.getElementById('kr-title').value.trim();
         const status = document.getElementById('kr-status').value;
+        const comment = document.getElementById('kr-comment')?.value.trim() || '';
+        const evidence = this.collectEvidence();
         const errorDiv = document.getElementById('kr-error');
 
         if (!title) {
@@ -827,6 +1009,8 @@ const OKRsPage = {
 
             kr.title = title;
             kr.status = status;
+            kr.comment = comment;
+            kr.evidence = evidence;
 
             await okr.save();
 
@@ -1545,16 +1729,26 @@ const OKRsPage = {
 
             .kr-accordion-item {
                 border: 1px solid var(--border);
-                border-radius: 8px;
+                border-radius: 10px;
                 overflow: visible;
                 background: white;
-                transition: all 0.2s ease;
+                transition: all 0.3s ease;
                 position: relative;
             }
 
             .kr-accordion-item:hover {
                 border-color: var(--top-teal);
                 box-shadow: 0 2px 8px rgba(18, 176, 160, 0.1);
+            }
+
+            .kr-accordion-item:has(.kr-accordion-body.expanded) {
+                border-color: var(--top-teal);
+                box-shadow: 0 4px 16px rgba(18, 176, 160, 0.15);
+            }
+
+            .kr-accordion-item:has(.kr-accordion-body.expanded) .kr-accordion-header {
+                background: linear-gradient(135deg, var(--bg-main) 0%, #e8f5f3 100%);
+                border-bottom: 1px solid var(--top-teal);
             }
 
             .kr-accordion-header {
@@ -1660,15 +1854,18 @@ const OKRsPage = {
 
             .kr-accordion-body {
                 max-height: 0;
-                overflow: visible;
+                overflow: hidden;
                 opacity: 0;
-                transition: max-height 0.4s ease, opacity 0.3s ease;
+                transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
                 background: white;
+                border-top: 0 solid var(--border-light);
             }
 
             .kr-accordion-body.expanded {
-                max-height: 2000px;
+                max-height: 3000px;
                 opacity: 1;
+                overflow: visible;
+                border-top-width: 1px;
             }
 
             /* Initiatives Section */
@@ -2203,6 +2400,269 @@ const OKRsPage = {
                     width: 100%;
                     justify-content: flex-end;
                 }
+            }
+
+            /* Estilos para Evidências no Modal */
+            .evidence-list {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .evidence-item {
+                background: var(--bg-main);
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                padding: 12px;
+            }
+
+            .evidence-item-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 8px;
+            }
+
+            .evidence-type-badge {
+                display: inline-flex;
+                align-items: center;
+                padding: 4px 10px;
+                border-radius: 12px;
+                font-size: 11px;
+                font-weight: 600;
+                text-transform: uppercase;
+            }
+
+            .evidence-type-badge.text {
+                background: var(--info-bg);
+                color: var(--info);
+            }
+
+            .evidence-type-badge.link {
+                background: var(--success-bg);
+                color: var(--success);
+            }
+
+            .evidence-add-section {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            /* ============================================ */
+            /* NOVO LAYOUT DO KR EXPANDIDO */
+            /* ============================================ */
+
+            .kr-body-content {
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+                background: linear-gradient(to bottom, #fafbfc, white);
+            }
+
+            .kr-top-row {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+            }
+
+            @media (max-width: 900px) {
+                .kr-top-row {
+                    grid-template-columns: 1fr;
+                }
+            }
+
+            .kr-detail-section {
+                background: white;
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                overflow: hidden;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            }
+
+            .kr-detail-header {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 14px 18px;
+                background: var(--bg-main);
+                border-bottom: 1px solid var(--border-light);
+                font-size: 13px;
+                font-weight: 600;
+                color: var(--top-blue);
+            }
+
+            .kr-detail-header svg {
+                color: var(--top-teal);
+                flex-shrink: 0;
+            }
+
+            .kr-detail-header span {
+                flex-shrink: 0;
+            }
+
+            .kr-count-badge {
+                background: var(--top-teal);
+                color: white;
+                font-size: 11px;
+                font-weight: 700;
+                padding: 2px 8px;
+                border-radius: 10px;
+                margin-left: 4px;
+            }
+
+            .kr-detail-body {
+                padding: 18px;
+                min-height: 60px;
+            }
+
+            .kr-comment-text {
+                margin: 0;
+                font-size: 14px;
+                color: var(--text-secondary);
+                line-height: 1.6;
+                white-space: pre-wrap;
+            }
+
+            .kr-empty-text {
+                margin: 0;
+                font-size: 13px;
+                color: var(--text-muted);
+                font-style: italic;
+                text-align: center;
+                padding: 10px 0;
+            }
+
+            /* Lista de Evidências */
+            .kr-evidence-list {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .kr-evidence-text {
+                margin: 0;
+                font-size: 14px;
+                color: var(--text-secondary);
+                line-height: 1.6;
+                white-space: pre-wrap;
+            }
+
+            /* Grid de Evidências (alternativo para tela cheia) */
+            .kr-evidence-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+                gap: 14px;
+            }
+
+            .kr-evidence-card {
+                display: flex;
+                gap: 12px;
+                padding: 14px;
+                background: var(--bg-main);
+                border: 1px solid var(--border-light);
+                border-radius: 10px;
+                transition: all 0.2s ease;
+            }
+
+            .kr-evidence-card:hover {
+                border-color: var(--top-teal);
+                box-shadow: 0 2px 8px rgba(18, 176, 160, 0.1);
+            }
+
+            .kr-evidence-card.text {
+                border-left: 3px solid var(--info);
+            }
+
+            .kr-evidence-card.link {
+                border-left: 3px solid var(--success);
+            }
+
+            .evidence-card-icon {
+                width: 36px;
+                height: 36px;
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+            }
+
+            .kr-evidence-card.text .evidence-card-icon {
+                background: var(--info-bg);
+                color: var(--info);
+            }
+
+            .kr-evidence-card.link .evidence-card-icon {
+                background: var(--success-bg);
+                color: var(--success);
+            }
+
+            .evidence-card-icon svg {
+                width: 18px;
+                height: 18px;
+            }
+
+            .evidence-card-content {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .evidence-card-type {
+                display: inline-block;
+                font-size: 10px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                color: var(--text-muted);
+                margin-bottom: 4px;
+            }
+
+            .evidence-card-text {
+                margin: 0;
+                font-size: 13px;
+                color: var(--text-secondary);
+                line-height: 1.5;
+                word-break: break-word;
+            }
+
+            .evidence-card-link {
+                font-size: 13px;
+                color: var(--top-teal);
+                text-decoration: none;
+                word-break: break-all;
+                display: block;
+            }
+
+            .evidence-card-link:hover {
+                text-decoration: underline;
+            }
+
+            /* Botão XS */
+            .btn-xs {
+                padding: 4px 10px;
+                font-size: 11px;
+                border-radius: 6px;
+            }
+
+            .btn-xs svg {
+                width: 12px;
+                height: 12px;
+            }
+
+            /* Ajuste da lista de iniciativas dentro do novo layout */
+            .kr-detail-body .initiatives-list {
+                margin: 0;
+            }
+
+            .kr-detail-body .initiative-item {
+                background: var(--bg-main);
+                margin-bottom: 10px;
+            }
+
+            .kr-detail-body .initiative-item:last-child {
+                margin-bottom: 0;
             }
         `;
         document.head.appendChild(style);

@@ -131,12 +131,14 @@ const Layout = {
                             </svg>
                             <span>Objetivos</span>
                         </a>
+                        ${isAdmin ? `
                         <a class="nav-item" data-page="approval" title="Comitê de Aprovação">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
                             <span>Comitê de Aprovação</span>
                         </a>
+                        ` : ''}
                     </div>
 
                     ${isAdmin ? `
@@ -259,7 +261,7 @@ const Layout = {
     getPageTitle(page) {
         const titles = {
             dashboard: 'Dashboard',
-            okrs: 'Gestão de OKRs',
+            okrs: "Gestão de O's",
             cycles: 'Gestão de Ciclos',
             objectives: 'Objetivos Estratégicos',
             approval: 'Comitê de Aprovação',
@@ -273,8 +275,8 @@ const Layout = {
     getPageSubtitle(page) {
         const subtitles = {
             dashboard: 'Visão geral do progresso dos objetivos',
-            okrs: 'Gerencie os OKRs da empresa',
-            cycles: 'Configure ciclos e miniciclos para organizar os OKRs',
+            okrs: "Gerencie os O's da empresa",
+            cycles: "Configure ciclos e miniciclos para organizar os O's",
             objectives: 'Gerencie os objetivos estratégicos da empresa',
             approval: 'Aprove e acompanhe os OKRs submetidos',
             users: 'Gerencie os usuários do sistema',
@@ -306,6 +308,15 @@ const Layout = {
 
     // Navega para uma página
     async navigate(page, updateURL = true) {
+        // Bloqueia acesso a páginas administrativas para não-admins
+        const isAdmin = AuthService.isAdmin();
+        const adminOnlyPages = ['approval', 'users', 'departments'];
+
+        if (!isAdmin && adminOnlyPages.includes(page)) {
+            page = 'dashboard';
+            updateURL = true;
+        }
+
         this.currentPage = page;
 
         // Atualiza URL se necessário
