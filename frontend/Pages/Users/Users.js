@@ -48,7 +48,10 @@ const UsersPage = {
                                 </thead>
                                 <tbody>
                                     ${users.map(user => {
-                                        const dept = departments.find(d => d.id === user.departamento_id);
+                                        // Suporta múltiplos departamentos ou legado
+                                        const userDepts = user.departments && user.departments.length > 0
+                                            ? user.departments
+                                            : (user.departamento_id ? [departments.find(d => d.id === user.departamento_id)].filter(Boolean) : []);
                                         return `
                                         <tr class="user-row ${!user.ativo ? 'inactive' : ''}">
                                             <td>
@@ -67,9 +70,12 @@ const UsersPage = {
                                             </td>
                                             <td class="user-email">${user.email}</td>
                                             <td>
-                                                <span class="dept-badge">
-                                                    ${dept ? dept.nome : 'N/A'}
-                                                </span>
+                                                <div class="dept-badges">
+                                                    ${userDepts.length > 0
+                                                        ? userDepts.map(d => `<span class="dept-badge">${d.nome}</span>`).join('')
+                                                        : '<span class="dept-badge empty">N/A</span>'
+                                                    }
+                                                </div>
                                             </td>
                                             <td>
                                                 <span class="type-badge ${user.tipo === 'admin' ? 'admin' : 'colaborador'}">
@@ -185,28 +191,33 @@ const UsersPage = {
                             Dados Organizacionais
                         </div>
 
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-                            <div class="form-group">
-                                <label class="form-label">Departamento *</label>
-                                <select id="user-departamento" class="form-control">
-                                    <option value="">Selecione...</option>
-                                    ${departments.map(dept => `
-                                        <option value="${dept.id}" ${this.currentUser && this.currentUser.departamento_id === dept.id ? 'selected' : ''}>
-                                            ${dept.nome}
-                                        </option>
-                                    `).join('')}
-                                </select>
+                        <div class="form-group">
+                            <label class="form-label">Departamentos * <small style="font-weight:normal;color:var(--text-muted);">(selecione um ou mais)</small></label>
+                            <div class="departments-checkbox-list" id="user-departamentos">
+                                ${departments.map(dept => {
+                                    const isChecked = this.currentUser && (
+                                        (this.currentUser.departments && this.currentUser.departments.some(d => d.id === dept.id)) ||
+                                        this.currentUser.departamento_id === dept.id
+                                    );
+                                    return `
+                                    <label class="department-checkbox-item ${isChecked ? 'checked' : ''}">
+                                        <input type="checkbox" name="user-dept" value="${dept.id}" ${isChecked ? 'checked' : ''}
+                                            onchange="this.parentElement.classList.toggle('checked', this.checked)">
+                                        <span class="dept-checkbox-name">${dept.nome}</span>
+                                    </label>
+                                `}).join('')}
                             </div>
-                            <div class="form-group">
-                                <label class="form-label">Tipo de Usuário *</label>
-                                <select id="user-tipo" class="form-control">
-                                    <option value="colaborador" ${this.currentUser && this.currentUser.tipo === 'colaborador' ? 'selected' : ''}>Colaborador</option>
-                                    <option value="admin" ${this.currentUser && this.currentUser.tipo === 'admin' ? 'selected' : ''}>Administrador</option>
-                                </select>
-                                <small style="color:var(--text-muted);font-size:11px;display:block;margin-top:4px;">
-                                    Admin tem acesso total ao sistema
-                                </small>
-                            </div>
+                        </div>
+
+                        <div class="form-group" style="margin-top:16px;">
+                            <label class="form-label">Tipo de Usuário *</label>
+                            <select id="user-tipo" class="form-control">
+                                <option value="colaborador" ${this.currentUser && this.currentUser.tipo === 'colaborador' ? 'selected' : ''}>Colaborador</option>
+                                <option value="admin" ${this.currentUser && this.currentUser.tipo === 'admin' ? 'selected' : ''}>Administrador</option>
+                            </select>
+                            <small style="color:var(--text-muted);font-size:11px;display:block;margin-top:4px;">
+                                Admin tem acesso total ao sistema
+                            </small>
                         </div>
                     </div>
 
@@ -258,15 +269,25 @@ const UsersPage = {
     async save() {
         const nome = document.getElementById('user-nome').value.trim();
         const email = document.getElementById('user-email').value.trim();
-        const departamentoId = document.getElementById('user-departamento').value;
         const tipo = document.getElementById('user-tipo').value;
-        const senha = document.getElementById('user-senha').value;
+        const senhaEl = document.getElementById('user-senha');
+        const senha = senhaEl ? senhaEl.value : '';
         const errorDiv = document.getElementById('user-error');
+
+        // Coletar departamentos selecionados
+        const selectedDepts = Array.from(document.querySelectorAll('input[name="user-dept"]:checked'))
+            .map(cb => cb.value);
 
         errorDiv.style.display = 'none';
 
-        if (!nome || !email || !departamentoId) {
+        if (!nome || !email) {
             errorDiv.textContent = 'Preencha todos os campos obrigatórios';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        if (selectedDepts.length === 0) {
+            errorDiv.textContent = 'Selecione pelo menos um departamento';
             errorDiv.style.display = 'block';
             return;
         }
@@ -287,8 +308,12 @@ const UsersPage = {
             const user = this.currentUser || new User();
             user.nome = nome;
             user.email = email;
-            user.departamento_id = departamentoId;
             user.tipo = tipo;
+
+            // Configurar departamentos (primeiro é o primário)
+            user.departments = selectedDepts.map((id, idx) => ({ id, is_primary: idx === 0 }));
+            user.departamento_id = selectedDepts[0]; // Compatibilidade
+
             if (senha) {
                 user.senha = senha;
             }

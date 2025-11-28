@@ -37,10 +37,31 @@ const AuthService = {
                 return null;
             }
 
-            // 3. Adiciona o auth_id aos dados do usuário
+            // 3. Busca departamentos vinculados (múltiplos departamentos)
+            const { data: userDepts } = await supabaseClient
+                .from('user_departments')
+                .select('department_id, is_primary, departments(id, nome)')
+                .eq('user_id', userData.id);
+
+            if (userDepts && userDepts.length > 0) {
+                userData.departments = userDepts.map(ud => ({
+                    id: ud.departments.id,
+                    nome: ud.departments.nome,
+                    is_primary: ud.is_primary
+                }));
+            } else if (userData.departamento) {
+                // Fallback para departamento único legado
+                userData.departments = [{
+                    id: userData.departamento.id,
+                    nome: userData.departamento.nome,
+                    is_primary: true
+                }];
+            }
+
+            // 4. Adiciona o auth_id aos dados do usuário
             userData.auth_id = authData.user.id;
 
-            // 4. Salva na sessão
+            // 5. Salva na sessão
             StorageService.setCurrentUser(userData);
             return userData;
         } catch (error) {

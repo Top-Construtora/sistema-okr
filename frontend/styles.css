@@ -2433,15 +2433,73 @@
 }
 
 /* Badges */
+.dept-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
 .dept-badge {
     display: inline-flex;
     align-items: center;
-    padding: 6px 12px;
+    padding: 4px 10px;
     background: linear-gradient(135deg, var(--top-blue) 0%, #1a5570 100%);
     color: white;
     border-radius: 6px;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 500;
+}
+
+.dept-badge.empty {
+    background: var(--bg-main);
+    color: var(--text-muted);
+}
+
+/* Department Checkbox List */
+.departments-checkbox-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 8px;
+    padding: 12px;
+    background: var(--bg-main);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.department-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: white;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.department-checkbox-item:hover {
+    border-color: var(--top-teal);
+}
+
+.department-checkbox-item.checked {
+    border-color: var(--top-teal);
+    background: rgba(45, 212, 191, 0.05);
+}
+
+.department-checkbox-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--top-teal);
+    cursor: pointer;
+}
+
+.dept-checkbox-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-main);
 }
 
 .type-badge {

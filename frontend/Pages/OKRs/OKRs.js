@@ -24,30 +24,52 @@ const OKRsPage = {
     expandedKRs: new Set(),
     currentInitiative: null,
 
+    // Retorna array de nomes de departamentos do usuário
+    getUserDepartmentNames(user) {
+        if (!user) return [];
+
+        // Se tem array de departments (nova estrutura)
+        if (user.departments && Array.isArray(user.departments) && user.departments.length > 0) {
+            return user.departments.map(d => d.nome).filter(Boolean);
+        }
+
+        // Fallback para departamento único (legado)
+        if (user.departamento?.nome) {
+            return [user.departamento.nome];
+        }
+
+        return [];
+    },
+
     async render() {
         const content = document.getElementById('content');
         const currentUser = AuthService.getCurrentUser();
         const isAdmin = currentUser && currentUser.tipo === 'admin';
-        const userDepartmentName = currentUser?.departamento?.nome || null;
+
+        // Suporta múltiplos departamentos
+        const userDepartmentNames = this.getUserDepartmentNames(currentUser);
+        const userDepartmentDisplay = userDepartmentNames.length > 1
+            ? `${userDepartmentNames.length} departamentos`
+            : userDepartmentNames[0] || null;
 
         // Se for colaborador, força o filtro pelo departamento do usuário
-        if (!isAdmin && userDepartmentName) {
-            this.currentDepartment = userDepartmentName;
+        if (!isAdmin && userDepartmentNames.length > 0) {
+            this.currentDepartment = 'user-depts'; // Marcador especial para múltiplos depts
         }
 
         let okrs = await OKR.getAll();
         const departments = await Department.getActive();
 
-        // Se for colaborador, filtra apenas OKRs do seu departamento
-        if (!isAdmin && userDepartmentName) {
-            okrs = okrs.filter(o => o.department === userDepartmentName);
+        // Se for colaborador, filtra OKRs dos seus departamentos
+        if (!isAdmin && userDepartmentNames.length > 0) {
+            okrs = okrs.filter(o => userDepartmentNames.includes(o.department));
         }
 
         content.innerHTML = `
             <div class="page-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
                 <div>
-                    <h2 style="font-size:20px;font-weight:700;color:var(--top-blue);margin-bottom:4px;">Gestão de O's</h2>
-                    <p style="color:var(--text-muted);font-size:13px;">${okrs.length} ${okrs.length === 1 ? 'O cadastrado' : "O's cadastrados"}${!isAdmin ? ` - ${userDepartmentName}` : ''}</p>
+                    <h2 style="font-size:20px;font-weight:700;color:var(--top-blue);margin-bottom:4px;">Gestão de OKRs</h2>
+                    <p style="color:var(--text-muted);font-size:13px;">${okrs.length} ${okrs.length === 1 ? 'O cadastrado' : "O's cadastrados"}${!isAdmin && userDepartmentDisplay ? ` - ${userDepartmentDisplay}` : ''}</p>
                 </div>
                 <button class="btn btn-primary" onclick="OKRsPage.openModal()">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -111,13 +133,13 @@ const OKRsPage = {
 
         const currentUser = AuthService.getCurrentUser();
         const isAdmin = currentUser && currentUser.tipo === 'admin';
-        const userDepartmentName = currentUser?.departamento?.nome || null;
+        const userDepartmentNames = this.getUserDepartmentNames(currentUser);
 
         let okrs = await OKR.getAll();
 
-        // Se for colaborador, filtra apenas OKRs do seu departamento
-        if (!isAdmin && userDepartmentName) {
-            okrs = okrs.filter(o => o.department === userDepartmentName);
+        // Se for colaborador, filtra OKRs dos seus departamentos
+        if (!isAdmin && userDepartmentNames.length > 0) {
+            okrs = okrs.filter(o => userDepartmentNames.includes(o.department));
         }
 
         // Filtro por status
@@ -349,8 +371,14 @@ const OKRsPage = {
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
                                                         </svg>
                                                         <span>Comentário</span>
+                                                        <button class="btn btn-xs btn-outline" onclick="OKRsPage.openQuickCommentEditor('${okr.id}', '${kr.id}')" style="margin-left:auto;" title="${kr.comment && kr.comment.trim() ? 'Editar' : 'Adicionar'} comentário">
+                                                            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${kr.comment && kr.comment.trim() ? 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z' : 'M12 4v16m8-8H4'}"/>
+                                                            </svg>
+                                                            ${kr.comment && kr.comment.trim() ? 'Editar' : 'Adicionar'}
+                                                        </button>
                                                     </div>
-                                                    <div class="kr-detail-body">
+                                                    <div class="kr-detail-body" id="kr-comment-body-${kr.id}">
                                                         ${kr.comment && kr.comment.trim()
                                                             ? `<p class="kr-comment-text">${kr.comment}</p>`
                                                             : `<p class="kr-empty-text">Nenhum comentário adicionado</p>`
@@ -369,8 +397,14 @@ const OKRsPage = {
                                                             ? `<span class="kr-count-badge">${kr.evidence.length}</span>`
                                                             : ''
                                                         }
+                                                        <button class="btn btn-xs btn-outline" onclick="OKRsPage.openQuickEvidenceModal('${okr.id}', '${kr.id}')" style="margin-left:auto;" title="Adicionar evidência">
+                                                            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                                            </svg>
+                                                            Adicionar
+                                                        </button>
                                                     </div>
-                                                    <div class="kr-detail-body">
+                                                    <div class="kr-detail-body" id="kr-evidence-body-${kr.id}">
                                                         ${kr.evidence && Array.isArray(kr.evidence) && kr.evidence.length > 0 ? `
                                                             <div class="kr-evidence-list">
                                                                 ${kr.evidence.map((ev, idx) => `
@@ -567,7 +601,8 @@ const OKRsPage = {
         const departments = await Department.getActive();
         const currentUser = AuthService.getCurrentUser();
         const isAdmin = currentUser && currentUser.tipo === 'admin';
-        const userDepartmentName = currentUser?.departamento?.nome || null;
+        const userDepartmentNames = this.getUserDepartmentNames(currentUser);
+        const hasMultipleDepts = userDepartmentNames.length > 1;
 
         modal.innerHTML = `
             <div class="modal-overlay" onclick="OKRsPage.closeModal()"></div>
@@ -616,9 +651,18 @@ const OKRsPage = {
                                         </option>
                                     `).join('')}
                                 </select>
+                            ` : hasMultipleDepts ? `
+                                <select id="okr-department" class="form-control">
+                                    ${userDepartmentNames.map((deptName, idx) => `
+                                        <option value="${deptName}" ${this.currentOKR && this.currentOKR.department === deptName ? 'selected' : (idx === 0 && !this.currentOKR ? 'selected' : '')}>
+                                            ${deptName}
+                                        </option>
+                                    `).join('')}
+                                </select>
+                                <small style="color:var(--text-muted);font-size:11px;display:block;margin-top:4px;">Selecione o departamento para este O</small>
                             ` : `
-                                <input type="text" id="okr-department-display" class="form-control" value="${userDepartmentName}" disabled style="background:var(--bg-main);cursor:not-allowed;">
-                                <input type="hidden" id="okr-department" value="${userDepartmentName}">
+                                <input type="text" id="okr-department-display" class="form-control" value="${userDepartmentNames[0] || ''}" disabled style="background:var(--bg-main);cursor:not-allowed;">
+                                <input type="hidden" id="okr-department" value="${userDepartmentNames[0] || ''}">
                                 <small style="color:var(--text-muted);font-size:11px;display:block;margin-top:4px;">O será criado para seu departamento</small>
                             `}
                         </div>
@@ -1115,6 +1159,241 @@ const OKRsPage = {
         return evidence;
     },
 
+    // =====================================================
+    // EDIÇÃO RÁPIDA DE COMENTÁRIO E EVIDÊNCIAS DO KR
+    // =====================================================
+
+    async openQuickCommentEditor(okrId, krId) {
+        const okr = await OKR.getById(okrId);
+        if (!okr) return;
+
+        const kr = okr.keyResults.find(k => k.id === krId);
+        if (!kr) return;
+
+        const modal = document.createElement('div');
+        modal.id = 'quick-comment-modal';
+        modal.className = 'quick-modal-overlay';
+        modal.innerHTML = `
+            <div class="quick-modal-content">
+                <div class="quick-modal-header">
+                    <h4>${kr.comment && kr.comment.trim() ? 'Editar' : 'Adicionar'} Comentário</h4>
+                    <button class="modal-close" onclick="OKRsPage.closeQuickModal('quick-comment-modal')">&times;</button>
+                </div>
+                <div class="quick-modal-body">
+                    <textarea id="quick-comment-text" class="form-control" rows="4"
+                        placeholder="Digite seu comentário sobre este Key Result...">${kr.comment || ''}</textarea>
+                </div>
+                <div class="quick-modal-footer">
+                    <button class="btn btn-secondary" onclick="OKRsPage.closeQuickModal('quick-comment-modal')">Cancelar</button>
+                    <button class="btn btn-primary" onclick="OKRsPage.saveQuickComment('${okrId}', '${krId}')">Salvar</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        document.getElementById('quick-comment-text').focus();
+    },
+
+    async saveQuickComment(okrId, krId) {
+        const comment = document.getElementById('quick-comment-text').value.trim();
+
+        try {
+            // Salvar diretamente no banco
+            const { error } = await supabaseClient
+                .from('key_results')
+                .update({ comment: comment || null })
+                .eq('id', krId);
+
+            if (error) throw error;
+
+            this.closeQuickModal('quick-comment-modal');
+            await this.renderList();
+            DepartmentsPage.showToast('Comentário salvo com sucesso!', 'success');
+        } catch (error) {
+            console.error('Erro ao salvar comentário:', error);
+            DepartmentsPage.showToast('Erro ao salvar comentário', 'error');
+        }
+    },
+
+    async openQuickEvidenceModal(okrId, krId) {
+        const modal = document.createElement('div');
+        modal.id = 'quick-evidence-modal';
+        modal.className = 'quick-modal-overlay';
+        modal.innerHTML = `
+            <div class="quick-modal-content">
+                <div class="quick-modal-header">
+                    <h4>Adicionar Evidência</h4>
+                    <button class="modal-close" onclick="OKRsPage.closeQuickModal('quick-evidence-modal')">&times;</button>
+                </div>
+                <div class="quick-modal-body">
+                    <input type="hidden" id="quick-evidence-okr-id" value="${okrId}">
+                    <input type="hidden" id="quick-evidence-kr-id" value="${krId}">
+
+                    <div class="form-group">
+                        <label class="form-label">Tipo de Evidência</label>
+                        <div class="evidence-type-selector">
+                            <label class="evidence-type-option active" data-type="text">
+                                <input type="radio" name="quick-evidence-type" value="text" checked>
+                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                <span>Texto</span>
+                            </label>
+                            <label class="evidence-type-option" data-type="file">
+                                <input type="radio" name="quick-evidence-type" value="file">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                </svg>
+                                <span>Arquivo</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="quick-evidence-text-container" class="form-group" style="margin-top:16px;">
+                        <label class="form-label">Texto da Evidência</label>
+                        <textarea id="quick-evidence-text" class="form-control" rows="3"
+                            placeholder="Descreva a medição ou evidência..."></textarea>
+                    </div>
+
+                    <div id="quick-evidence-file-container" class="form-group" style="margin-top:16px;display:none;">
+                        <label class="form-label">Arquivo</label>
+                        <div class="file-upload-wrapper">
+                            <input type="file" id="quick-evidence-file" class="evidence-file-input"
+                                accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif"
+                                onchange="OKRsPage.handleQuickFileSelect(this)">
+                            <label for="quick-evidence-file" class="file-upload-label">
+                                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                </svg>
+                                <span>Clique para selecionar arquivo</span>
+                            </label>
+                            <div id="quick-file-selected" class="file-selected" style="display:none;">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <span id="quick-file-name" class="file-name"></span>
+                                <span id="quick-file-size" class="file-size"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="quick-modal-footer">
+                    <button class="btn btn-secondary" onclick="OKRsPage.closeQuickModal('quick-evidence-modal')">Cancelar</button>
+                    <button class="btn btn-primary" onclick="OKRsPage.saveQuickEvidence()">Adicionar</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Event listeners para trocar tipo
+        modal.querySelectorAll('.evidence-type-option').forEach(option => {
+            option.addEventListener('click', () => {
+                modal.querySelectorAll('.evidence-type-option').forEach(o => o.classList.remove('active'));
+                option.classList.add('active');
+                option.querySelector('input').checked = true;
+
+                const type = option.dataset.type;
+                document.getElementById('quick-evidence-text-container').style.display = type === 'text' ? 'block' : 'none';
+                document.getElementById('quick-evidence-file-container').style.display = type === 'file' ? 'block' : 'none';
+            });
+        });
+    },
+
+    quickSelectedFile: null,
+
+    handleQuickFileSelect(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        if (file.size > 10 * 1024 * 1024) {
+            alert('Arquivo muito grande. Máximo permitido: 10MB');
+            input.value = '';
+            return;
+        }
+
+        this.quickSelectedFile = file;
+
+        const label = document.querySelector('#quick-evidence-file-container .file-upload-label');
+        const selected = document.getElementById('quick-file-selected');
+        const fileName = document.getElementById('quick-file-name');
+        const fileSize = document.getElementById('quick-file-size');
+
+        label.style.display = 'none';
+        selected.style.display = 'flex';
+        fileName.textContent = file.name;
+        fileSize.textContent = this.formatFileSize(file.size);
+    },
+
+    async saveQuickEvidence() {
+        const okrId = document.getElementById('quick-evidence-okr-id').value;
+        const krId = document.getElementById('quick-evidence-kr-id').value;
+        const type = document.querySelector('input[name="quick-evidence-type"]:checked').value;
+
+        try {
+            // Buscar evidências atuais
+            const { data: krData, error: fetchError } = await supabaseClient
+                .from('key_results')
+                .select('evidence')
+                .eq('id', krId)
+                .single();
+
+            if (fetchError) throw fetchError;
+
+            const currentEvidence = krData.evidence || [];
+            let newEvidence;
+
+            if (type === 'text') {
+                const text = document.getElementById('quick-evidence-text').value.trim();
+                if (!text) {
+                    DepartmentsPage.showToast('Digite o texto da evidência', 'error');
+                    return;
+                }
+                newEvidence = { type: 'text', content: text };
+            } else {
+                if (!this.quickSelectedFile) {
+                    DepartmentsPage.showToast('Selecione um arquivo', 'error');
+                    return;
+                }
+
+                // Upload do arquivo
+                const uploaded = await this.uploadFile(this.quickSelectedFile, krId);
+                newEvidence = {
+                    type: 'file',
+                    content: uploaded.url,
+                    name: uploaded.name,
+                    size: uploaded.size,
+                    path: uploaded.path
+                };
+            }
+
+            // Adicionar nova evidência
+            currentEvidence.push(newEvidence);
+
+            // Salvar no banco
+            const { error } = await supabaseClient
+                .from('key_results')
+                .update({ evidence: currentEvidence })
+                .eq('id', krId);
+
+            if (error) throw error;
+
+            this.quickSelectedFile = null;
+            this.closeQuickModal('quick-evidence-modal');
+            await this.renderList();
+            DepartmentsPage.showToast('Evidência adicionada com sucesso!', 'success');
+        } catch (error) {
+            console.error('Erro ao salvar evidência:', error);
+            DepartmentsPage.showToast('Erro ao salvar evidência', 'error');
+        }
+    },
+
+    closeQuickModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) modal.remove();
+        this.quickSelectedFile = null;
+    },
+
     async saveNewKR() {
         const okrId = document.getElementById('kr-okr-id').value;
         const title = document.getElementById('kr-title').value.trim();
@@ -1388,8 +1667,8 @@ const OKRsPage = {
             ${type === 'text'
                 ? `<textarea class="form-control evidence-content" rows="2" placeholder="Descrição da evidência..."></textarea>`
                 : `<div class="file-upload-wrapper">
-                    <input type="file" class="evidence-file-input" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif" onchange="OKRsPage.handleInitFileSelect(${index}, this)">
-                    <label class="file-upload-label">
+                    <input type="file" id="init-file-input-${index}" class="evidence-file-input" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif" onchange="OKRsPage.handleInitFileSelect(${index}, this)">
+                    <label class="file-upload-label" for="init-file-input-${index}">
                         <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                         </svg>
@@ -2768,6 +3047,141 @@ const OKRsPage = {
             .btn-icon-sm svg {
                 width: 14px;
                 height: 14px;
+            }
+
+            /* Botão Outline */
+            .btn-outline {
+                background: transparent;
+                border: 1px solid var(--border);
+                color: var(--text-secondary);
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                padding: 4px 10px;
+                border-radius: 6px;
+                font-size: 12px;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+
+            .btn-outline:hover {
+                border-color: var(--top-teal);
+                color: var(--top-teal);
+                background: rgba(45, 212, 191, 0.05);
+            }
+
+            /* Quick Modals */
+            .quick-modal-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 1000;
+                animation: fadeIn 0.2s ease;
+            }
+
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+
+            .quick-modal-content {
+                background: white;
+                border-radius: 12px;
+                width: 90%;
+                max-width: 500px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                animation: slideUp 0.3s ease;
+            }
+
+            @keyframes slideUp {
+                from { transform: translateY(20px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+            }
+
+            .quick-modal-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 16px 20px;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .quick-modal-header h4 {
+                margin: 0;
+                font-size: 16px;
+                font-weight: 600;
+                color: var(--text-primary);
+            }
+
+            .quick-modal-body {
+                padding: 20px;
+            }
+
+            .quick-modal-footer {
+                display: flex;
+                justify-content: flex-end;
+                gap: 10px;
+                padding: 16px 20px;
+                border-top: 1px solid var(--border);
+                background: var(--bg-main);
+                border-radius: 0 0 12px 12px;
+            }
+
+            /* Evidence Type Selector */
+            .evidence-type-selector {
+                display: flex;
+                gap: 12px;
+            }
+
+            .evidence-type-option {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 8px;
+                padding: 16px 24px;
+                border: 2px solid var(--border);
+                border-radius: 10px;
+                cursor: pointer;
+                transition: all 0.2s;
+                flex: 1;
+            }
+
+            .evidence-type-option input {
+                display: none;
+            }
+
+            .evidence-type-option svg {
+                color: var(--text-muted);
+                transition: color 0.2s;
+            }
+
+            .evidence-type-option span {
+                font-size: 13px;
+                font-weight: 500;
+                color: var(--text-secondary);
+            }
+
+            .evidence-type-option:hover {
+                border-color: var(--top-teal);
+            }
+
+            .evidence-type-option.active {
+                border-color: var(--top-teal);
+                background: rgba(45, 212, 191, 0.05);
+            }
+
+            .evidence-type-option.active svg {
+                color: var(--top-teal);
+            }
+
+            .evidence-type-option.active span {
+                color: var(--top-teal);
             }
 
             /* Responsividade */
