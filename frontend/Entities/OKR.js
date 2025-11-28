@@ -121,15 +121,28 @@ class OKR {
 
                 if (okrError) throw okrError;
 
-                // Delete KRs antigos
-                await supabaseClient
+                // Buscar KRs existentes no banco para comparar
+                const { data: existingKRs } = await supabaseClient
                     .from('key_results')
-                    .delete()
+                    .select('id')
                     .eq('okr_id', this.id);
 
-                // Insert novos KRs
-                if (this.key_results.length > 0) {
-                    const krs = this.key_results.map((kr, idx) => ({
+                const existingKRIds = new Set((existingKRs || []).map(kr => kr.id));
+                const currentKRIds = new Set(this.key_results.filter(kr => kr.id && !String(kr.id).startsWith('temp_')).map(kr => kr.id));
+
+                // Deletar KRs que foram removidos (não estão mais na lista atual)
+                const krsToDelete = [...existingKRIds].filter(id => !currentKRIds.has(id));
+                if (krsToDelete.length > 0) {
+                    await supabaseClient
+                        .from('key_results')
+                        .delete()
+                        .in('id', krsToDelete);
+                }
+
+                // Processar cada KR
+                for (let idx = 0; idx < this.key_results.length; idx++) {
+                    const kr = this.key_results[idx];
+                    const krData = {
                         okr_id: this.id,
                         title: kr.title,
                         metric: kr.metric || '%',
@@ -140,13 +153,26 @@ class OKR {
                         status: kr.status || 'pending',
                         comment: kr.comment || null,
                         evidence: kr.evidence || []
-                    }));
+                    };
 
-                    const { error: krError } = await supabaseClient
-                        .from('key_results')
-                        .insert(krs);
-
-                    if (krError) throw krError;
+                    // Se KR já existe (tem ID válido no banco), atualizar
+                    if (kr.id && existingKRIds.has(kr.id)) {
+                        const { error } = await supabaseClient
+                            .from('key_results')
+                            .update(krData)
+                            .eq('id', kr.id);
+                        if (error) throw error;
+                    } else {
+                        // Novo KR - inserir
+                        const { data: newKR, error } = await supabaseClient
+                            .from('key_results')
+                            .insert(krData)
+                            .select()
+                            .single();
+                        if (error) throw error;
+                        // Atualizar o ID local com o ID do banco
+                        kr.id = newKR.id;
+                    }
                 }
             } else {
                 // Insert OKR

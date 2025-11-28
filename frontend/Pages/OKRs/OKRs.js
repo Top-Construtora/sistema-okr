@@ -340,7 +340,7 @@ const OKRsPage = {
 
                                     <div class="kr-accordion-body ${isKRExpanded ? 'expanded' : ''}" data-kr-id="${kr.id}">
                                         <div class="kr-body-content">
-                                            <!-- Comentário e Evidências lado a lado -->
+                                            <!-- Comentário e Medições/Evidências lado a lado -->
                                             <div class="kr-top-row">
                                                 <!-- Seção de Comentário -->
                                                 <div class="kr-detail-section">
@@ -358,13 +358,13 @@ const OKRsPage = {
                                                     </div>
                                                 </div>
 
-                                                <!-- Seção de Evidências -->
+                                                <!-- Seção de Medições e Evidências -->
                                                 <div class="kr-detail-section">
                                                     <div class="kr-detail-header">
                                                         <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                                         </svg>
-                                                        <span>Evidências</span>
+                                                        <span>Medições e Evidências</span>
                                                         ${kr.evidence && Array.isArray(kr.evidence) && kr.evidence.length > 0
                                                             ? `<span class="kr-count-badge">${kr.evidence.length}</span>`
                                                             : ''
@@ -780,7 +780,7 @@ const OKRsPage = {
                     </div>
 
                     <div class="form-group" style="margin-top:16px;">
-                        <label class="form-label">Evidências</label>
+                        <label class="form-label">Medições e Evidências</label>
                         <div id="kr-evidence-list" class="evidence-list"></div>
                         <div class="evidence-add-section" style="margin-top:8px;">
                             <select id="kr-evidence-type" class="form-control" style="width:auto;display:inline-block;margin-right:8px;">
@@ -854,7 +854,7 @@ const OKRsPage = {
                     </div>
 
                     <div class="form-group" style="margin-top:16px;">
-                        <label class="form-label">Evidências</label>
+                        <label class="form-label">Medições e Evidências</label>
                         <div id="kr-evidence-list" class="evidence-list">
                             ${existingEvidence.map((ev, idx) => `
                                 <div class="evidence-item" data-index="${idx}">
@@ -1100,6 +1100,7 @@ const OKRsPage = {
                 target: 100,
                 metric: '%',
                 progress: 0,
+                tasks: [],
                 comment: comment,
                 evidence: evidence
             };
