@@ -1201,24 +1201,28 @@
         .kanban-card {
             background: var(--bg-card);
             border-radius: var(--radius);
-            padding: 16px;
             border: 1px solid var(--border);
             transition: all 0.2s;
-            cursor: pointer;
+            overflow: visible;
         }
 
         .kanban-card:hover {
             box-shadow: var(--shadow-md);
-            transform: translateY(-2px);
+            border-color: var(--top-teal);
+        }
+
+        .kanban-card-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-light);
         }
 
         .kanban-card-dept {
-            font-size: 10px;
-            font-weight: 700;
-            color: var(--top-blue);
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--top-teal);
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
         }
 
         .kanban-card-title {
@@ -1226,7 +1230,31 @@
             font-weight: 600;
             color: var(--text-primary);
             line-height: 1.4;
-            margin-bottom: 12px;
+        }
+
+        .kanban-card-body {
+            padding: 12px 16px;
+        }
+
+        .kanban-card-meta,
+        .kanban-card-krs {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: flex-start;
+            gap: 6px;
+        }
+
+        .kanban-card-progress {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .kanban-card-progress .progress {
+            flex: 1;
         }
 
         .kanban-card-info {
@@ -1239,9 +1267,30 @@
         }
 
         .kanban-card-actions {
+            padding: 12px 16px;
+            background: var(--bg-main);
+            border-top: 1px solid var(--border-light);
             display: flex;
             gap: 8px;
-            justify-content: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .kanban-card-actions .btn {
+            flex: 1;
+            min-width: 100px;
+        }
+
+        .kanban-card-comment {
+            padding: 12px 16px;
+            background: var(--danger-bg);
+            border-top: 1px solid var(--danger);
+            font-size: 12px;
+            color: var(--danger);
+        }
+
+        .kanban-card-comment strong {
+            display: block;
+            margin-bottom: 4px;
         }
 
         .kanban-empty {
