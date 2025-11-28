@@ -94,12 +94,19 @@ const StorageService = {
     // Deletar registro
     async delete(entity, id) {
         try {
-            const { error } = await supabaseClient
+            const { data, error } = await supabaseClient
                 .from(entity)
                 .delete()
-                .eq('id', id);
+                .eq('id', id)
+                .select();
 
             if (error) throw error;
+
+            // Se não retornou dados, significa que o RLS bloqueou ou o registro não existe
+            if (!data || data.length === 0) {
+                throw new Error('Não foi possível excluir. Verifique se você tem permissão de administrador.');
+            }
+
             return true;
         } catch (error) {
             console.error(`Erro ao deletar ${entity}:`, error);

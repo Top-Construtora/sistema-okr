@@ -750,14 +750,22 @@ const OKRsPage = {
         this.openModal(id);
     },
 
-    delete(id) {
-        const okr = OKR.getById(id);
-        if (!okr) return;
+    async delete(id) {
+        const okr = await OKR.getById(id);
+        if (!okr) {
+            DepartmentsPage.showToast('OKR não encontrado', 'error');
+            return;
+        }
 
-        if (confirm(`Deseja realmente excluir o O "${okr.title}"?`)) {
-            OKR.delete(id);
-            this.render();
-            DepartmentsPage.showToast('O excluído com sucesso!', 'success');
+        if (confirm(`Deseja realmente excluir o OKR "${okr.title}"?\n\nTodos os Key Results e iniciativas vinculados também serão excluídos.`)) {
+            try {
+                await OKR.delete(id);
+                await this.render();
+                DepartmentsPage.showToast('OKR excluído com sucesso!', 'success');
+            } catch (error) {
+                console.error('Erro ao excluir OKR:', error);
+                DepartmentsPage.showToast(error.message || 'Erro ao excluir OKR', 'error');
+            }
         }
     },
 
