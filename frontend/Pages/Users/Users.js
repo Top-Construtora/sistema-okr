@@ -9,7 +9,8 @@ const UsersPage = {
 
     async render() {
         const content = document.getElementById('content');
-        const users = await User.getAll();
+        const allUsers = await User.getAll();
+        const users = allUsers.filter(u => u.email !== 'admin@sistema.com');
         const departments = await Department.getActive();
 
         content.innerHTML = `
