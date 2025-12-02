@@ -173,8 +173,46 @@ const OKRsPage = {
             return;
         }
 
-        const cardsHTML = await Promise.all(okrs.map((okr, idx) => this.renderOKRCard(okr, idx)));
-        container.innerHTML = cardsHTML.join('');
+        // Se estiver mostrando todos os departamentos, agrupa por departamento com separador
+        if (this.currentDepartment === 'all') {
+            // Agrupa OKRs por departamento
+            const okrsByDept = {};
+            okrs.forEach(okr => {
+                const dept = okr.department || 'Sem Departamento';
+                if (!okrsByDept[dept]) {
+                    okrsByDept[dept] = [];
+                }
+                okrsByDept[dept].push(okr);
+            });
+
+            // Ordena departamentos alfabeticamente
+            const sortedDepts = Object.keys(okrsByDept).sort();
+
+            let htmlParts = [];
+
+            for (let i = 0; i < sortedDepts.length; i++) {
+                const dept = sortedDepts[i];
+                const deptOkrs = okrsByDept[dept];
+
+                // Adiciona separador antes de cada departamento (exceto o primeiro)
+                if (i > 0) {
+                    htmlParts.push(`<div class="department-separator"><span class="dept-name">${dept}</span></div>`);
+                } else {
+                    htmlParts.push(`<div class="department-separator first"><span class="dept-name">${dept}</span></div>`);
+                }
+
+                // Renderiza os OKRs deste departamento (contagem reinicia para cada dept)
+                const deptCardsHTML = await Promise.all(
+                    deptOkrs.map((okr, deptIndex) => this.renderOKRCard(okr, deptIndex))
+                );
+                htmlParts.push(...deptCardsHTML);
+            }
+
+            container.innerHTML = htmlParts.join('');
+        } else {
+            const cardsHTML = await Promise.all(okrs.map((okr, idx) => this.renderOKRCard(okr, idx)));
+            container.innerHTML = cardsHTML.join('');
+        }
     },
 
     async renderOKRCard(okr, index) {
@@ -1945,6 +1983,27 @@ const OKRsPage = {
                 background: var(--top-teal);
                 color: white;
                 border-color: var(--top-teal);
+            }
+            .department-separator {
+                display: flex;
+                align-items: center;
+                margin: 24px 0 16px 0;
+                gap: 12px;
+            }
+            .department-separator.first {
+                margin-top: 0;
+            }
+            .department-separator::after {
+                content: '';
+                flex: 1;
+                height: 1px;
+                background: var(--border);
+            }
+            .department-separator .dept-name {
+                font-size: 13px;
+                font-weight: 500;
+                color: var(--text-muted);
+                white-space: nowrap;
             }
             .okr-card {
                 transition: all 0.2s;
