@@ -275,7 +275,7 @@ const Layout = {
     getPageSubtitle(page) {
         const subtitles = {
             dashboard: 'Visão geral do progresso dos objetivos',
-            okrs: "Gerencie os O's da empresa",
+            okrs: "Gerencie os OKR's da empresa",
             cycles: "Configure ciclos e miniciclos para organizar os O's",
             objectives: 'Gerencie os objetivos estratégicos da empresa',
             approval: 'Aprove e acompanhe os OKRs submetidos',
@@ -294,15 +294,6 @@ const Layout = {
                 const page = item.getAttribute('data-page');
                 this.navigate(page);
             });
-        });
-
-        // Fecha todos os menus ao clicar fora
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.action-menu')) {
-                document.querySelectorAll('.action-menu-dropdown').forEach(menu => {
-                    menu.classList.remove('show');
-                });
-            }
         });
     },
 

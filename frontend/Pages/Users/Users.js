@@ -40,11 +40,11 @@ const UsersPage = {
                             <table class="users-table">
                                 <thead>
                                     <tr>
-                                        <th style="width:32%;">Usuário</th>
-                                        <th style="width:26%;">Email</th>
-                                        <th style="width:16%;">Departamento</th>
-                                        <th style="width:10%;">Tipo</th>
-                                        <th style="width:16%;text-align:right;">Ações</th>
+                                        <th style="min-width:220px;">Usuário</th>
+                                        <th style="min-width:200px;">Email</th>
+                                        <th style="min-width:150px;">Departamento</th>
+                                        <th style="min-width:100px;">Tipo</th>
+                                        <th style="min-width:120px;text-align:right;">Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -128,9 +128,6 @@ const UsersPage = {
             <div id="user-modal" style="display:none;"></div>
             <div id="delete-confirmation-modal" style="display:none;"></div>
         `;
-
-        // Fecha menus ao clicar fora
-        document.addEventListener('click', () => this.closeAllMenus());
     },
 
     async openModal(id = null) {
@@ -411,12 +408,13 @@ const UsersPage = {
 
     toggleMenu(event, userId) {
         event.stopPropagation();
-        window.closeAllDropdownMenus();
-        const menu = document.getElementById(`menu-${userId}`);
-        if (menu) {
-            window.positionDropdownMenu(event.currentTarget, `menu-${userId}`);
-            menu.classList.toggle('show');
-        }
+        event.preventDefault();
+
+        const button = event.currentTarget;
+        if (!button) return;
+
+        // Abre o menu (a função já lida com toggle)
+        window.openDropdownMenu(button, `menu-${userId}`);
     },
 
     closeAllMenus() {
