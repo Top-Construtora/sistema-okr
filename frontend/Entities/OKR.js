@@ -269,7 +269,7 @@ class OKR {
             const { data, error } = await supabaseClient
                 .from('okrs_complete')
                 .select('*')
-                .order('created_at', { ascending: false });
+                .order('created_at', { ascending: true });
 
             if (error) throw error;
             return data.map(o => new OKR(o));
