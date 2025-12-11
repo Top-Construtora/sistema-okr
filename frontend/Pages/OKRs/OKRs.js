@@ -6,6 +6,7 @@ import { OKR, OKR_STATUS } from '../../Entities/OKR.js';
 import { Department } from '../../Entities/Department.js';
 import { Initiative } from '../../Entities/Initiative.js';
 import { User } from '../../Entities/User.js';
+import { MiniCycle } from '../../Entities/MiniCycle.js';
 
 // Importa uid diretamente se necessário
 const generateId = () => {
@@ -172,7 +173,7 @@ const OKRsPage = {
                         <p style="color:var(--text-muted);font-size:15px;margin-bottom:16px;">Nenhum OKR encontrado</p>
                         ${canEdit ? `
                         <button class="btn btn-primary" onclick="OKRsPage.openModal()">
-                            Criar primeiro O
+                            Criar primeiro OKR
                         </button>
                         ` : ''}
                     </div>
@@ -225,6 +226,7 @@ const OKRsPage = {
 
     async renderOKRCard(okr, index, canEdit = true) {
         const objective = await okr.getObjective();
+        const miniCycle = okr.mini_cycle_id ? await MiniCycle.getById(okr.mini_cycle_id) : null;
         const isOKRExpanded = this.expandedOKRs.has(okr.id);
         const okrIdentifier = `O${index + 1}`;
 
@@ -282,6 +284,13 @@ const OKRsPage = {
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>
                                     </svg>
                                     ${objective ? objective.text : 'N/A'}
+                                </span>
+                                <span class="okr-separator">•</span>
+                                <span class="okr-minicycle" style="color:${miniCycle ? '#fff' : 'var(--danger)'};">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                    ${miniCycle ? miniCycle.nome : 'Sem miniciclo'}
                                 </span>
                             </div>
                             <div class="okr-progress-line">
@@ -676,10 +685,19 @@ const OKRsPage = {
         const modal = document.getElementById('okr-modal');
         const objectives = await StorageService.getObjectives();
         const departments = await Department.getActive();
+        const miniCycles = await MiniCycle.getActive();
         const currentUser = AuthService.getCurrentUser();
         const isAdmin = currentUser && currentUser.tipo === 'admin';
         const userDepartmentNames = this.getUserDepartmentNames(currentUser);
         const hasMultipleDepts = userDepartmentNames.length > 1;
+
+        // Encontra o miniciclo atualmente ativo (baseado na data)
+        const today = new Date();
+        const activeMiniCycle = miniCycles.find(mc => {
+            const inicio = new Date(mc.data_inicio);
+            const fim = new Date(mc.data_fim);
+            return today >= inicio && today <= fim;
+        });
 
         modal.innerHTML = `
             <div class="modal-overlay" onclick="OKRsPage.closeModal()"></div>
@@ -745,10 +763,30 @@ const OKRsPage = {
                         </div>
                     </div>
 
+                    <div class="form-group" style="margin-top:16px;">
+                        <label class="form-label">Miniciclo *</label>
+                        <select id="okr-minicycle" class="form-control">
+                            <option value="">Selecione...</option>
+                            ${miniCycles.map(mc => {
+                                const isCurrentlyActive = activeMiniCycle && activeMiniCycle.id === mc.id;
+                                const isSelected = this.currentOKR && this.currentOKR.mini_cycle_id === mc.id;
+                                const shouldSelect = isSelected || (!this.currentOKR && isCurrentlyActive);
+                                return `
+                                    <option value="${mc.id}" ${shouldSelect ? 'selected' : ''}>
+                                        ${mc.nome}${isCurrentlyActive ? ' [ATUAL]' : ''}
+                                    </option>
+                                `;
+                            }).join('')}
+                        </select>
+                        <small style="color:var(--text-muted);font-size:11px;display:block;margin-top:4px;">
+                            Selecione o miniciclo ao qual este OKR pertence
+                        </small>
+                    </div>
+
                     ${!this.currentOKR ? `
                         <div class="info-box" style="margin-top:16px;padding:12px 16px;background:var(--info-bg);border-left:3px solid var(--info);border-radius:6px;">
                             <p style="margin:0;font-size:13px;color:var(--text-secondary);">
-                                💡 <strong>Dica:</strong> Após criar o O, você poderá adicionar Key Results clicando no botão "Novo KR".
+                                Dica: Após criar o O, você poderá adicionar Key Results clicando no botão "Novo KR".
                             </p>
                         </div>
                     ` : ''}
@@ -779,6 +817,7 @@ const OKRsPage = {
         const title = document.getElementById('okr-title').value.trim();
         const objectiveId = parseInt(document.getElementById('okr-objective').value);
         const department = document.getElementById('okr-department').value;
+        const miniCycleId = document.getElementById('okr-minicycle').value;
         const errorDiv = document.getElementById('okr-error');
 
         errorDiv.style.display = 'none';
@@ -801,11 +840,18 @@ const OKRsPage = {
             return;
         }
 
+        if (!miniCycleId) {
+            errorDiv.textContent = 'Selecione um miniciclo';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
         try {
             const okr = this.currentOKR || new OKR();
             okr.title = title;
             okr.objectiveId = objectiveId;
             okr.department = department;
+            okr.mini_cycle_id = miniCycleId;
 
             // Se for novo OKR, cria com array vazio de KRs
             if (!this.currentOKR) {
