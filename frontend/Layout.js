@@ -89,6 +89,7 @@ const Layout = {
     renderSidebar() {
         const user = AuthService.getCurrentUser();
         const isAdmin = AuthService.isAdmin();
+        const canAccessApproval = AuthService.canAccessApproval();
 
         return `
             <div class="sidebar">
@@ -131,7 +132,7 @@ const Layout = {
                             </svg>
                             <span>Objetivos</span>
                         </a>
-                        ${isAdmin ? `
+                        ${canAccessApproval ? `
                         <a class="nav-item" data-page="approval" title="Comitê de Aprovação">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -301,9 +302,17 @@ const Layout = {
     async navigate(page, updateURL = true) {
         // Bloqueia acesso a páginas administrativas para não-admins
         const isAdmin = AuthService.isAdmin();
-        const adminOnlyPages = ['approval', 'users', 'departments'];
+        const canAccessApproval = AuthService.canAccessApproval();
+        const adminOnlyPages = ['users', 'departments'];
 
+        // Páginas só de admin
         if (!isAdmin && adminOnlyPages.includes(page)) {
+            page = 'dashboard';
+            updateURL = true;
+        }
+
+        // Comitê de Aprovação: admin e consultor podem acessar
+        if (!canAccessApproval && page === 'approval') {
             page = 'dashboard';
             updateURL = true;
         }

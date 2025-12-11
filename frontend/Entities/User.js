@@ -15,6 +15,7 @@ class User {
         this.updated_at = data.updated_at || null;
         this.department = data.department || null; // Quando vem com JOIN (legado)
         this.departments = data.departments || []; // Array de departamentos vinculados
+        this.primeiro_acesso = data.primeiro_acesso !== undefined ? data.primeiro_acesso : true;
     }
 
     // Validações
@@ -35,13 +36,13 @@ class User {
             errors.push('Senha é obrigatória');
         }
 
-        // Aceita departments array ou departamento_id legado
+        // Aceita departments array ou departamento_id legado (consultor não precisa de departamento)
         const hasDepartments = this.departments && this.departments.length > 0;
-        if (!hasDepartments && !this.departamento_id) {
+        if (this.tipo !== 'consultor' && !hasDepartments && !this.departamento_id) {
             errors.push('Pelo menos um departamento é obrigatório');
         }
 
-        if (!['admin', 'colaborador'].includes(this.tipo)) {
+        if (!['admin', 'colaborador', 'consultor'].includes(this.tipo)) {
             errors.push('Tipo de usuário inválido');
         }
 
@@ -368,6 +369,47 @@ class User {
 
     static async delete(id) {
         return await StorageService.delete('users', id);
+    }
+
+    // Atualiza a senha do usuário e marca primeiro_acesso como false
+    static async updatePassword(userId, newPassword) {
+        try {
+            // 1. Atualizar senha no Supabase Auth
+            const { error: authError } = await supabaseClient.auth.updateUser({
+                password: newPassword
+            });
+
+            if (authError) throw authError;
+
+            // 2. Marcar primeiro_acesso como false na tabela users
+            const { error: updateError } = await supabaseClient
+                .from('users')
+                .update({ primeiro_acesso: false })
+                .eq('id', userId);
+
+            if (updateError) throw updateError;
+
+            return true;
+        } catch (error) {
+            console.error('Erro ao atualizar senha:', error);
+            throw new Error('Erro ao atualizar senha: ' + error.message);
+        }
+    }
+
+    // Marca primeiro_acesso como false (sem trocar senha)
+    static async markFirstAccessComplete(userId) {
+        try {
+            const { error } = await supabaseClient
+                .from('users')
+                .update({ primeiro_acesso: false })
+                .eq('id', userId);
+
+            if (error) throw error;
+            return true;
+        } catch (error) {
+            console.error('Erro ao marcar primeiro acesso:', error);
+            throw error;
+        }
     }
 }
 

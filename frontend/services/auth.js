@@ -100,6 +100,18 @@ const AuthService = {
         return user && user.tipo === 'admin';
     },
 
+    // Verifica se é consultor
+    isConsultor() {
+        const user = this.getCurrentUser();
+        return user && user.tipo === 'consultor';
+    },
+
+    // Verifica se pode acessar o Comitê de Aprovação (admin ou consultor)
+    canAccessApproval() {
+        const user = this.getCurrentUser();
+        return user && (user.tipo === 'admin' || user.tipo === 'consultor');
+    },
+
     // Verifica sessão do Supabase Auth
     async checkSession() {
         try {

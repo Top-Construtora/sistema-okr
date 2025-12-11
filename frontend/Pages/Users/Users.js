@@ -79,8 +79,8 @@ const UsersPage = {
                                                 </div>
                                             </td>
                                             <td>
-                                                <span class="type-badge ${user.tipo === 'admin' ? 'admin' : 'colaborador'}">
-                                                    ${user.tipo === 'admin' ? 'Admin' : 'Colab.'}
+                                                <span class="type-badge ${user.tipo}">
+                                                    ${user.tipo === 'admin' ? 'Admin' : user.tipo === 'consultor' ? 'Consultor' : 'Colab.'}
                                                 </span>
                                             </td>
                                             <td class="actions-cell">
@@ -189,8 +189,8 @@ const UsersPage = {
                             Dados Organizacionais
                         </div>
 
-                        <div class="form-group">
-                            <label class="form-label">Departamentos * <small style="font-weight:normal;color:var(--text-muted);">(selecione um ou mais)</small></label>
+                        <div class="form-group" id="departamentos-group">
+                            <label class="form-label" id="departamentos-label">Departamentos * <small style="font-weight:normal;color:var(--text-muted);">(selecione um ou mais)</small></label>
                             <div class="departments-checkbox-list" id="user-departamentos">
                                 ${departments.map(dept => {
                                     const isChecked = this.currentUser && (
@@ -209,12 +209,13 @@ const UsersPage = {
 
                         <div class="form-group" style="margin-top:16px;">
                             <label class="form-label">Tipo de Usuário *</label>
-                            <select id="user-tipo" class="form-control">
+                            <select id="user-tipo" class="form-control" onchange="UsersPage.onTipoChange()">
                                 <option value="colaborador" ${this.currentUser && this.currentUser.tipo === 'colaborador' ? 'selected' : ''}>Colaborador</option>
+                                <option value="consultor" ${this.currentUser && this.currentUser.tipo === 'consultor' ? 'selected' : ''}>Consultor</option>
                                 <option value="admin" ${this.currentUser && this.currentUser.tipo === 'admin' ? 'selected' : ''}>Administrador</option>
                             </select>
-                            <small style="color:var(--text-muted);font-size:11px;display:block;margin-top:4px;">
-                                Admin tem acesso total ao sistema
+                            <small id="tipo-hint" style="color:var(--text-muted);font-size:11px;display:block;margin-top:4px;">
+                                ${this.currentUser?.tipo === 'consultor' ? 'Consultor: visualiza OKRs e pode solicitar ajustes' : 'Admin tem acesso total ao sistema'}
                             </small>
                         </div>
                     </div>
@@ -257,6 +258,39 @@ const UsersPage = {
             </div>
         `;
         modal.style.display = 'flex';
+
+        // Aplica estado inicial baseado no tipo
+        this.onTipoChange();
+    },
+
+    // Chamado quando o tipo de usuário muda
+    onTipoChange() {
+        const tipo = document.getElementById('user-tipo')?.value;
+        const deptsGroup = document.getElementById('departamentos-group');
+        const deptsLabel = document.getElementById('departamentos-label');
+        const tipoHint = document.getElementById('tipo-hint');
+        const checkboxes = document.querySelectorAll('input[name="user-dept"]');
+
+        if (!deptsGroup) return;
+
+        if (tipo === 'consultor') {
+            // Consultor não tem departamento
+            deptsGroup.style.opacity = '0.5';
+            deptsGroup.style.pointerEvents = 'none';
+            deptsLabel.innerHTML = 'Departamentos <small style="font-weight:normal;color:var(--text-muted);">(não aplicável para consultor)</small>';
+            tipoHint.textContent = 'Consultor: visualiza OKRs e pode solicitar ajustes no Comitê';
+            // Desmarca todos os departamentos
+            checkboxes.forEach(cb => {
+                cb.checked = false;
+                cb.parentElement.classList.remove('checked');
+            });
+        } else {
+            // Admin ou Colaborador precisam de departamento
+            deptsGroup.style.opacity = '1';
+            deptsGroup.style.pointerEvents = 'auto';
+            deptsLabel.innerHTML = 'Departamentos * <small style="font-weight:normal;color:var(--text-muted);">(selecione um ou mais)</small>';
+            tipoHint.textContent = tipo === 'admin' ? 'Admin tem acesso total ao sistema' : 'Colaborador tem acesso ao seu departamento';
+        }
     },
 
     closeModal() {
@@ -284,7 +318,8 @@ const UsersPage = {
             return;
         }
 
-        if (selectedDepts.length === 0) {
+        // Consultor não precisa de departamento, outros tipos precisam
+        if (tipo !== 'consultor' && selectedDepts.length === 0) {
             errorDiv.textContent = 'Selecione pelo menos um departamento';
             errorDiv.style.display = 'block';
             return;
@@ -308,9 +343,14 @@ const UsersPage = {
             user.email = email;
             user.tipo = tipo;
 
-            // Configurar departamentos (primeiro é o primário)
-            user.departments = selectedDepts.map((id, idx) => ({ id, is_primary: idx === 0 }));
-            user.departamento_id = selectedDepts[0]; // Compatibilidade
+            // Configurar departamentos (consultor não tem departamento)
+            if (tipo === 'consultor') {
+                user.departments = [];
+                user.departamento_id = null;
+            } else {
+                user.departments = selectedDepts.map((id, idx) => ({ id, is_primary: idx === 0 }));
+                user.departamento_id = selectedDepts[0]; // Compatibilidade
+            }
 
             if (senha) {
                 user.senha = senha;

@@ -2601,6 +2601,11 @@
     border: 1px solid var(--border);
 }
 
+.type-badge.consultor {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    color: white;
+}
+
 /* =====================================================
    ACTION MENU DROPDOWN - Sistema Portal
    ===================================================== */
@@ -2940,6 +2945,7 @@
 
 .delete-confirmation-modal .btn-danger {
     background: var(--danger);
+    color: white;
 }
 
 .delete-confirmation-modal .btn-danger:hover {

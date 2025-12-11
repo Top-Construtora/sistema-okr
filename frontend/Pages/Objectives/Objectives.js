@@ -179,7 +179,7 @@ const ObjectivesPage = {
                         <tr>
                             <th class="col-category">Categoria</th>
                             <th class="col-objective">Objetivo</th>
-                            <th class="col-okrs">O's Vinculados</th>
+                            <th class="col-okrs">OKR's Vinculados</th>
                             ${isAdmin ? '<th class="col-actions">Ações</th>' : '<th></th>'}
                         </tr>
                     </thead>

@@ -275,7 +275,11 @@ const ApprovalPage = {
     },
 
     renderActions(okr, currentStatus) {
-        const actions = {
+        const currentUser = AuthService.getCurrentUser();
+        const isConsultor = currentUser && currentUser.tipo === 'consultor';
+
+        // Ações completas para admin
+        const adminActions = {
             pending: [
                 { action: 'adjust', label: 'Solicitar Ajuste', icon: 'edit', variant: 'danger' },
                 { action: 'approved', label: 'Aprovar', icon: 'check', variant: 'success' }
@@ -293,6 +297,19 @@ const ApprovalPage = {
             homologated: []
         };
 
+        // Ações limitadas para consultor: apenas solicitar ajuste em OKRs pendentes
+        const consultorActions = {
+            pending: [
+                { action: 'adjust', label: 'Solicitar Ajuste', icon: 'edit', variant: 'danger' }
+            ],
+            adjust: [],
+            approved: [],
+            completed: [],
+            homologated: []
+        };
+
+        const actions = isConsultor ? consultorActions : adminActions;
+
         const icons = {
             'edit': '<path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>',
             'check': '<path d="M20 6L9 17l-5-5"/>',
@@ -304,6 +321,17 @@ const ApprovalPage = {
         const currentActions = actions[currentStatus] || [];
 
         if (currentActions.length === 0) {
+            // Mensagem diferente para consultor vs fluxo finalizado
+            if (isConsultor && currentStatus !== 'homologated') {
+                return `
+                    <div class="actions-completed" style="color: var(--text-muted); font-style: italic;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
+                        </svg>
+                        Apenas visualização
+                    </div>
+                `;
+            }
             return `
                 <div class="actions-completed">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
