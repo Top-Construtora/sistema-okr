@@ -20,6 +20,7 @@ const generateId = () => {
 const OKRsPage = {
     currentFilter: 'all',
     currentDepartment: 'all',
+    currentMiniCycle: 'all',
     currentOKR: null,
     expandedOKRs: new Set(),
     expandedKRs: new Set(),
@@ -62,6 +63,7 @@ const OKRsPage = {
 
         let okrs = await OKR.getAll();
         const departments = await Department.getActive();
+        const miniCycles = await MiniCycle.getActive();
 
         // Se for colaborador, filtra OKRs dos seus departamentos
         if (!isAdmin && userDepartmentNames.length > 0) {
@@ -100,8 +102,16 @@ const OKRsPage = {
                     </button>
                 </div>
 
-                ${isAdmin ? `
-                <div style="margin-left:auto;">
+                <div style="margin-left:auto;display:flex;gap:12px;">
+                    <select id="minicycle-filter" class="form-control" onchange="OKRsPage.filterByMiniCycle(this.value)" style="min-width:180px;">
+                        <option value="all" ${this.currentMiniCycle === 'all' ? 'selected' : ''}>Todos os Miniciclos</option>
+                        ${miniCycles.map(mc => `
+                            <option value="${mc.id}" ${this.currentMiniCycle === mc.id ? 'selected' : ''}>
+                                ${mc.nome}
+                            </option>
+                        `).join('')}
+                    </select>
+                    ${isAdmin ? `
                     <select id="dept-filter" class="form-control" onchange="OKRsPage.filterByDepartment(this.value)" style="min-width:200px;">
                         <option value="all">Todos os Departamentos</option>
                         ${departments.map(dept => `
@@ -110,8 +120,8 @@ const OKRsPage = {
                             </option>
                         `).join('')}
                     </select>
+                    ` : ''}
                 </div>
-                ` : ''}
             </div>
 
             <div id="okrs-list"></div>
@@ -161,6 +171,11 @@ const OKRsPage = {
         // Filtro por departamento (apenas admin pode filtrar por outros departamentos)
         if (isAdmin && this.currentDepartment !== 'all') {
             okrs = okrs.filter(o => o.department === this.currentDepartment);
+        }
+
+        // Filtro por miniciclo
+        if (this.currentMiniCycle !== 'all') {
+            okrs = okrs.filter(o => o.mini_cycle_id === this.currentMiniCycle);
         }
 
         if (okrs.length === 0) {
@@ -676,6 +691,11 @@ const OKRsPage = {
 
     async filterByDepartment(department) {
         this.currentDepartment = department;
+        await this.renderList();
+    },
+
+    async filterByMiniCycle(miniCycleId) {
+        this.currentMiniCycle = miniCycleId;
         await this.renderList();
     },
 
