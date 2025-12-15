@@ -1,2 +1,25 @@
-*.md
+# Dependencies
+node_modules/
+
+# Environment files
+.env
+.env.local
+
+# Build outputs
+dist/
+
+# IDE/Editor
 .claude
+.vscode/
+CLAUDE.md
+
+# Documentation
+frontend/README_NPM.md
+
+# OS files
+nul
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

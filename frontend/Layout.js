@@ -277,7 +277,7 @@ const Layout = {
         const subtitles = {
             dashboard: 'Visão geral do progresso dos objetivos',
             okrs: "Gerencie os OKR's da empresa",
-            cycles: "Configure ciclos e miniciclos para organizar os O's",
+            cycles: "Configure ciclos e miniciclos para organizar os OKR's",
             objectives: 'Gerencie os objetivos estratégicos da empresa',
             approval: 'Aprove e acompanhe os OKRs submetidos',
             users: 'Gerencie os usuários do sistema',
