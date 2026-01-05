@@ -10,12 +10,7 @@ const App = {
 
         try {
             // Inicializa o storage (testa conexão Supabase)
-            const connected = await StorageService.init();
-
-            if (!connected) {
-                this.showError('Erro ao conectar com o banco de dados. Verifique sua configuração do Supabase.');
-                return;
-            }
+            await StorageService.init();
 
             // Cria admin padrão se necessário
             await AuthService.initializeDefaultAdmin();
