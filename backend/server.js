@@ -15,8 +15,29 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Configuração de CORS com suporte a múltiplas origens
+const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000')
+    .split(',')
+    .map(url => url.trim());
+
+const corsOptions = {
+    origin: function (origin, callback) {
+        // Permite requisições sem origin (como apps mobile, Postman, etc)
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            console.warn(`⚠️  CORS bloqueou origem: ${origin}`);
+            console.warn(`✅ Origens permitidas: ${allowedOrigins.join(', ')}`);
+            callback(new Error('Origem não permitida pelo CORS'));
+        }
+    },
+    credentials: true
+};
+
 app.use(helmet());
-app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:3000', credentials: true }));
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(morgan('dev'));
 
