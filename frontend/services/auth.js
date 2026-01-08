@@ -126,6 +126,74 @@ const AuthService = {
     // Admin é criado via Supabase Auth Dashboard
     async initializeDefaultAdmin() {
         return true;
+    },
+
+    // Solicita reset de senha via email
+    async requestPasswordReset(email) {
+        try {
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+            const response = await fetch(`${API_URL}/api/auth/password-reset`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ email })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                return {
+                    success: false,
+                    error: data.error || 'Erro ao solicitar recuperação de senha'
+                };
+            }
+
+            return {
+                success: true,
+                message: data.message
+            };
+        } catch (error) {
+            console.error('Erro ao solicitar reset de senha:', error);
+            return {
+                success: false,
+                error: 'Erro ao processar solicitação'
+            };
+        }
+    },
+
+    // Redefine a senha usando o token
+    async resetPassword(token, newPassword) {
+        try {
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+            const response = await fetch(`${API_URL}/api/auth/confirm-reset`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ token, newPassword })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                return {
+                    success: false,
+                    error: data.error || 'Erro ao redefinir senha'
+                };
+            }
+
+            return {
+                success: true,
+                message: data.message
+            };
+        } catch (error) {
+            console.error('Erro ao redefinir senha:', error);
+            return {
+                success: false,
+                error: 'Erro ao processar redefinição de senha'
+            };
+        }
     }
 };
 

@@ -66,7 +66,9 @@ const Layout = {
             '/usuarios': 'users',
             '/users': 'users',
             '/departamentos': 'departments',
-            '/departments': 'departments'
+            '/departments': 'departments',
+            '/esqueci-senha': 'forgot-password',
+            '/redefinir-senha': 'reset-password'
         };
         return routes[path] || 'dashboard';
     },
@@ -80,7 +82,9 @@ const Layout = {
             'objectives': '/objetivos',
             'approval': '/approval',
             'users': '/usuarios',
-            'departments': '/departamentos'
+            'departments': '/departamentos',
+            'forgot-password': '/esqueci-senha',
+            'reset-password': '/redefinir-senha'
         };
         return paths[page] || '/dashboard';
     },
@@ -363,6 +367,12 @@ const Layout = {
                     break;
                 case 'departments':
                     DepartmentsPage.render();
+                    break;
+                case 'forgot-password':
+                    ForgotPasswordPage.render();
+                    break;
+                case 'reset-password':
+                    ResetPasswordPage.render();
                     break;
                 default:
                     content.innerHTML = '<p>Página não encontrada</p>';

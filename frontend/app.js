@@ -15,6 +15,16 @@ const App = {
             // Cria admin padrão se necessário
             await AuthService.initializeDefaultAdmin();
 
+            // Verifica se é uma página pública (não requer autenticação)
+            const path = window.location.pathname;
+            const publicPages = ['/esqueci-senha', '/redefinir-senha', '/auth/callback'];
+
+            if (publicPages.includes(path)) {
+                // Renderiza página pública
+                this.renderPublicPage(path);
+                return;
+            }
+
             // Verifica se está autenticado
             if (AuthService.isAuthenticated()) {
                 this.renderApp();
@@ -24,6 +34,19 @@ const App = {
         } catch (error) {
             console.error('Erro ao inicializar:', error);
             this.showError('Erro ao inicializar o sistema: ' + error.message);
+        }
+    },
+
+    renderPublicPage(path) {
+        const app = document.getElementById('app');
+        app.innerHTML = '<div id="content"></div>';
+
+        if (path === '/esqueci-senha') {
+            window.ForgotPasswordPage.render();
+        } else if (path === '/redefinir-senha') {
+            window.ResetPasswordPage.render();
+        } else if (path === '/auth/callback') {
+            window.PasswordRecoveryCallbackPage.render();
         }
     },
 
@@ -147,6 +170,9 @@ const App = {
                                         </button>
                                     </div>
                                 </div>
+                                <div class="forgot-password-link">
+                                    <a href="/esqueci-senha" onclick="App.navigateToForgotPassword(event)">Esqueci minha senha</a>
+                                </div>
                                 <div id="loginError" class="error-message" style="display:none;"></div>
                                 <button type="submit" class="btn btn-primary btn-block btn-login">
                                     <span class="btn-text">Entrar no Sistema</span>
@@ -195,6 +221,11 @@ const App = {
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
             `;
         }
+    },
+
+    navigateToForgotPassword(event) {
+        event.preventDefault();
+        window.location.href = '/esqueci-senha';
     },
 
     async handleLogin() {
@@ -843,6 +874,26 @@ const App = {
                 font-size: 12px;
                 color: #a0aec0;
                 margin: 0;
+            }
+
+            /* Forgot Password Link */
+            .forgot-password-link {
+                text-align: right;
+                margin-top: 8px;
+                margin-bottom: -12px;
+            }
+
+            .forgot-password-link a {
+                color: #12b0a0;
+                text-decoration: none;
+                font-size: 13px;
+                font-weight: 500;
+                transition: color 0.2s;
+            }
+
+            .forgot-password-link a:hover {
+                color: #0d9488;
+                text-decoration: underline;
             }
 
             /* Responsive */
