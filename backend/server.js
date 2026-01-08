@@ -18,29 +18,39 @@ const PORT = process.env.PORT || 3001;
 // Configuração de CORS com suporte a múltiplas origens
 const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000')
     .split(',')
-    .map(url => url.trim());
+    .map(url => url.trim().replace(/\/$/, '')); // Remove barra final
+
+console.log('🔐 Origens CORS permitidas:', allowedOrigins);
 
 const corsOptions = {
     origin: function (origin, callback) {
         // Permite requisições sem origin (como apps mobile, Postman, etc)
-        if (!origin) return callback(null, true);
+        if (!origin) {
+            console.log('✅ CORS: Requisição sem origin (permitida)');
+            return callback(null, true);
+        }
 
-        if (allowedOrigins.indexOf(origin) !== -1) {
+        // Normaliza a origem removendo barra final
+        const normalizedOrigin = origin.replace(/\/$/, '');
+
+        if (allowedOrigins.includes(normalizedOrigin)) {
+            console.log(`✅ CORS: Origem permitida: ${origin}`);
             callback(null, true);
         } else {
-            console.warn(`⚠️  CORS bloqueou origem: ${origin}`);
-            console.warn(`✅ Origens permitidas: ${allowedOrigins.join(', ')}`);
-            // Retorna false em vez de erro para evitar status 500
+            console.warn(`⚠️  CORS: Origem BLOQUEADA: ${origin}`);
+            console.warn(`    Origens permitidas: ${allowedOrigins.join(', ')}`);
             callback(null, false);
         }
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    optionsSuccessStatus: 200
 };
 
-app.use(helmet());
+// IMPORTANTE: CORS antes do helmet
 app.use(cors(corsOptions));
+app.use(helmet());
 app.use(express.json());
 app.use(morgan('dev'));
 
