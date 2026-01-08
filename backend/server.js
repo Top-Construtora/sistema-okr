@@ -30,10 +30,13 @@ const corsOptions = {
         } else {
             console.warn(`⚠️  CORS bloqueou origem: ${origin}`);
             console.warn(`✅ Origens permitidas: ${allowedOrigins.join(', ')}`);
-            callback(new Error('Origem não permitida pelo CORS'));
+            // Retorna false em vez de erro para evitar status 500
+            callback(null, false);
         }
     },
-    credentials: true
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 };
 
 app.use(helmet());
