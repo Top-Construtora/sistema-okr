@@ -196,6 +196,7 @@ const DashboardPage = {
                 display: grid;
                 grid-template-columns: 1fr 2fr;
                 gap: 24px;
+                align-items: start;
             }
 
             .widget {

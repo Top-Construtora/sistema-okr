@@ -130,21 +130,8 @@ const ObjectivesPage = {
                             ` : ''}
                         </div>
                     </td>
-                    <td class="meta-cell-page" style="text-align:center;">
-                        <div class="metric-item">
-                            <div class="metric-icon">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <div class="metric-value">${okrCount}</div>
-                                <div class="metric-label">${okrCount === 1 ? 'Título' : "Títulos"}</div>
-                            </div>
-                        </div>
-                    </td>
                     ${isAdmin ? `
-                    <td class="actions-cell" style="text-align:right;">
+                    <td class="actions-cell" style="text-align:center;">
                         <div class="action-menu">
                             <button class="action-menu-btn" onclick="ObjectivesPage.toggleMenu(event, '${obj.id}')" title="Ações">
                                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -168,6 +155,14 @@ const ObjectivesPage = {
                         </div>
                     </td>
                     ` : '<td></td>'}
+                    <td class="meta-cell-page" style="text-align:center;">
+                        <div class="metric-item">
+                            <div>
+                                <div class="metric-value">${okrCount}</div>
+                                <div class="metric-label">OKR's</div>
+                            </div>
+                        </div>
+                    </td>
                 </tr>
             `;
         }).join('');
@@ -179,8 +174,8 @@ const ObjectivesPage = {
                         <tr>
                             <th class="col-category">Categoria</th>
                             <th class="col-objective">Objetivo</th>
-                            <th class="col-okrs">OKR's Vinculados</th>
                             ${isAdmin ? '<th class="col-actions">Ações</th>' : '<th></th>'}
+                            <th class="col-okrs">OKR's Vinculados</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -554,12 +549,12 @@ const ObjectivesPage = {
             }
 
             .objective-row-page td:nth-child(3) {
-                width: 140px;
+                width: 70px;
                 text-align: center;
             }
 
             .objective-row-page td:nth-child(4) {
-                width: 70px;
+                width: 140px;
                 text-align: center;
             }
 
@@ -593,22 +588,6 @@ const ObjectivesPage = {
                 align-items: center;
                 justify-content: center;
                 gap: 8px;
-            }
-
-            .metric-icon {
-                width: 32px;
-                height: 32px;
-                border-radius: var(--radius);
-                background: var(--bg-main);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: var(--top-teal);
-            }
-
-            .metric-icon svg {
-                width: 16px;
-                height: 16px;
             }
 
             .metric-value {
@@ -664,17 +643,13 @@ const ObjectivesPage = {
                 }
 
                 .objectives-table-page .col-okrs,
-                .objective-row-page td:nth-child(3) {
+                .objective-row-page td:nth-child(4) {
                     width: 80px;
                 }
 
                 .metric-item {
                     flex-direction: column;
                     gap: 2px;
-                }
-
-                .metric-icon {
-                    display: none;
                 }
             }
         `;
