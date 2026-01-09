@@ -33,6 +33,7 @@ import { DepartmentsPage } from './Pages/Departments/Departments.js'
 import { UsersPage } from './Pages/Users/Users.js'
 import { OKRsPage } from './Pages/OKRs/OKRs.js'
 import { ApprovalPage } from './Pages/ApprovalCommittee/ApprovalCommittee.js'
+import { SettingsPage } from './Pages/Settings/Settings.js'
 import ForgotPasswordPage from './Pages/PasswordRecovery/ForgotPassword.js'
 import ResetPasswordPage from './Pages/PasswordRecovery/ResetPassword.js'
 import PasswordRecoveryCallbackPage from './Pages/PasswordRecovery/PasswordRecoveryCallback.js'
@@ -58,6 +59,7 @@ window.DepartmentsPage = DepartmentsPage;
 window.UsersPage = UsersPage;
 window.OKRsPage = OKRsPage;
 window.ApprovalPage = ApprovalPage;
+window.SettingsPage = SettingsPage;
 window.ForgotPasswordPage = ForgotPasswordPage;
 window.ResetPasswordPage = ResetPasswordPage;
 window.PasswordRecoveryCallbackPage = PasswordRecoveryCallbackPage;

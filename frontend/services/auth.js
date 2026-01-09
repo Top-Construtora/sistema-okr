@@ -194,6 +194,43 @@ const AuthService = {
                 error: 'Erro ao processar redefinição de senha'
             };
         }
+    },
+
+    // Atualiza senha do usuário logado (usado em Settings)
+    async updatePassword(currentPassword, newPassword) {
+        try {
+            const user = this.getCurrentUser();
+            if (!user) {
+                return { success: false, error: 'Usuário não autenticado' };
+            }
+
+            // 1. Verifica senha atual
+            const { error: signInError } = await supabaseClient.auth.signInWithPassword({
+                email: user.email,
+                password: currentPassword
+            });
+
+            if (signInError) {
+                return { success: false, error: 'Senha atual incorreta' };
+            }
+
+            // 2. Atualiza para nova senha
+            const { error: updateError } = await supabaseClient.auth.updateUser({
+                password: newPassword
+            });
+
+            if (updateError) {
+                return { success: false, error: updateError.message };
+            }
+
+            return { success: true, message: 'Senha alterada com sucesso!' };
+        } catch (error) {
+            console.error('Erro ao atualizar senha:', error);
+            return {
+                success: false,
+                error: 'Erro ao processar alteração de senha'
+            };
+        }
     }
 };
 

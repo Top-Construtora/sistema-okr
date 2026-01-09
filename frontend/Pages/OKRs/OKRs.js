@@ -841,6 +841,8 @@ const OKRsPage = {
     closeModal() {
         document.getElementById('okr-modal').style.display = 'none';
         this.currentOKR = null;
+        // Garante que o scroll seja liberado
+        document.body.style.overflow = '';
     },
 
     async save() {
@@ -1157,6 +1159,8 @@ const OKRsPage = {
     closeKRModal() {
         const modal = document.getElementById('kr-modal');
         if (modal) modal.remove();
+        // Garante que o scroll seja liberado
+        document.body.style.overflow = '';
     },
 
     // Funções para gerenciar evidências
@@ -1805,6 +1809,8 @@ const OKRsPage = {
         const modal = document.getElementById('initiative-modal');
         if (modal) modal.remove();
         this.currentInitiative = null;
+        // Garante que o scroll seja liberado
+        document.body.style.overflow = '';
     },
 
     // Funções para gerenciar evidências de iniciativas
@@ -3541,57 +3547,297 @@ const OKRsPage = {
                 color: var(--top-teal);
             }
 
-            /* Responsividade */
+            /* ============================================ */
+            /* RESPONSIVIDADE MOBILE - MELHORADA */
+            /* ============================================ */
             @media (max-width: 768px) {
+                /* Page Header Mobile - Muito Melhor */
+                .page-header {
+                    flex-direction: column !important;
+                    align-items: stretch !important;
+                    gap: 14px !important;
+                    margin-bottom: 18px !important;
+                    background: linear-gradient(135deg, rgba(248, 250, 252, 1) 0%, white 100%);
+                    padding: 16px;
+                    border-radius: 12px;
+                    border: 1px solid rgba(30, 96, 118, 0.08);
+                }
+
+                .page-header > div:first-child {
+                    width: 100%;
+                }
+
+                .page-header > div:first-child h2 {
+                    font-size: 19px !important;
+                    margin-bottom: 6px !important;
+                }
+
+                .page-header > div:first-child p {
+                    font-size: 13px !important;
+                }
+
+                .page-header > div:last-child {
+                    width: 100%;
+                    flex-direction: column !important;
+                    gap: 10px !important;
+                }
+
+                .page-header .btn {
+                    width: 100%;
+                    justify-content: center;
+                    min-height: 50px;
+                    font-size: 15px;
+                    font-weight: 600;
+                    border-radius: 12px;
+                }
+
+                .page-header .btn-primary {
+                    background: linear-gradient(135deg, var(--top-teal) 0%, #0d9488 100%);
+                    box-shadow: 0 4px 14px rgba(18, 176, 160, 0.3);
+                }
+
+                .page-header .btn-secondary {
+                    background: white;
+                    border: 2px solid var(--border);
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+                }
+
+                /* Filters Section Mobile - Tabs Style */
+                div[style*="display:flex"][style*="margin-bottom:24px"] {
+                    flex-direction: column !important;
+                    gap: 12px !important;
+                    margin-bottom: 18px !important;
+                }
+
+                .okr-filters {
+                    width: 100%;
+                    gap: 8px;
+                    display: grid !important;
+                    grid-template-columns: 1fr 1fr;
+                }
+
+                .filter-btn {
+                    flex: none;
+                    width: 100%;
+                    padding: 12px 10px;
+                    font-size: 12px;
+                    border-radius: 12px;
+                    font-weight: 700;
+                    border-width: 2px;
+                    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                    text-align: center;
+                }
+
+                .filter-btn.active {
+                    background: linear-gradient(135deg, var(--top-teal) 0%, #0d9488 100%);
+                    box-shadow: 0 4px 12px rgba(18, 176, 160, 0.3);
+                    border-color: var(--top-teal);
+                    transform: translateY(-2px);
+                }
+
+                .filter-btn:active {
+                    transform: translateY(0);
+                }
+
+                /* Selects Mobile - Stack Vertical */
+                div[style*="margin-left:auto"] {
+                    margin-left: 0 !important;
+                    width: 100%;
+                    flex-direction: column !important;
+                    gap: 10px !important;
+                }
+
+                #minicycle-filter,
+                #dept-filter {
+                    width: 100% !important;
+                    min-width: 100% !important;
+                    min-height: 48px;
+                    padding: 12px 14px;
+                    font-size: 14px;
+                    border-radius: 12px;
+                    border: 2px solid var(--border);
+                    background: white;
+                    font-weight: 500;
+                }
+
+                /* Department Separator Mobile */
+                .department-separator {
+                    margin: 20px 0 14px 0;
+                }
+
+                .department-separator .dept-name {
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: var(--top-blue);
+                }
+
+                /* OKR Accordion Card Mobile */
+                .okr-accordion-card {
+                    margin-bottom: 18px;
+                    border-radius: 14px;
+                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+                }
+
+                .okr-adjustment-banner {
+                    padding: 14px 16px;
+                    flex-direction: column;
+                    gap: 10px;
+                }
+
+                .adjustment-content strong {
+                    font-size: 14px;
+                }
+
+                .adjustment-content p {
+                    font-size: 13px;
+                }
+
+                /* OKR Header Mobile */
                 .okr-accordion-header {
-                    padding: 12px 16px;
+                    padding: 16px;
+                    flex-direction: column;
+                    gap: 12px;
+                    align-items: flex-start !important;
                 }
 
                 .okr-header-left {
+                    width: 100%;
                     flex-direction: column;
                     align-items: flex-start;
-                    gap: 8px;
+                    gap: 10px;
                 }
 
                 .okr-info-wrapper {
                     width: 100%;
+                    gap: 10px;
                 }
 
                 .okr-main-line {
                     flex-wrap: wrap;
+                    gap: 10px;
+                    width: 100%;
                 }
 
-                .okr-meta-line {
-                    font-size: 11px;
-                    flex-wrap: wrap;
-                }
-
-                .okr-progress-line {
-                    margin-top: 6px;
-                }
-
-                .okr-progress-bar-header {
-                    height: 6px;
-                }
-
-                .okr-progress-text {
+                .okr-identifier {
+                    padding: 5px 12px;
                     font-size: 12px;
-                    min-width: 38px;
+                    border-radius: 8px;
                 }
 
                 .okr-title-header {
-                    font-size: 14px;
+                    font-size: 15px;
+                    line-height: 1.4;
                 }
 
                 .kr-count {
                     font-size: 12px;
                 }
 
+                .okr-meta-line {
+                    font-size: 12px;
+                    flex-wrap: wrap;
+                    gap: 6px;
+                }
+
+                .okr-department svg,
+                .okr-objective svg {
+                    width: 14px;
+                    height: 14px;
+                }
+
+                .okr-progress-line {
+                    width: 100%;
+                    margin-top: 10px;
+                    gap: 12px;
+                }
+
+                .okr-progress-bar-header {
+                    height: 8px;
+                    border-radius: 4px;
+                }
+
+                .okr-progress-fill {
+                    border-radius: 4px;
+                }
+
+                .okr-progress-text {
+                    font-size: 14px;
+                    font-weight: 800;
+                    min-width: 50px;
+                }
+
+                .okr-header-right {
+                    width: 100%;
+                    justify-content: space-between;
+                    flex-direction: row-reverse;
+                }
+
+                .okr-status-badge {
+                    padding: 6px 12px;
+                    font-size: 11px;
+                    border-radius: 8px;
+                }
+
+                .action-menu-btn-header {
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 8px;
+                }
+
+                .action-menu-btn-header svg {
+                    width: 20px;
+                    height: 20px;
+                }
+
+                .expand-arrow {
+                    width: 40px;
+                    height: 40px;
+                }
+
+                .expand-arrow svg {
+                    width: 20px;
+                    height: 20px;
+                }
+
+                /* KRs Section Mobile */
+                .krs-section {
+                    padding: 16px;
+                }
+
+                .krs-section-header {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 12px;
+                    margin-bottom: 14px;
+                }
+
+                .section-title {
+                    font-size: 15px;
+                }
+
+                .krs-section-header .btn {
+                    width: 100%;
+                    min-height: 44px;
+                }
+
+                /* KR Accordion Mobile */
+                .kr-accordion-list {
+                    gap: 14px;
+                }
+
+                .kr-accordion-item {
+                    border-radius: 12px;
+                }
+
                 .kr-accordion-header {
-                    padding: 12px;
+                    padding: 14px;
+                    flex-direction: column;
+                    gap: 10px;
+                    align-items: flex-start !important;
                 }
 
                 .kr-header-left {
+                    width: 100%;
                     flex-wrap: wrap;
                 }
 
@@ -3601,37 +3847,338 @@ const OKRsPage = {
 
                 .kr-title-line {
                     width: 100%;
+                    flex-wrap: wrap;
+                    gap: 8px;
+                }
+
+                .kr-badge {
+                    padding: 5px 12px;
+                    font-size: 11px;
+                    border-radius: 8px;
+                }
+
+                .kr-title-text {
+                    font-size: 14px;
+                    line-height: 1.5;
+                }
+
+                .kr-progress-line-header {
+                    padding-left: 0;
+                    width: 100%;
+                    margin-top: 8px;
+                }
+
+                .kr-progress-bar-small {
+                    max-width: 100%;
+                    height: 8px;
+                    border-radius: 4px;
+                }
+
+                .kr-progress-fill-small {
+                    border-radius: 4px;
+                }
+
+                .kr-progress-text-small {
+                    font-size: 13px;
+                    font-weight: 700;
+                    min-width: 50px;
+                }
+
+                .kr-header-right {
+                    width: 100%;
+                    justify-content: space-between;
+                    flex-direction: row-reverse;
+                }
+
+                .kr-status-badge {
+                    font-size: 11px;
+                    padding: 5px 12px;
+                    border-radius: 8px;
+                }
+
+                .expand-arrow-sm {
+                    width: 36px;
+                    height: 36px;
+                }
+
+                .expand-arrow-sm svg {
+                    width: 18px;
+                    height: 18px;
+                }
+
+                /* KR Body Content Mobile */
+                .kr-body-content {
+                    padding: 16px;
+                    gap: 16px;
+                }
+
+                .kr-top-row {
+                    grid-template-columns: 1fr;
+                    gap: 14px;
+                }
+
+                .kr-detail-section {
+                    border-radius: 10px;
+                }
+
+                .kr-detail-header {
+                    padding: 12px 14px;
+                    font-size: 13px;
+                }
+
+                .kr-detail-header svg {
+                    width: 16px;
+                    height: 16px;
+                }
+
+                .kr-detail-body {
+                    padding: 14px;
+                }
+
+                .kr-comment-text,
+                .kr-evidence-text {
+                    font-size: 14px;
+                }
+
+                /* Initiatives Section Mobile */
+                .initiatives-section {
+                    padding: 14px;
+                }
+
+                .initiatives-section-header {
+                    flex-direction: column;
+                    align-items: flex-start !important;
+                    gap: 12px;
+                }
+
+                .initiatives-section-header .btn {
+                    width: 100%;
+                    min-height: 44px;
+                }
+
+                .initiatives-list {
+                    gap: 12px;
+                }
+
+                .initiative-item {
+                    flex-direction: column;
+                    gap: 12px;
+                    padding: 14px;
+                    border-radius: 12px;
+                }
+
+                .initiative-checkbox .checkmark {
+                    width: 24px;
+                    height: 24px;
+                    border-width: 2.5px;
+                }
+
+                .initiative-content {
+                    width: 100%;
+                }
+
+                .initiative-header-row {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 12px;
+                }
+
+                .initiative-name {
+                    font-size: 15px;
+                }
+
+                .initiative-progress-inline {
+                    width: 100%;
+                    justify-content: space-between;
+                }
+
+                .initiative-progress-slider-inline {
+                    width: 100%;
+                    height: 8px;
+                }
+
+                .initiative-progress-slider-inline::-webkit-slider-thumb {
+                    width: 20px;
+                    height: 20px;
+                    margin-top: -6px;
+                }
+
+                .progress-value-inline {
+                    font-size: 14px;
+                    min-width: 50px;
+                }
+
+                .initiative-desc {
+                    font-size: 13px;
+                }
+
+                .initiative-meta {
+                    font-size: 12px;
+                    gap: 10px;
+                }
+
+                .initiative-actions {
+                    width: 100%;
+                    justify-content: flex-start;
+                    gap: 8px;
+                }
+
+                .btn-icon-sm {
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 8px;
+                }
+
+                .btn-icon-sm svg {
+                    width: 16px;
+                    height: 16px;
+                }
+
+                /* Evidence Cards Mobile */
+                .kr-evidence-grid {
+                    grid-template-columns: 1fr;
+                    gap: 12px;
+                }
+
+                .kr-evidence-card {
+                    padding: 14px;
+                    border-radius: 10px;
+                }
+
+                .evidence-card-icon {
+                    width: 40px;
+                    height: 40px;
+                }
+
+                .evidence-card-icon svg {
+                    width: 20px;
+                    height: 20px;
+                }
+
+                .kr-evidence-file {
+                    padding: 14px;
+                    border-radius: 10px;
+                }
+
+                .kr-evidence-file .file-icon {
+                    width: 44px;
+                    height: 44px;
+                }
+
+                .kr-evidence-file .file-icon svg {
+                    width: 22px;
+                    height: 22px;
+                }
+
+                /* Buttons Mobile */
+                .btn-outline {
+                    padding: 8px 14px;
+                    font-size: 13px;
+                    border-radius: 8px;
+                    min-height: 40px;
+                }
+
+                .btn-secondary {
+                    padding: 12px 18px;
+                    font-size: 14px;
+                    border-radius: 10px;
+                    min-height: 48px;
+                }
+
+                /* Quick Modals Mobile */
+                .quick-modal-content {
+                    max-width: calc(100% - 32px);
+                    border-radius: 16px;
+                }
+
+                .quick-modal-header {
+                    padding: 16px 18px;
+                }
+
+                .quick-modal-header h4 {
+                    font-size: 17px;
+                }
+
+                .quick-modal-body {
+                    padding: 18px;
+                }
+
+                .quick-modal-footer {
+                    padding: 14px 18px;
+                    flex-direction: column;
+                    gap: 8px;
+                }
+
+                .quick-modal-footer .btn {
+                    width: 100%;
+                    min-height: 48px;
+                }
+
+                /* Evidence Type Selector Mobile */
+                .evidence-type-selector {
+                    flex-direction: column;
+                    gap: 10px;
+                }
+
+                .evidence-type-option {
+                    padding: 14px 20px;
+                    border-radius: 12px;
+                }
+
+                /* File Upload Mobile */
+                .file-upload-label {
+                    padding: 18px;
+                    border-radius: 12px;
+                    font-size: 14px;
+                }
+
+                .file-selected {
+                    padding: 14px 18px;
+                    border-radius: 12px;
+                }
+            }
+
+            /* Mobile Extra Small */
+            @media (max-width: 480px) {
+                .page-header > div:first-child h2 {
+                    font-size: 17px !important;
+                }
+
+                .okr-accordion-card {
+                    border-radius: 12px;
+                }
+
+                .okr-accordion-header {
+                    padding: 14px;
+                }
+
+                .okr-title-header {
+                    font-size: 14px;
+                }
+
+                .okr-meta-line {
+                    font-size: 11px;
+                }
+
+                .krs-section,
+                .initiatives-section {
+                    padding: 14px;
+                }
+
+                .kr-accordion-header {
+                    padding: 12px;
                 }
 
                 .kr-title-text {
                     font-size: 13px;
                 }
 
-                .kr-progress-line-header {
-                    padding-left: 0;
-                }
-
-                .kr-progress-bar-small {
-                    max-width: 100%;
-                }
-
-                .kr-status-badge {
-                    font-size: 10px;
-                    padding: 3px 8px;
-                }
-
-                .initiatives-section {
+                .initiative-item {
                     padding: 12px;
                 }
 
-                .initiative-item {
-                    flex-direction: column;
-                    gap: 8px;
-                }
-
-                .initiative-actions {
-                    width: 100%;
-                    justify-content: flex-end;
+                .initiative-name {
+                    font-size: 14px;
                 }
             }
 

@@ -459,24 +459,27 @@ const ObjectivesPage = {
                 width: 32px;
                 height: 32px;
                 border-radius: 6px;
-                border: none;
-                background: transparent;
+                border: 1px solid var(--border);
+                background: white;
                 color: var(--text-secondary);
-                display: flex;
+                display: inline-flex;
                 align-items: center;
                 justify-content: center;
                 cursor: pointer;
-                transition: all 0.2s;
+                transition: all 0.15s ease;
+                flex-shrink: 0;
             }
 
             .action-menu-btn:hover {
-                background: var(--bg-hover);
-                color: var(--text-primary);
+                background: var(--top-teal);
+                color: white;
+                border-color: var(--top-teal);
             }
 
             .action-menu-btn svg {
                 width: 18px;
                 height: 18px;
+                pointer-events: none;
             }
 
             /* Objectives Table Page */
@@ -532,7 +535,7 @@ const ObjectivesPage = {
             }
 
             .objective-row-page:hover {
-                background: var(--bg-main);
+                background: rgba(18, 176, 160, 0.03);
             }
 
             .objective-row-page:last-child {
@@ -566,9 +569,9 @@ const ObjectivesPage = {
 
             .objective-text-page {
                 font-size: 14px;
-                font-weight: 600;
+                font-weight: 500;
                 color: var(--text-primary);
-                line-height: 1.5;
+                line-height: 1.6;
             }
 
             .objective-category-badge {
@@ -627,29 +630,190 @@ const ObjectivesPage = {
                 position: relative;
             }
 
+            /* RESPONSIVO MOBILE */
             @media (max-width: 768px) {
-                .objectives-table-page {
-                    table-layout: auto;
+                /* Header da página */
+                .page-header {
+                    flex-direction: column !important;
+                    align-items: flex-start !important;
+                    gap: 16px;
                 }
 
-                .objectives-table-page thead th,
+                .page-header h2 {
+                    font-size: 18px !important;
+                }
+
+                .page-header p {
+                    font-size: 12px !important;
+                }
+
+                .page-header .btn {
+                    width: 100%;
+                    justify-content: center;
+                    padding: 12px 16px !important;
+                    font-size: 14px;
+                }
+
+                /* Filtros */
+                .filter-buttons {
+                    width: 100%;
+                    overflow-x: auto;
+                    -webkit-overflow-scrolling: touch;
+                    scrollbar-width: none;
+                    -ms-overflow-style: none;
+                }
+
+                .filter-buttons::-webkit-scrollbar {
+                    display: none;
+                }
+
+                .filter-btn {
+                    font-size: 12px;
+                    padding: 10px 14px;
+                    white-space: nowrap;
+                    flex-shrink: 0;
+                }
+
+                /* Esconde a tabela e usa cards */
+                .objectives-table-container {
+                    box-shadow: none;
+                    background: transparent;
+                }
+
+                .objectives-table-page thead {
+                    display: none;
+                }
+
+                .objectives-table-page,
+                .objectives-table-page tbody {
+                    display: block;
+                }
+
+                .objective-row-page {
+                    display: block;
+                    background: white;
+                    border: 1px solid var(--border-light);
+                    border-radius: 12px;
+                    margin-bottom: 12px;
+                    padding: 16px;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+                }
+
+                .objective-row-page:hover {
+                    background: white;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+                }
+
                 .objective-row-page td {
-                    padding: 12px 10px;
+                    display: block;
+                    padding: 0;
+                    width: 100% !important;
+                    text-align: left !important;
+                    border: none;
                 }
 
-                .objectives-table-page .col-category,
+                /* Categoria */
                 .objective-row-page td:nth-child(1) {
-                    width: 100px;
+                    margin-bottom: 10px;
                 }
 
-                .objectives-table-page .col-okrs,
+                .objective-category-badge {
+                    font-size: 10px;
+                    padding: 5px 10px;
+                }
+
+                /* Conteúdo do objetivo */
+                .objective-row-page td:nth-child(2) {
+                    margin-bottom: 12px;
+                }
+
+                .objective-text-page {
+                    font-size: 14px;
+                    line-height: 1.5;
+                    margin-bottom: 10px;
+                }
+
+                .objective-meta-info {
+                    font-size: 11px;
+                    padding: 6px 8px;
+                }
+
+                .objective-meta-info svg {
+                    width: 12px;
+                    height: 12px;
+                }
+
+                /* Ações e métricas na mesma linha */
+                .objective-row-page td:nth-child(3),
                 .objective-row-page td:nth-child(4) {
-                    width: 80px;
+                    display: inline-block;
+                    width: auto !important;
+                    vertical-align: middle;
                 }
 
+                .objective-row-page td:nth-child(3) {
+                    float: left;
+                }
+
+                .objective-row-page td:nth-child(4) {
+                    float: right;
+                }
+
+                /* Adiciona clearfix */
+                .objective-row-page::after {
+                    content: "";
+                    display: table;
+                    clear: both;
+                }
+
+                /* Métricas */
                 .metric-item {
-                    flex-direction: column;
-                    gap: 2px;
+                    flex-direction: row;
+                    gap: 8px;
+                    align-items: baseline;
+                }
+
+                .metric-value {
+                    font-size: 16px;
+                }
+
+                .metric-label {
+                    font-size: 10px;
+                }
+
+                /* Botões de ação */
+                .action-menu-btn {
+                    width: 36px;
+                    height: 36px;
+                }
+
+                .action-menu-btn svg {
+                    width: 20px;
+                    height: 20px;
+                }
+            }
+
+            /* Telas muito pequenas */
+            @media (max-width: 480px) {
+                .page-header h2 {
+                    font-size: 16px !important;
+                }
+
+                .page-header p {
+                    font-size: 11px !important;
+                }
+
+                .objective-row-page {
+                    padding: 12px;
+                }
+
+                .objective-text-page {
+                    font-size: 13px;
+                }
+
+                .filter-btn {
+                    font-size: 11px;
+                    padding: 8px 12px;
                 }
             }
         `;

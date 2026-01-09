@@ -11,6 +11,7 @@ const Layout = {
     async render() {
         const app = document.getElementById('app');
         app.innerHTML = `
+            <div class="sidebar-overlay" onclick="Layout.closeMobileSidebar()"></div>
             <div class="app ${this.sidebarCollapsed ? 'sidebar-collapsed' : ''}">
                 ${this.renderSidebar()}
                 <div class="main">
@@ -67,6 +68,8 @@ const Layout = {
             '/users': 'users',
             '/departamentos': 'departments',
             '/departments': 'departments',
+            '/configuracoes': 'settings',
+            '/settings': 'settings',
             '/esqueci-senha': 'forgot-password',
             '/redefinir-senha': 'reset-password'
         };
@@ -83,6 +86,7 @@ const Layout = {
             'approval': '/approval',
             'users': '/usuarios',
             'departments': '/departamentos',
+            'settings': '/configuracoes',
             'forgot-password': '/esqueci-senha',
             'reset-password': '/redefinir-senha'
         };
@@ -188,6 +192,11 @@ const Layout = {
         return `
             <div class="header">
                 <div class="header-left">
+                    <button class="sidebar-toggle-mobile btn-icon btn-secondary" onclick="Layout.toggleMobileSidebar()" title="Menu" style="display:none;">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                    </button>
                     <div>
                         <h1>${pageTitle}</h1>
                         ${pageSubtitle ? `<p>${pageSubtitle}</p>` : ''}
@@ -286,7 +295,8 @@ const Layout = {
             objectives: 'Objetivos Estratégicos',
             approval: 'Comitê de Aprovação',
             users: 'Gestão de Usuários',
-            departments: 'Gestão de Departamentos'
+            departments: 'Gestão de Departamentos',
+            settings: 'Configurações'
         };
         return titles[page] || 'Sistema OKR';
     },
@@ -300,7 +310,8 @@ const Layout = {
             objectives: 'Gerencie os objetivos estratégicos da empresa',
             approval: 'Aprove e acompanhe os OKRs submetidos',
             users: 'Gerencie os usuários do sistema',
-            departments: 'Gerencie os departamentos da empresa'
+            departments: 'Gerencie os departamentos da empresa',
+            settings: 'Altere sua senha de acesso ao sistema'
         };
         return subtitles[page] || '';
     },
@@ -319,6 +330,12 @@ const Layout = {
 
     // Navega para uma página
     async navigate(page, updateURL = true) {
+        // Garante que o scroll está habilitado ao navegar
+        document.body.style.overflow = '';
+
+        // Fecha sidebar mobile se estiver aberta
+        this.closeMobileSidebar();
+
         // Bloqueia acesso a páginas administrativas para não-admins
         const isAdmin = AuthService.isAdmin();
         const canAccessApproval = AuthService.canAccessApproval();
@@ -383,6 +400,9 @@ const Layout = {
                 case 'departments':
                     DepartmentsPage.render();
                     break;
+                case 'settings':
+                    SettingsPage.render();
+                    break;
                 case 'forgot-password':
                     ForgotPasswordPage.render();
                     break;
@@ -424,36 +444,127 @@ const Layout = {
     // User Menu Functions
     toggleUserMenu(event) {
         event.stopPropagation();
-        const dropdown = document.getElementById('user-menu-dropdown');
-        if (dropdown) {
-            dropdown.classList.toggle('show');
-        }
+        console.log('[UserMenu] Toggle clicked');
 
-        // Close on outside click
-        if (dropdown.classList.contains('show')) {
+        // Detecta se está em mobile (largura <= 768px)
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+            // MOBILE: Usa portal dropdown no body
+            let portalDropdown = document.getElementById('user-menu-dropdown-portal');
+
+            if (portalDropdown) {
+                // Se existe, fecha
+                this.closeUserMenu();
+                return;
+            }
+
+            // Cria overlay de fundo
+            const overlay = document.createElement('div');
+            overlay.id = 'user-menu-overlay';
+            overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1500; transition: opacity 0.3s; opacity: 0;';
+            overlay.onclick = () => this.closeUserMenu();
+            document.body.appendChild(overlay);
+
+            // Força reflow e anima overlay
+            overlay.offsetHeight;
             setTimeout(() => {
-                document.addEventListener('click', this.handleOutsideClick.bind(this), { once: true });
-            }, 0);
+                overlay.style.opacity = '1';
+            }, 10);
+
+            // Cria dropdown no body (fora do header)
+            portalDropdown = document.createElement('div');
+            portalDropdown.id = 'user-menu-dropdown-portal';
+            portalDropdown.className = 'user-menu-dropdown';
+            portalDropdown.innerHTML = `
+                <button class="user-menu-item" onclick="Layout.openSettings(); Layout.closeUserMenu();">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    Configurações
+                </button>
+                <div class="user-menu-divider"></div>
+                <button class="user-menu-item user-menu-item-danger" onclick="Layout.logout(); Layout.closeUserMenu();">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                    </svg>
+                    Sair
+                </button>
+            `;
+
+            document.body.appendChild(portalDropdown);
+
+            // Força reflow para animação
+            portalDropdown.offsetHeight;
+
+            // Adiciona classe show
+            setTimeout(() => {
+                portalDropdown.classList.add('show');
+            }, 10);
+
+            console.log('[UserMenu] Menu opened (mobile)');
+        } else {
+            // DESKTOP: Usa dropdown normal do header
+            const dropdown = document.getElementById('user-menu-dropdown');
+            if (!dropdown) {
+                console.error('[UserMenu] Dropdown element not found!');
+                return;
+            }
+
+            dropdown.classList.toggle('show');
+
+            // Close on outside click
+            if (dropdown.classList.contains('show')) {
+                setTimeout(() => {
+                    document.addEventListener('click', this.handleOutsideClick.bind(this), { once: true });
+                }, 0);
+            }
+
+            console.log('[UserMenu] Menu opened (desktop)');
         }
     },
 
     handleOutsideClick(event) {
         const dropdown = document.getElementById('user-menu-dropdown');
-        if (dropdown && !dropdown.contains(event.target) && !event.target.closest('.user-menu-trigger')) {
+        const portalDropdown = document.getElementById('user-menu-dropdown-portal');
+
+        if ((dropdown && !dropdown.contains(event.target) && !event.target.closest('.user-menu-trigger')) ||
+            (portalDropdown && !portalDropdown.contains(event.target) && !event.target.closest('.user-menu-trigger'))) {
             this.closeUserMenu();
         }
     },
 
     closeUserMenu() {
+        console.log('[UserMenu] Closing menu');
+
+        // Remove dropdown do header (se existir)
         const dropdown = document.getElementById('user-menu-dropdown');
         if (dropdown) {
             dropdown.classList.remove('show');
         }
+
+        // Remove portal dropdown (se existir)
+        const portalDropdown = document.getElementById('user-menu-dropdown-portal');
+        if (portalDropdown) {
+            portalDropdown.classList.remove('show');
+            setTimeout(() => {
+                portalDropdown.remove();
+            }, 300);
+        }
+
+        // Remove overlay
+        const overlay = document.getElementById('user-menu-overlay');
+        if (overlay) {
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.remove();
+            }, 300);
+        }
     },
 
     openSettings() {
-        alert('Funcionalidade de Configurações em desenvolvimento');
-        // TODO: Implementar página de configurações
+        this.navigate('settings');
     },
 
     // Logout
@@ -492,6 +603,50 @@ const Layout = {
                 setTimeout(() => window.location.reload(), 1500);
             }
         }
+    },
+
+    // Toggle Mobile Sidebar
+    toggleMobileSidebar() {
+        const sidebar = document.querySelector('.sidebar');
+        const overlay = document.querySelector('.sidebar-overlay');
+
+        if (sidebar && overlay) {
+            sidebar.classList.toggle('mobile-open');
+            overlay.classList.toggle('active');
+
+            // Previne scroll do body quando sidebar está aberta
+            if (sidebar.classList.contains('mobile-open')) {
+                document.body.style.overflow = 'hidden';
+            } else {
+                document.body.style.overflow = '';
+            }
+        }
+    },
+
+    // Close Mobile Sidebar
+    closeMobileSidebar() {
+        const sidebar = document.querySelector('.sidebar');
+        const overlay = document.querySelector('.sidebar-overlay');
+
+        if (sidebar && overlay) {
+            sidebar.classList.remove('mobile-open');
+            overlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+    },
+
+    // Anexa event listeners (sobrescrevendo para incluir fechamento mobile)
+    attachEventListeners() {
+        const navItems = document.querySelectorAll('.nav-item');
+        navItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const page = item.getAttribute('data-page');
+                this.navigate(page);
+                // Fecha sidebar mobile ao navegar
+                this.closeMobileSidebar();
+            });
+        });
     }
 };
 

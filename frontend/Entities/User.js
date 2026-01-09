@@ -411,6 +411,60 @@ class User {
             throw error;
         }
     }
+
+    // Atualiza perfil do usuário (nome e email)
+    async updateProfile(nome, email) {
+        try {
+            // Validação básica
+            if (!nome || nome.trim().length < 3) {
+                throw new Error('Nome deve ter no mínimo 3 caracteres');
+            }
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!email || !emailRegex.test(email)) {
+                throw new Error('Email inválido');
+            }
+
+            // Verificar email único (se mudou)
+            if (email !== this.email) {
+                const isUnique = await User.isEmailUnique(email, this.id);
+                if (!isUnique) {
+                    throw new Error('Este email já está em uso');
+                }
+            }
+
+            // 1. Atualizar tabela users
+            const { error: updateError } = await supabaseClient
+                .from('users')
+                .update({ nome, email })
+                .eq('id', this.id);
+
+            if (updateError) throw updateError;
+
+            // 2. Se email mudou, atualizar auth.users
+            if (email !== this.email) {
+                const { error: authError } = await supabaseClient.auth.updateUser({
+                    email: email
+                });
+
+                if (authError) {
+                    console.warn('Email atualizado na tabela users, mas erro no auth:', authError);
+                }
+            }
+
+            // 3. Atualizar objeto
+            this.nome = nome;
+            this.email = email;
+
+            // 4. Atualizar sessão
+            StorageService.setCurrentUser(this);
+
+            return { success: true };
+        } catch (error) {
+            console.error('Erro ao atualizar perfil:', error);
+            throw error;
+        }
+    }
 }
 
 // Expõe globalmente

@@ -41,7 +41,7 @@
 
         html, body {
             height: 100%;
-            overflow: hidden;
+            overflow-x: hidden;
         }
 
         body {
@@ -1120,6 +1120,130 @@
             box-shadow: 0 0 0 3px rgba(18, 176, 160, 0.15);
         }
 
+        /* Seção de detalhes do KR (Medições e Evidências, etc) */
+        .kr-detail-section {
+            margin-top: 16px;
+            border-top: 1px solid var(--border-light);
+            padding-top: 16px;
+        }
+
+        .kr-detail-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .kr-detail-header svg {
+            color: var(--top-teal);
+            flex-shrink: 0;
+        }
+
+        .kr-detail-header .btn {
+            margin-left: auto;
+            font-size: 12px;
+            padding: 6px 12px;
+        }
+
+        .kr-detail-header .btn svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        .kr-count-badge {
+            background: var(--top-teal);
+            color: white;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 4px;
+        }
+
+        .kr-detail-body {
+            padding: 8px 0;
+        }
+
+        /* Lista de evidências */
+        .kr-evidence-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .kr-evidence-item {
+            background: var(--bg-main);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius);
+            padding: 12px;
+            transition: all 0.2s;
+        }
+
+        .kr-evidence-item:hover {
+            border-color: var(--border);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .kr-evidence-text {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        .kr-evidence-file {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .file-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--bg-hover);
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .file-icon svg {
+            width: 20px;
+            height: 20px;
+            color: var(--top-blue);
+        }
+
+        .file-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .file-download-link {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--top-blue);
+            text-decoration: none;
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-download-link:hover {
+            text-decoration: underline;
+        }
+
+        .file-size-display {
+            font-size: 11px;
+            color: var(--text-muted);
+            display: block;
+            margin-top: 2px;
+        }
+
         /* OKR Card Footer */
         .okr-card-footer {
             padding: 16px 24px;
@@ -1801,37 +1925,639 @@
         }
 
         @media (max-width: 768px) {
+            /* Header Mobile - Melhorado */
             .header {
-                flex-wrap: wrap;
+                flex-wrap: nowrap;
                 gap: 12px;
-                padding: 16px 20px;
+                padding: 14px 16px;
+                position: sticky;
+                top: 0;
+                background: white;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+                z-index: 100;
+                border-bottom: 1px solid var(--border-light);
+            }
+
+            .header-left {
+                flex: 1;
+                min-width: 0;
+                gap: 12px;
+            }
+
+            .header-left h1 {
+                font-size: 18px;
+                font-weight: 700;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .header-left p {
+                display: none;
             }
 
             .header-center {
                 display: none;
             }
 
-            .header-left,
             .header-right {
                 flex: none;
             }
 
+            /* Botão Menu Hamburguer - Moderno */
+            .sidebar-toggle-mobile {
+                background: linear-gradient(135deg, var(--top-teal) 0%, #0d9488 100%) !important;
+                border: none !important;
+                color: white !important;
+                box-shadow: 0 2px 8px rgba(18, 176, 160, 0.25);
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                width: 48px;
+                height: 48px;
+                border-radius: 10px;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                padding: 0 !important;
+            }
+
+            .sidebar-toggle-mobile:active {
+                transform: scale(0.95);
+                box-shadow: 0 1px 4px rgba(18, 176, 160, 0.3);
+            }
+
+            .sidebar-toggle-mobile svg {
+                width: 30px;
+                height: 30px;
+                stroke-width: 2.5;
+                flex-shrink: 0;
+            }
+
+            /* Sidebar Mobile - Melhorada */
             .sidebar {
                 transform: translateX(-100%);
-                transition: transform 0.3s;
+                transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                width: 280px;
+                z-index: 201;
+                box-shadow: none;
             }
-            .main { margin-left: 0; }
-            .stats-grid { grid-template-columns: 1fr; }
-            .kr-item { grid-template-columns: 1fr; }
+
+            .sidebar.mobile-open {
+                transform: translateX(0);
+                box-shadow: 8px 0 24px rgba(0, 0, 0, 0.15);
+            }
+
+            /* Esconde botão de recolher sidebar no mobile */
+            .sidebar-toggle-container {
+                display: none !important;
+            }
+
+            /* Sidebar footer no mobile */
+            .sidebar-footer {
+                display: block !important;
+            }
+
+            .sidebar-nav {
+                padding-bottom: 0;
+            }
+
+            /* Main Content Mobile */
+            .main {
+                margin-left: 0;
+                width: 100%;
+                min-height: 100vh;
+            }
+
+            .content {
+                padding: 16px;
+                overflow-x: hidden;
+                padding-bottom: 40px;
+            }
+
+            /* Cards Mobile - Melhorados */
+            .card {
+                border-radius: 12px;
+                box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+                border: 1px solid rgba(30, 96, 118, 0.08);
+            }
+
+            .card-body {
+                padding: 18px;
+            }
+
+            .card-header {
+                padding: 16px 18px;
+                background: linear-gradient(135deg, var(--bg-main) 0%, white 100%);
+            }
+
+            .card-title {
+                font-size: 16px;
+                font-weight: 700;
+            }
+
+            /* Stats Grid Mobile */
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+                margin-bottom: 20px;
+            }
+
+            .stat-card {
+                padding: 16px;
+            }
+
+            .stat-label {
+                font-size: 11px;
+            }
+
+            .stat-value {
+                font-size: 26px;
+            }
+
+            /* Hero Section Mobile */
+            .hero {
+                padding: 20px;
+                border-radius: 12px;
+                margin-bottom: 20px;
+            }
+
+            .hero h2 {
+                font-size: 20px;
+            }
+
+            .hero p {
+                font-size: 14px;
+            }
+
+            /* Buttons Mobile - Touch Friendly & Bonitos */
+            .btn {
+                padding: 13px 22px;
+                font-size: 14px;
+                min-height: 48px;
+                gap: 8px;
+                font-weight: 600;
+                border-radius: 10px;
+                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            .btn:active {
+                transform: scale(0.97);
+            }
+
+            .btn svg {
+                width: 18px;
+                height: 18px;
+            }
+
+            .btn-primary {
+                background: linear-gradient(135deg, var(--top-teal) 0%, #0d9488 100%);
+                box-shadow: 0 4px 12px rgba(18, 176, 160, 0.25);
+            }
+
+            .btn-primary:active {
+                box-shadow: 0 2px 6px rgba(18, 176, 160, 0.3);
+            }
+
+            .btn-sm {
+                padding: 11px 18px;
+                font-size: 13px;
+                min-height: 44px;
+                border-radius: 8px;
+            }
+
+            .btn-icon {
+                width: 48px;
+                height: 48px;
+                min-height: 48px;
+                border-radius: 10px;
+            }
+
+            .btn-secondary {
+                background: white;
+                border: 2px solid var(--border);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            }
+
+            .btn-secondary:active {
+                background: var(--bg-main);
+                box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            }
+
+            /* OKR Items Mobile */
+            .kr-item {
+                grid-template-columns: 1fr;
+                padding: 16px;
+                gap: 16px;
+            }
+
             .kr-progress-control {
                 border-left: none;
                 padding-left: 0;
-                padding-top: 20px;
+                padding-top: 16px;
                 border-top: 1px solid var(--border-light);
             }
-            .form-grid { grid-template-columns: 1fr; }
-            .form-group.full { grid-column: span 1; }
-            .kr-form-grid { grid-template-columns: 1fr; }
+
+            .kr-title {
+                font-size: 14px;
+            }
+
+            .kr-meta {
+                font-size: 12px;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            /* Forms Mobile */
+            .form-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .form-group {
+                margin-bottom: 16px;
+            }
+
+            .form-group.full {
+                grid-column: span 1;
+            }
+
+            .form-control {
+                padding: 12px 14px;
+                font-size: 14px;
+                min-height: 44px;
+            }
+
+            .form-label {
+                font-size: 12px;
+                margin-bottom: 6px;
+            }
+
+            .kr-form-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            /* Modal Mobile - Melhorado */
+            .modal-content {
+                max-width: 100%;
+                max-height: 95vh;
+                margin: auto;
+                border-radius: 16px;
+                box-shadow: 0 12px 48px rgba(0, 0, 0, 0.2);
+            }
+
+            .modal-header {
+                padding: 18px 20px;
+                background: linear-gradient(135deg, var(--bg-main) 0%, white 100%);
+            }
+
+            .modal-title {
+                font-size: 18px;
+                font-weight: 700;
+                color: var(--top-blue);
+            }
+
+            .modal-subtitle {
+                font-size: 13px;
+                color: var(--text-muted);
+            }
+
+            .modal-close {
+                width: 38px;
+                height: 38px;
+                border-radius: 8px;
+                background: white;
+                border: 2px solid var(--border);
+                transition: all 0.2s ease;
+            }
+
+            .modal-close:active {
+                transform: scale(0.95);
+                background: var(--bg-hover);
+            }
+
+            .modal-body {
+                padding: 18px 20px;
+                max-height: calc(95vh - 160px);
+            }
+
+            .modal-footer {
+                padding: 16px 20px;
+                gap: 10px;
+                background: linear-gradient(135deg, var(--bg-main) 0%, white 100%);
+            }
+
+            .modal-footer .btn {
+                flex: 1;
+                min-width: 0;
+            }
+
+            /* Kanban Mobile */
+            .kanban {
+                flex-direction: column;
+                gap: 16px;
+                padding-bottom: 16px;
+            }
+
+            .kanban-column {
+                min-width: 100%;
+                max-width: 100%;
+            }
+
+            .kanban-card {
+                border-radius: 8px;
+            }
+
+            /* Objectives Grid Mobile */
+            .objectives-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            /* Badge Mobile */
+            .badge {
+                font-size: 10px;
+                padding: 3px 8px;
+            }
+
+            /* User Menu Mobile - Bottom Sheet Style */
+            .user-menu {
+                position: static !important;
+            }
+
+            .user-menu-trigger {
+                position: relative;
+                z-index: 1;
+            }
+
+            /* Portal dropdown (criado dinamicamente no body em mobile) */
+            #user-menu-dropdown-portal {
+                position: fixed !important;
+                top: auto !important;
+                bottom: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                border-radius: 20px 20px 0 0 !important;
+                max-width: 100% !important;
+                min-width: 100% !important;
+                width: 100% !important;
+                transform: translateY(100%) !important;
+                box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.2) !important;
+                z-index: 2000 !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+                transition: transform 0.3s ease-out !important;
+                background: #ffffff !important;
+                pointer-events: auto !important;
+                overflow: visible !important;
+                padding: 0 !important;
+            }
+
+            #user-menu-dropdown-portal.show {
+                transform: translateY(0) !important;
+                display: block !important;
+            }
+
+            #user-menu-dropdown-portal::before {
+                content: '';
+                display: block;
+                width: 40px;
+                height: 4px;
+                background: var(--border);
+                border-radius: 2px;
+                margin: 12px auto 8px;
+            }
+
+            /* Botões dentro do portal dropdown */
+            #user-menu-dropdown-portal .user-menu-item {
+                padding: 16px 20px !important;
+                font-size: 15px !important;
+                width: 100% !important;
+                text-align: left !important;
+                display: flex !important;
+                align-items: center !important;
+                gap: 12px !important;
+                background: white !important;
+                border: none !important;
+                color: #0f172a !important;
+                cursor: pointer !important;
+                transition: background 0.15s !important;
+                font-family: 'Inter', sans-serif !important;
+                font-weight: 500 !important;
+            }
+
+            #user-menu-dropdown-portal .user-menu-item:active {
+                background: #f1f5f9 !important;
+                transform: scale(0.98);
+            }
+
+            #user-menu-dropdown-portal .user-menu-item-danger {
+                color: #ef4444 !important;
+            }
+
+            #user-menu-dropdown-portal .user-menu-item-danger:active {
+                background: #fef2f2 !important;
+            }
+
+            #user-menu-dropdown-portal .user-menu-item svg {
+                width: 20px !important;
+                height: 20px !important;
+                flex-shrink: 0 !important;
+                color: currentColor !important;
+            }
+
+            #user-menu-dropdown-portal .user-menu-divider {
+                margin: 0 !important;
+                height: 1px !important;
+                background: var(--border) !important;
+                border: none !important;
+            }
+
+            /* Esconde nome do usuário no mobile (só mostra avatar) */
+            .user-menu-trigger .user-name {
+                display: none;
+            }
+
+            /* Esconde a seta no mobile */
+            .user-menu-trigger .user-menu-arrow {
+                display: none;
+            }
+
+            /* Aumenta área de toque do trigger */
+            .user-menu-trigger {
+                padding: 8px !important;
+                min-width: 48px;
+                min-height: 48px;
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+            }
+
+            /* User Avatar Mobile - Maior */
+            .user-avatar-small {
+                width: 38px;
+                height: 38px;
+                font-size: 14px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                border: 2px solid white;
+            }
+
+            .user-menu-trigger {
+                padding: 4px;
+            }
+
+            /* Table Container Mobile */
+            .users-table-container,
+            .departments-table-container {
+                border-radius: 8px;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            /* Overlay para sidebar mobile - Melhorado */
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(15, 23, 42, 0.6);
+                backdrop-filter: blur(4px);
+                -webkit-backdrop-filter: blur(4px);
+                z-index: 200;
+                opacity: 0;
+                transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            .sidebar-overlay.active {
+                display: block;
+                opacity: 1;
+                animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                }
+                to {
+                    opacity: 1;
+                }
+            }
+        }
+
+        /* Mobile Extra Small */
+        @media (max-width: 480px) {
+            .header {
+                padding: 12px 14px;
+            }
+
+            .header-left h1 {
+                font-size: 17px;
+            }
+
+            .sidebar-toggle-mobile {
+                width: 46px;
+                height: 46px;
+                border-radius: 9px;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                padding: 0 !important;
+            }
+
+            .sidebar-toggle-mobile svg {
+                width: 28px;
+                height: 28px;
+                stroke-width: 2.5;
+                flex-shrink: 0;
+            }
+
+            .content {
+                padding: 14px;
+            }
+
+            .card {
+                border-radius: 10px;
+            }
+
+            .card-body {
+                padding: 14px;
+            }
+
+            .stat-card {
+                padding: 14px;
+            }
+
+            .stat-value {
+                font-size: 22px;
+            }
+
+            .btn {
+                padding: 11px 18px;
+                font-size: 13px;
+                min-height: 44px;
+                border-radius: 9px;
+            }
+
+            .btn-icon {
+                width: 44px;
+                height: 44px;
+                border-radius: 9px;
+            }
+
+            .modal-content {
+                border-radius: 14px;
+            }
+
+            .modal-header {
+                padding: 16px 18px;
+            }
+
+            .modal-title {
+                font-size: 17px;
+            }
+
+            .modal-body {
+                padding: 16px 18px;
+            }
+
+            .modal-footer {
+                padding: 14px 18px;
+            }
+
+            .user-avatar-small {
+                width: 36px;
+                height: 36px;
+                font-size: 13px;
+            }
+        }
+
+        /* Animações Globais para Mobile */
+        @media (max-width: 768px) {
+            * {
+                -webkit-tap-highlight-color: rgba(18, 176, 160, 0.1);
+            }
+
+            .btn,
+            .nav-item,
+            .action-menu-btn,
+            .modal-close,
+            .user-menu-trigger {
+                touch-action: manipulation;
+            }
+
+            /* Smooth Scrolling */
+            .content,
+            .modal-body,
+            .sidebar-nav {
+                -webkit-overflow-scrolling: touch;
+                scroll-behavior: smooth;
+            }
+
+            /* Pull to refresh prevention */
+            body {
+                overscroll-behavior-y: contain;
+            }
         }
 
         /* ===== DASHBOARD OBJECTIVES TABLE ===== */
@@ -2353,6 +3079,29 @@
             transform: translateY(0);
         }
 
+        /* Portal dropdown - criado dinamicamente no body */
+        #user-menu-dropdown-portal {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            min-width: 200px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.2s;
+            z-index: 2000;
+            overflow: hidden;
+        }
+
+        #user-menu-dropdown-portal.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
         .user-menu-item {
             width: 100%;
             display: flex;
@@ -2395,6 +3144,7 @@
 
         .sidebar-toggle-mobile {
             display: none;
+            flex-shrink: 0;
         }
 
         .header-left {
@@ -2403,26 +3153,48 @@
             gap: 16px;
         }
 
-        /* Mobile */
+        /* Mobile - Sidebar Override */
         @media (max-width: 768px) {
             .sidebar-toggle-mobile {
-                display: flex;
+                display: flex !important;
             }
 
-            .sidebar {
-                transform: translateX(-100%);
-            }
-
+            /* No mobile, sidebar sempre começa escondida */
+            .sidebar,
             .sidebar-collapsed .sidebar {
+                transform: translateX(-100%);
+                width: 280px;
+            }
+
+            /* No mobile, sidebar aberta com classe mobile-open */
+            .sidebar.mobile-open,
+            .sidebar-collapsed .sidebar.mobile-open {
                 transform: translateX(0);
             }
 
-            .main {
+            .main,
+            .sidebar-collapsed .main {
                 margin-left: 0;
             }
 
-            .sidebar-collapsed .main {
-                margin-left: 0;
+            /* Remove todos os estilos de sidebar-collapsed no mobile */
+            .app.sidebar-collapsed .sidebar-nav span,
+            .app.sidebar-collapsed .brand-text,
+            .app.sidebar-collapsed .nav-section-title,
+            .app.sidebar-collapsed .user-info,
+            .app.sidebar-collapsed .toggle-text {
+                display: block !important;
+                opacity: 1 !important;
+            }
+
+            .app.sidebar-collapsed .nav-item {
+                justify-content: flex-start !important;
+                padding: 12px 24px !important;
+            }
+
+            .app.sidebar-collapsed .brand-logo,
+            .app.sidebar-collapsed .user-card {
+                justify-content: flex-start !important;
             }
 
             /* Modais em mobile */
@@ -2453,7 +3225,7 @@
 .users-table-container {
     background: white;
     border-radius: 12px;
-    overflow: visible;
+    overflow: hidden;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     width: 100%;
     position: relative;
@@ -2482,7 +3254,7 @@
     border-collapse: collapse;
     table-layout: auto;
     border-radius: 12px;
-    overflow: visible;
+    overflow: hidden;
 }
 
 .users-table thead {
@@ -2505,7 +3277,7 @@
 }
 
 .users-table tbody tr.user-row:hover {
-    background: var(--bg-main);
+    background: rgba(18, 176, 160, 0.03);
     transform: scale(1.001);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
@@ -2692,6 +3464,193 @@
     color: white;
 }
 
+/* ===== RESPONSIVO MOBILE - PÁGINA DE USUÁRIOS ===== */
+@media (max-width: 768px) {
+    /* Header do botão "Novo Usuário" */
+    div[style*="justify-content:flex-end"] {
+        justify-content: stretch !important;
+    }
+
+    div[style*="justify-content:flex-end"] .btn {
+        width: 100%;
+        justify-content: center;
+        padding: 12px 16px !important;
+        font-size: 14px;
+    }
+
+    /* Transforma tabela em cards */
+    .users-table-container {
+        box-shadow: none;
+        background: transparent;
+        overflow: visible;
+    }
+
+    .users-table {
+        display: block;
+        table-layout: auto;
+    }
+
+    .users-table thead {
+        display: none;
+    }
+
+    .users-table tbody {
+        display: block;
+    }
+
+    .users-table tbody tr.user-row {
+        display: block;
+        background: white;
+        border: 1px solid var(--border-light);
+        border-radius: 12px;
+        margin-bottom: 12px;
+        padding: 16px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .users-table tbody tr.user-row:hover {
+        background: white;
+        transform: none;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .users-table tbody td {
+        display: block;
+        padding: 0;
+        width: 100% !important;
+        text-align: left !important;
+        border: none;
+    }
+
+    /* User Info (primeira linha do card) */
+    .users-table tbody td:nth-child(1) {
+        margin-bottom: 12px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border-light);
+    }
+
+    .user-info {
+        gap: 12px;
+    }
+
+    .user-avatar {
+        width: 48px;
+        height: 48px;
+        font-size: 16px;
+    }
+
+    .user-name {
+        font-size: 15px;
+    }
+
+    .user-status {
+        font-size: 12px;
+    }
+
+    /* Email (segunda linha) */
+    .users-table tbody td:nth-child(2) {
+        margin-bottom: 10px;
+    }
+
+    .user-email {
+        font-size: 13px;
+        color: var(--text-secondary);
+        word-break: break-word;
+    }
+
+    /* Departamento e Tipo na mesma linha */
+    .users-table tbody td:nth-child(3),
+    .users-table tbody td:nth-child(4) {
+        display: inline-block;
+        width: auto !important;
+        vertical-align: middle;
+        margin-bottom: 12px;
+    }
+
+    .users-table tbody td:nth-child(3) {
+        margin-right: 8px;
+    }
+
+    .dept-badges {
+        display: inline-flex;
+    }
+
+    .dept-badge {
+        font-size: 10px;
+        padding: 4px 8px;
+    }
+
+    .type-badge {
+        font-size: 11px;
+        padding: 5px 10px;
+    }
+
+    /* Ações (última linha, centralizada) */
+    .users-table tbody td:nth-child(5) {
+        text-align: center !important;
+        padding-top: 8px;
+        border-top: 1px solid var(--border-light);
+    }
+
+    .actions-cell {
+        display: flex;
+        justify-content: center;
+    }
+
+    .action-menu-btn {
+        width: 40px;
+        height: 40px;
+    }
+
+    .action-menu-btn svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    /* Dropdown de ações */
+    .action-menu-dropdown {
+        right: 50% !important;
+        left: auto !important;
+        transform: translateX(50%);
+    }
+
+    /* Card de usuário inativo */
+    .users-table tbody tr.user-row.inactive {
+        opacity: 0.7;
+    }
+}
+
+/* Telas muito pequenas */
+@media (max-width: 480px) {
+    .users-table tbody tr.user-row {
+        padding: 12px;
+    }
+
+    .user-avatar {
+        width: 44px;
+        height: 44px;
+        font-size: 14px;
+    }
+
+    .user-name {
+        font-size: 14px;
+    }
+
+    .user-email {
+        font-size: 12px;
+    }
+
+    .dept-badge {
+        font-size: 9px;
+        padding: 3px 7px;
+    }
+
+    .type-badge {
+        font-size: 10px;
+        padding: 4px 8px;
+    }
+}
+
 /* =====================================================
    ACTION MENU DROPDOWN - Sistema Portal
    ===================================================== */
@@ -2701,6 +3660,7 @@
 }
 
 .action-menu {
+    position: relative;
     display: inline-block;
 }
 
@@ -2716,6 +3676,7 @@
     justify-content: center;
     cursor: pointer;
     transition: all 0.15s ease;
+    flex-shrink: 0;
 }
 
 .action-menu-btn:hover {
@@ -2727,6 +3688,34 @@
 .action-menu-btn svg {
     width: 16px;
     height: 16px;
+    pointer-events: none;
+}
+
+/* Botão de menu no header do OKR */
+.action-menu-btn-header {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: white;
+    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.action-menu-btn-header:hover {
+    background: var(--top-teal);
+    color: white;
+    border-color: var(--top-teal);
+}
+
+.action-menu-btn-header svg {
+    width: 18px;
+    height: 18px;
     pointer-events: none;
 }
 
@@ -3072,5 +4061,484 @@
 
     .delete-confirmation-modal .btn {
         width: 100%;
+    }
+}
+
+/* ===== MOBILE RESPONSIVO - PÁGINA DE OKRs ===== */
+@media (max-width: 768px) {
+    /* Header da página */
+    .page-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 16px !important;
+    }
+
+    .page-header > div:first-child {
+        width: 100%;
+    }
+
+    .page-header > div:last-child {
+        width: 100%;
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+
+    .page-header h2 {
+        font-size: 18px !important;
+    }
+
+    .page-header p {
+        font-size: 12px !important;
+    }
+
+    /* Botões do header */
+    .page-header .btn {
+        width: 100%;
+        justify-content: center;
+        padding: 12px 16px !important;
+        font-size: 14px;
+    }
+
+    .page-header .btn svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    /* Container de filtros */
+    .okr-filters {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .filter-btn {
+        font-size: 12px !important;
+        padding: 10px 14px !important;
+        white-space: nowrap;
+    }
+
+    /* Selects de filtro */
+    div[style*="margin-left:auto"] {
+        margin-left: 0 !important;
+        width: 100%;
+        flex-direction: column !important;
+    }
+
+    #dept-filter,
+    #minicycle-filter {
+        width: 100% !important;
+        min-width: 100% !important;
+        padding: 12px !important;
+        font-size: 14px;
+    }
+
+    /* Card OKR Accordion */
+    .okr-accordion-card {
+        border-radius: 12px !important;
+    }
+
+    .okr-accordion-header {
+        padding: 16px !important;
+    }
+
+    .okr-header-left {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .okr-info-wrapper {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .okr-main-line {
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+    }
+
+    .okr-identifier {
+        font-size: 11px !important;
+        padding: 4px 8px !important;
+    }
+
+    .okr-title-header {
+        font-size: 14px !important;
+        line-height: 1.4 !important;
+        flex: 1 1 100%;
+        order: 3;
+    }
+
+    .okr-status-badge {
+        font-size: 10px !important;
+        padding: 4px 8px !important;
+    }
+
+    .kr-count {
+        font-size: 11px !important;
+        padding: 4px 8px !important;
+    }
+
+    /* Meta line do OKR */
+    .okr-meta-line {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 6px !important;
+        font-size: 11px !important;
+    }
+
+    .okr-meta-line span {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .okr-meta-line .okr-separator {
+        display: none !important;
+    }
+
+    .okr-meta-line svg {
+        width: 12px !important;
+        height: 12px !important;
+    }
+
+    /* Progress bar do OKR */
+    .okr-progress-line {
+        margin-top: 12px !important;
+    }
+
+    .okr-progress-bar-header {
+        height: 6px !important;
+    }
+
+    .okr-progress-text {
+        font-size: 12px !important;
+        min-width: 40px;
+    }
+
+    /* Botão de ações do OKR */
+    .okr-header-right {
+        margin-left: 8px;
+    }
+
+    .action-menu-btn-header {
+        width: 36px !important;
+        height: 36px !important;
+        padding: 0 !important;
+    }
+
+    .action-menu-btn-header svg {
+        width: 20px !important;
+        height: 20px !important;
+    }
+
+    /* Banner de ajuste */
+    .okr-adjustment-banner {
+        padding: 12px 16px !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+
+    .adjustment-icon svg {
+        width: 20px !important;
+        height: 20px !important;
+    }
+
+    .adjustment-content strong {
+        font-size: 13px !important;
+    }
+
+    .adjustment-content p {
+        font-size: 12px !important;
+    }
+
+    /* Corpo do accordion (KRs) */
+    .okr-accordion-body {
+        padding: 12px !important;
+    }
+
+    .krs-section-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 12px !important;
+        padding: 12px !important;
+    }
+
+    .krs-section-header .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .section-title {
+        font-size: 14px !important;
+    }
+
+    .section-title svg {
+        width: 16px !important;
+        height: 16px !important;
+    }
+
+    /* KR Accordion Item */
+    .kr-accordion-item {
+        border-radius: 8px !important;
+    }
+
+    .kr-accordion-header {
+        padding: 12px !important;
+        gap: 8px !important;
+    }
+
+    .kr-header-left {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .kr-info-section {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .kr-title-line {
+        flex-wrap: wrap;
+        gap: 8px !important;
+    }
+
+    .kr-badge {
+        font-size: 10px !important;
+        padding: 4px 8px !important;
+    }
+
+    .kr-title-text {
+        font-size: 13px !important;
+        line-height: 1.4 !important;
+        flex: 1 1 100%;
+    }
+
+    .kr-progress-line-header {
+        margin-top: 8px !important;
+    }
+
+    .kr-progress-bar-small {
+        height: 5px !important;
+    }
+
+    .kr-progress-text-small {
+        font-size: 11px !important;
+        min-width: 35px;
+    }
+
+    /* KR Header Right */
+    .kr-header-right {
+        flex-wrap: wrap;
+        gap: 6px !important;
+    }
+
+    .kr-status-badge {
+        font-size: 9px !important;
+        padding: 4px 8px !important;
+        letter-spacing: 0.3px;
+    }
+
+    .action-menu-btn {
+        width: 32px !important;
+        height: 32px !important;
+        padding: 0 !important;
+    }
+
+    .action-menu-btn svg {
+        width: 18px !important;
+        height: 18px !important;
+    }
+
+    /* Dropdown de menu de ações */
+    .action-menu-dropdown {
+        min-width: 180px !important;
+        right: 0 !important;
+        left: auto !important;
+    }
+
+    .menu-item {
+        padding: 12px 14px !important;
+        font-size: 14px !important;
+    }
+
+    .menu-item svg {
+        width: 18px !important;
+        height: 18px !important;
+    }
+
+    /* KR Body */
+    .kr-accordion-body {
+        padding: 12px !important;
+    }
+
+    .kr-details-row {
+        flex-direction: column !important;
+        gap: 16px !important;
+    }
+
+    .kr-detail-item {
+        padding: 12px !important;
+    }
+
+    .kr-detail-label {
+        font-size: 11px !important;
+    }
+
+    .kr-detail-value {
+        font-size: 13px !important;
+    }
+
+    /* Seção de iniciativas */
+    .initiatives-section-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 10px !important;
+    }
+
+    .initiatives-section-header .btn {
+        width: 100%;
+        justify-content: center;
+        font-size: 13px !important;
+    }
+
+    .initiative-card {
+        padding: 12px !important;
+    }
+
+    .initiative-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 10px !important;
+    }
+
+    .initiative-title {
+        font-size: 13px !important;
+    }
+
+    .initiative-meta {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 8px !important;
+        font-size: 11px !important;
+    }
+
+    .initiative-meta-item svg {
+        width: 14px !important;
+        height: 14px !important;
+    }
+
+    /* Separador de departamento */
+    .department-separator {
+        padding: 10px 16px !important;
+        margin: 16px 0 12px 0 !important;
+    }
+
+    .department-separator .dept-name {
+        font-size: 13px !important;
+    }
+
+    /* Estado vazio */
+    .empty-krs {
+        padding: 20px 12px !important;
+    }
+
+    .empty-krs p {
+        font-size: 13px !important;
+    }
+
+    /* Seção de medições e evidências */
+    .kr-detail-section {
+        margin-top: 12px;
+        padding-top: 12px;
+    }
+
+    .kr-detail-header {
+        flex-wrap: wrap;
+        gap: 6px !important;
+        font-size: 12px !important;
+    }
+
+    .kr-detail-header svg {
+        width: 14px !important;
+        height: 14px !important;
+    }
+
+    .kr-detail-header .btn {
+        width: 100%;
+        margin-left: 0 !important;
+        margin-top: 8px;
+        justify-content: center;
+        font-size: 13px !important;
+        padding: 10px 14px !important;
+    }
+
+    .kr-count-badge {
+        font-size: 9px !important;
+        padding: 3px 6px !important;
+    }
+
+    .kr-evidence-item {
+        padding: 10px !important;
+    }
+
+    .kr-evidence-text {
+        font-size: 12px !important;
+    }
+
+    .kr-evidence-file {
+        gap: 10px !important;
+    }
+
+    .file-icon {
+        width: 36px !important;
+        height: 36px !important;
+    }
+
+    .file-icon svg {
+        width: 18px !important;
+        height: 18px !important;
+    }
+
+    .file-download-link {
+        font-size: 12px !important;
+    }
+
+    .file-size-display {
+        font-size: 10px !important;
+    }
+}
+
+/* Para telas muito pequenas (smartphones antigos) */
+@media (max-width: 480px) {
+    .page-header h2 {
+        font-size: 16px !important;
+    }
+
+    .page-header p {
+        font-size: 11px !important;
+    }
+
+    .okr-accordion-header {
+        padding: 12px !important;
+    }
+
+    .okr-title-header {
+        font-size: 13px !important;
+    }
+
+    .okr-meta-line {
+        font-size: 10px !important;
+    }
+
+    .kr-accordion-header {
+        padding: 10px !important;
+    }
+
+    .kr-title-text {
+        font-size: 12px !important;
+    }
+
+    .filter-btn {
+        font-size: 11px !important;
+        padding: 8px 12px !important;
     }
 }

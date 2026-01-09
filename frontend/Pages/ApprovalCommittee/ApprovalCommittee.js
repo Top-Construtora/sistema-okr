@@ -7,6 +7,8 @@ import { Modal } from '../../Components/Modal.js';
 
 // Página do Comitê de Aprovação - Kanban
 const ApprovalPage = {
+    currentMobileTab: 'pending', // Tab ativo no mobile
+
     // Retorna array de nomes de departamentos do usuário
     getUserDepartmentNames(user) {
         if (!user) return [];
@@ -63,6 +65,55 @@ const ApprovalPage = {
                     </div>
                 </div>
 
+                <!-- Mobile Tabs Navigation -->
+                <div class="mobile-tabs-nav">
+                    <button class="mobile-tab-btn ${this.currentMobileTab === 'pending' ? 'active' : ''}"
+                            data-status="pending"
+                            onclick="ApprovalPage.switchMobileTab('pending')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+                        </svg>
+                        <span class="tab-label">Revisão</span>
+                        <span class="tab-count">${stats.pending}</span>
+                    </button>
+                    <button class="mobile-tab-btn ${this.currentMobileTab === 'adjust' ? 'active' : ''}"
+                            data-status="adjust"
+                            onclick="ApprovalPage.switchMobileTab('adjust')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        <span class="tab-label">Ajustes</span>
+                        <span class="tab-count">${stats.adjust}</span>
+                    </button>
+                    <button class="mobile-tab-btn ${this.currentMobileTab === 'approved' ? 'active' : ''}"
+                            data-status="approved"
+                            onclick="ApprovalPage.switchMobileTab('approved')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                        <span class="tab-label">Andamento</span>
+                        <span class="tab-count">${stats.approved}</span>
+                    </button>
+                    <button class="mobile-tab-btn ${this.currentMobileTab === 'completed' ? 'active' : ''}"
+                            data-status="completed"
+                            onclick="ApprovalPage.switchMobileTab('completed')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span class="tab-label">Concluídos</span>
+                        <span class="tab-count">${stats.completed}</span>
+                    </button>
+                    <button class="mobile-tab-btn ${this.currentMobileTab === 'homologated' ? 'active' : ''}"
+                            data-status="homologated"
+                            onclick="ApprovalPage.switchMobileTab('homologated')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>
+                        </svg>
+                        <span class="tab-label">Homologados</span>
+                        <span class="tab-count">${stats.homologated}</span>
+                    </button>
+                </div>
+
                 <!-- Kanban Container -->
                 <div class="kanban-container">
                     <div class="kanban-scroll-area">
@@ -75,15 +126,30 @@ const ApprovalPage = {
         await this.renderKanban(okrs);
         this.addStyles();
         this.initScrollBehavior();
+        this.initMobileTabs(); // Inicializa comportamento mobile
 
-        // Força remoção do scroll dos containers pai
+        // Força configuração de overflow dependendo do dispositivo
+        const isMobile = window.innerWidth <= 768;
         const contentEl = document.getElementById('content');
-        if (contentEl) {
-            contentEl.style.overflow = 'hidden';
-        }
         const mainEl = document.querySelector('.main');
-        if (mainEl) {
-            mainEl.style.overflow = 'hidden';
+
+        if (isMobile) {
+            // Mobile: Permite scroll vertical normal
+            if (contentEl) contentEl.style.overflow = '';
+            if (mainEl) mainEl.style.overflow = '';
+        } else {
+            // Desktop: Esconde overflow (Kanban tem scroll próprio)
+            if (contentEl) contentEl.style.overflow = 'hidden';
+            if (mainEl) mainEl.style.overflow = 'hidden';
+        }
+    },
+
+    // Inicializa tabs mobile
+    initMobileTabs() {
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+            // Mostra apenas a coluna da tab ativa
+            this.switchMobileTab(this.currentMobileTab);
         }
     },
 
@@ -379,6 +445,47 @@ const ApprovalPage = {
         if (window.DepartmentsPage?.showToast) {
             DepartmentsPage.showToast('Status atualizado com sucesso!', 'success');
         }
+    },
+
+    // Função para trocar tabs no mobile
+    switchMobileTab(status) {
+        this.currentMobileTab = status;
+
+        // Atualiza botões ativos
+        document.querySelectorAll('.mobile-tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.status === status) {
+                btn.classList.add('active');
+            }
+        });
+
+        // Animação suave ao trocar tabs
+        const board = document.querySelector('.kanban-board');
+        if (board) {
+            board.style.opacity = '0';
+            board.style.transform = 'translateY(10px)';
+        }
+
+        setTimeout(() => {
+            // Mostra/esconde colunas correspondentes
+            document.querySelectorAll('.kanban-column').forEach(col => {
+                if (col.dataset.status === status) {
+                    col.style.display = 'flex';
+                } else {
+                    col.style.display = 'none';
+                }
+            });
+
+            // Anima de volta
+            if (board) {
+                board.style.transition = 'all 0.3s ease';
+                board.style.opacity = '1';
+                board.style.transform = 'translateY(0)';
+            }
+        }, 150);
+
+        // Scroll para o topo suavemente
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     },
 
     addStyles() {
@@ -834,18 +941,554 @@ const ApprovalPage = {
             }
 
             /* Responsive */
+            /* Esconde tabs no desktop */
+            .mobile-tabs-nav {
+                display: none;
+            }
+
+            /* RESPONSIVO MOBILE */
             @media (max-width: 768px) {
+                /* Header */
                 .approval-header {
                     flex-direction: column;
+                    margin-bottom: 16px;
                 }
 
+                .approval-title {
+                    font-size: 20px;
+                }
+
+                .approval-title svg {
+                    width: 24px;
+                    height: 24px;
+                }
+
+                .approval-subtitle {
+                    font-size: 13px;
+                }
+
+                .dept-badge {
+                    font-size: 11px;
+                    padding: 3px 10px;
+                }
+
+                /* Esconde stats no mobile para economizar espaço */
                 .approval-stats {
-                    width: 100%;
-                    justify-content: space-around;
+                    display: none;
                 }
 
+                /* Mobile Tabs Navigation - MOSTRA */
+                .mobile-tabs-nav {
+                    display: flex;
+                    gap: 6px;
+                    margin-bottom: 16px;
+                    overflow-x: auto;
+                    -webkit-overflow-scrolling: touch;
+                    scrollbar-width: none;
+                    padding-bottom: 4px;
+                }
+
+                .mobile-tabs-nav::-webkit-scrollbar {
+                    display: none;
+                }
+
+                .mobile-tab-btn {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 4px;
+                    padding: 10px 12px;
+                    background: white;
+                    border: 2px solid var(--border);
+                    border-radius: 10px;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    flex-shrink: 0;
+                    min-width: 80px;
+                }
+
+                .mobile-tab-btn svg {
+                    color: var(--text-muted);
+                    transition: all 0.2s;
+                }
+
+                .mobile-tab-btn .tab-label {
+                    font-size: 11px;
+                    font-weight: 600;
+                    color: var(--text-secondary);
+                    text-align: center;
+                    line-height: 1.2;
+                }
+
+                .mobile-tab-btn .tab-count {
+                    font-size: 12px;
+                    font-weight: 700;
+                    color: var(--text-muted);
+                }
+
+                /* Tab ativa */
+                .mobile-tab-btn {
+                    position: relative;
+                }
+
+                .mobile-tab-btn.active {
+                    border-color: var(--top-teal);
+                    background: linear-gradient(135deg, rgba(18, 176, 160, 0.12) 0%, rgba(18, 176, 160, 0.06) 100%);
+                    box-shadow: 0 2px 8px rgba(18, 176, 160, 0.15);
+                }
+
+                /* Indicador inferior da tab ativa */
+                .mobile-tab-btn.active::after {
+                    content: '';
+                    position: absolute;
+                    bottom: -6px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    width: 30px;
+                    height: 3px;
+                    background: var(--top-teal);
+                    border-radius: 2px 2px 0 0;
+                }
+
+                .mobile-tab-btn.active svg {
+                    color: var(--top-teal);
+                }
+
+                .mobile-tab-btn.active .tab-label {
+                    color: var(--top-teal);
+                }
+
+                .mobile-tab-btn.active .tab-count {
+                    color: white;
+                    background: var(--top-teal);
+                    padding: 2px 8px;
+                    border-radius: 10px;
+                }
+
+                /* Cores específicas por status - Tabs */
+                .mobile-tab-btn[data-status="pending"].active {
+                    border-color: #f59e0b;
+                    background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(245, 158, 11, 0.06) 100%);
+                }
+
+                .mobile-tab-btn[data-status="pending"].active::after {
+                    background: #f59e0b;
+                }
+
+                .mobile-tab-btn[data-status="pending"].active svg,
+                .mobile-tab-btn[data-status="pending"].active .tab-label {
+                    color: #f59e0b;
+                }
+
+                .mobile-tab-btn[data-status="pending"].active .tab-count {
+                    background: #f59e0b;
+                }
+
+                .mobile-tab-btn[data-status="adjust"].active {
+                    border-color: #ef4444;
+                    background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(239, 68, 68, 0.06) 100%);
+                }
+
+                .mobile-tab-btn[data-status="adjust"].active::after {
+                    background: #ef4444;
+                }
+
+                .mobile-tab-btn[data-status="adjust"].active svg,
+                .mobile-tab-btn[data-status="adjust"].active .tab-label {
+                    color: #ef4444;
+                }
+
+                .mobile-tab-btn[data-status="adjust"].active .tab-count {
+                    background: #ef4444;
+                }
+
+                .mobile-tab-btn[data-status="approved"].active {
+                    border-color: #3b82f6;
+                    background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(59, 130, 246, 0.06) 100%);
+                }
+
+                .mobile-tab-btn[data-status="approved"].active::after {
+                    background: #3b82f6;
+                }
+
+                .mobile-tab-btn[data-status="approved"].active svg,
+                .mobile-tab-btn[data-status="approved"].active .tab-label {
+                    color: #3b82f6;
+                }
+
+                .mobile-tab-btn[data-status="approved"].active .tab-count {
+                    background: #3b82f6;
+                }
+
+                .mobile-tab-btn[data-status="completed"].active {
+                    border-color: #10b981;
+                    background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.06) 100%);
+                }
+
+                .mobile-tab-btn[data-status="completed"].active::after {
+                    background: #10b981;
+                }
+
+                .mobile-tab-btn[data-status="completed"].active svg,
+                .mobile-tab-btn[data-status="completed"].active .tab-label {
+                    color: #10b981;
+                }
+
+                .mobile-tab-btn[data-status="completed"].active .tab-count {
+                    background: #10b981;
+                }
+
+                .mobile-tab-btn[data-status="homologated"].active {
+                    border-color: #8b5cf6;
+                    background: linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(139, 92, 246, 0.06) 100%);
+                }
+
+                .mobile-tab-btn[data-status="homologated"].active::after {
+                    background: #8b5cf6;
+                }
+
+                .mobile-tab-btn[data-status="homologated"].active svg,
+                .mobile-tab-btn[data-status="homologated"].active .tab-label {
+                    color: #8b5cf6;
+                }
+
+                .mobile-tab-btn[data-status="homologated"].active .tab-count {
+                    background: #8b5cf6;
+                }
+
+                /* Kanban Container - Layout vertical em mobile */
+                .kanban-container {
+                    border-radius: 0;
+                    background: transparent;
+                    overflow: visible;
+                }
+
+                .kanban-scroll-area {
+                    padding: 0;
+                    overflow: visible;
+                    cursor: default;
+                    height: auto;
+                }
+
+                /* Board - Layout vertical */
+                .kanban-board {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0;
+                    width: 100%;
+                }
+
+                /* Colunas ocupam largura total e layout vertical */
                 .kanban-column {
-                    flex: 0 0 280px;
+                    flex: 1 1 auto;
+                    width: 100%;
+                    min-height: auto;
+                    margin-bottom: 0;
+                    border-radius: 12px;
+                    box-shadow: none;
+                }
+
+                /* Esconde header das colunas (info está nas tabs) */
+                .kanban-col-header {
+                    display: none;
+                }
+
+                .kanban-col-body {
+                    padding: 0;
+                    gap: 12px;
+                    overflow-y: visible;
+                    max-height: none;
+                }
+
+                /* Cards OKR - Totalmente redesenhados para mobile */
+                .okr-card {
+                    padding: 0;
+                    border-radius: 12px;
+                    margin-bottom: 12px;
+                    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+                    border-left-width: 4px;
+                    overflow: hidden;
+                    background: white;
+                }
+
+                .okr-card:last-child {
+                    margin-bottom: 0;
+                }
+
+                .okr-card:hover {
+                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+                }
+
+                /* Topo do card */
+                .okr-card-top {
+                    padding: 12px 14px;
+                    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 1) 100%);
+                    border-bottom: 1px solid var(--border-light);
+                    margin-bottom: 0;
+                }
+
+                .okr-dept {
+                    font-size: 10px;
+                    padding: 4px 10px;
+                    background: linear-gradient(135deg, var(--top-teal) 0%, #0d9488 100%);
+                    color: white;
+                    border-radius: 6px;
+                    font-weight: 600;
+                    letter-spacing: 0.3px;
+                }
+
+                .okr-progress-badge {
+                    font-size: 11px;
+                    padding: 4px 10px;
+                    font-weight: 700;
+                    border-radius: 6px;
+                }
+
+                /* Título do OKR */
+                .okr-title {
+                    font-size: 14px;
+                    margin: 14px 14px 12px 14px;
+                    line-height: 1.6;
+                    font-weight: 600;
+                    color: var(--text-primary);
+                }
+
+                /* Objetivo estratégico */
+                .okr-objective {
+                    padding: 10px 12px;
+                    font-size: 11px;
+                    margin: 0 14px 12px 14px;
+                    line-height: 1.5;
+                    background: linear-gradient(135deg, rgba(18, 176, 160, 0.05) 0%, rgba(18, 176, 160, 0.02) 100%);
+                    border-left: 3px solid var(--top-teal);
+                }
+
+                .okr-objective svg {
+                    width: 14px;
+                    height: 14px;
+                    color: var(--top-teal);
+                }
+
+                .okr-objective span {
+                    flex: 1;
+                    color: var(--text-secondary);
+                }
+
+                /* Meta (KRs) */
+                .okr-meta {
+                    margin: 0 14px 12px 14px;
+                }
+
+                .okr-krs {
+                    font-size: 11px;
+                    padding: 8px 10px;
+                    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.04) 100%);
+                    border-radius: 8px;
+                    font-weight: 500;
+                    color: #3b82f6;
+                }
+
+                .okr-krs svg {
+                    width: 14px;
+                    height: 14px;
+                }
+
+                /* Barra de progresso */
+                .okr-progress-bar {
+                    margin: 0 14px 12px 14px;
+                }
+
+                .progress-track {
+                    height: 8px;
+                    border-radius: 4px;
+                    background: var(--bg-main);
+                    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+                }
+
+                .progress-fill {
+                    border-radius: 4px;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                }
+
+                /* Comentário do comitê */
+                .okr-comment {
+                    padding: 10px 12px;
+                    font-size: 12px;
+                    margin: 0 14px 12px 14px;
+                    line-height: 1.5;
+                    background: #fef2f2;
+                    border: 1px solid #fecaca;
+                    border-left-width: 3px;
+                }
+
+                .okr-comment svg {
+                    width: 16px;
+                    height: 16px;
+                    color: #dc2626;
+                }
+
+                /* Ações - Botões maiores e mais fáceis de clicar */
+                .okr-actions {
+                    flex-direction: column;
+                    gap: 8px;
+                    padding: 12px 14px 14px 14px;
+                    background: var(--bg-main);
+                    margin: 0;
+                    border-top: 1px solid var(--border-light);
+                }
+
+                .action-btn {
+                    padding: 14px 16px;
+                    font-size: 13px;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    transition: all 0.15s;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                    border-width: 2px;
+                }
+
+                .action-btn:active {
+                    transform: scale(0.97);
+                    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+                }
+
+                .action-btn svg {
+                    width: 18px;
+                    height: 18px;
+                }
+
+                /* Cores dos botões */
+                .action-btn.success {
+                    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                    border-color: #10b981;
+                    color: white;
+                }
+
+                .action-btn.danger {
+                    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+                    border-color: #ef4444;
+                    color: white;
+                }
+
+                .action-btn.secondary {
+                    background: white;
+                    border-color: var(--border);
+                    color: var(--text-secondary);
+                }
+
+                .action-btn.primary {
+                    background: linear-gradient(135deg, var(--top-blue) 0%, #1a5570 100%);
+                    border-color: var(--top-blue);
+                    color: white;
+                }
+
+                /* Empty state */
+                .kanban-empty-state {
+                    padding: 60px 20px;
+                    min-height: 300px;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                }
+
+                .empty-icon {
+                    margin-bottom: 16px;
+                }
+
+                .empty-icon svg {
+                    width: 48px;
+                    height: 48px;
+                    color: var(--text-muted);
+                    opacity: 0.4;
+                }
+
+                .kanban-empty-state p {
+                    font-size: 14px;
+                    color: var(--text-muted);
+                    text-align: center;
+                }
+            }
+
+            /* Telas muito pequenas */
+            @media (max-width: 480px) {
+                .approval-title {
+                    font-size: 18px;
+                }
+
+                .approval-subtitle {
+                    font-size: 12px;
+                }
+
+                .mobile-tab-btn {
+                    min-width: 70px;
+                    padding: 8px 10px;
+                }
+
+                .mobile-tab-btn .tab-label {
+                    font-size: 10px;
+                }
+
+                .mobile-tab-btn .tab-count {
+                    font-size: 11px;
+                }
+
+                .okr-card {
+                    border-radius: 10px;
+                }
+
+                .okr-card-top {
+                    padding: 10px 12px;
+                }
+
+                .okr-dept {
+                    font-size: 9px;
+                    padding: 3px 8px;
+                }
+
+                .okr-title {
+                    font-size: 13px;
+                    margin: 12px 12px 10px 12px;
+                }
+
+                .okr-objective {
+                    font-size: 10px;
+                    padding: 8px 10px;
+                    margin: 0 12px 10px 12px;
+                }
+
+                .okr-krs {
+                    font-size: 10px;
+                    padding: 6px 8px;
+                }
+
+                .okr-progress-bar {
+                    margin: 0 12px 10px 12px;
+                }
+
+                .progress-track {
+                    height: 6px;
+                }
+
+                .okr-comment {
+                    font-size: 11px;
+                    padding: 8px 10px;
+                    margin: 0 12px 10px 12px;
+                }
+
+                .okr-actions {
+                    padding: 10px 12px 12px 12px;
+                }
+
+                .action-btn {
+                    font-size: 12px;
+                    padding: 12px 14px;
+                }
+
+                .action-btn svg {
+                    width: 16px;
+                    height: 16px;
                 }
             }
         `;

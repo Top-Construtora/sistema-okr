@@ -940,6 +940,44 @@ const App = {
 // Inicializa quando o DOM estiver pronto
 document.addEventListener('DOMContentLoaded', () => {
     App.init();
+
+    // Monitora e corrige problemas de scroll bloqueado
+    setupScrollMonitor();
 });
+
+/**
+ * Monitor de Scroll - Garante que o scroll nunca fique bloqueado permanentemente
+ * Verifica periodicamente se há modais abertos e libera o scroll se não houver
+ */
+function setupScrollMonitor() {
+    // Verifica a cada 2 segundos se o scroll está bloqueado sem necessidade
+    setInterval(() => {
+        // Verifica se há algum modal aberto
+        const hasOpenModal =
+            document.querySelector('.modal-overlay') !== null ||
+            document.querySelector('[id$="-modal"][style*="display: block"]') !== null ||
+            document.querySelector('[id$="-modal"][style*="display:block"]') !== null ||
+            document.querySelector('.sidebar.mobile-open') !== null;
+
+        // Se não há modal aberto e o overflow está hidden, libera o scroll
+        if (!hasOpenModal && document.body.style.overflow === 'hidden') {
+            console.log('[ScrollMonitor] Liberando scroll bloqueado sem modal ativo');
+            document.body.style.overflow = '';
+        }
+    }, 2000);
+
+    // Adiciona listener para garantir limpeza em eventos de navegação
+    window.addEventListener('popstate', () => {
+        // Pequeno delay para garantir que a página foi renderizada
+        setTimeout(() => {
+            const hasOpenModal = document.querySelector('.modal-overlay') !== null;
+            if (!hasOpenModal) {
+                document.body.style.overflow = '';
+            }
+        }, 100);
+    });
+
+    console.log('[ScrollMonitor] Monitoramento de scroll ativado');
+}
 
 export { App };
