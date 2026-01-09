@@ -1,6 +1,7 @@
 import { StorageService, uid } from '../../services/storage.js';
 import { supabaseClient } from '../../services/supabase.js';
 import { AuthService } from '../../services/auth.js';
+import { ExportService } from '../../services/export.js';
 
 import { OKR, OKR_STATUS } from '../../Entities/OKR.js';
 import { Department } from '../../Entities/Department.js';
@@ -76,14 +77,23 @@ const OKRsPage = {
                     <h2 style="font-size:20px;font-weight:700;color:var(--top-blue);margin-bottom:4px;">Gestão de OKRs</h2>
                     <p style="color:var(--text-muted);font-size:13px;">${okrs.length} ${okrs.length === 1 ? 'OKR cadastrado' : "OKR's cadastrados"}${!isAdmin && userDepartmentDisplay ? ` - ${userDepartmentDisplay}` : ''}</p>
                 </div>
-                ${canEdit ? `
-                <button class="btn btn-primary" onclick="OKRsPage.openModal()">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                    </svg>
-                    Novo OKR
-                </button>
-                ` : ''}
+                <div style="display:flex;gap:12px;">
+                    ${canEdit ? `
+                    <button class="btn btn-primary" onclick="OKRsPage.openModal()">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        Novo OKR
+                    </button>
+                    ` : ''}
+
+                    <button class="btn btn-secondary" onclick="OKRsPage.exportToPDF()" title="Exportar para PDF">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:20px;height:20px;">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                        </svg>
+                        Exportar PDF
+                    </button>
+                </div>
             </div>
 
             <div style="display:flex;gap:16px;margin-bottom:24px;align-items:center;flex-wrap:wrap;">
@@ -2058,6 +2068,153 @@ const OKRsPage = {
         return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
     },
 
+    // ==================== EXPORT METHODS ====================
+
+    async exportToPDF() {
+        try {
+            this.showExportLoading('PDF');
+
+            const currentUser = AuthService.getCurrentUser();
+            const userDepartmentNames = this.getUserDepartmentNames(currentUser);
+            const isAdmin = currentUser && currentUser.tipo === 'admin';
+
+            // Get all OKRs
+            let okrs = await OKR.getAll();
+
+            // Filter by user departments if not admin
+            if (!isAdmin && userDepartmentNames.length > 0) {
+                okrs = okrs.filter(o => userDepartmentNames.includes(o.department));
+            }
+
+            // Apply current filters
+            okrs = this.applyCurrentFilters(okrs);
+
+            // Check if there are OKRs to export
+            if (okrs.length === 0) {
+                DepartmentsPage.showToast('Nenhum OKR disponível para exportar', 'warning');
+                this.hideExportLoading();
+                return;
+            }
+
+            // Export to PDF
+            await ExportService.exportToPDF(okrs, currentUser);
+
+            DepartmentsPage.showToast(`${okrs.length} OKR(s) exportado(s) para PDF com sucesso!`, 'success');
+            this.hideExportLoading();
+        } catch (error) {
+            console.error('Erro ao exportar para PDF:', error);
+            DepartmentsPage.showToast('Erro ao gerar arquivo PDF', 'error');
+            this.hideExportLoading();
+        }
+    },
+
+    async exportToExcel() {
+        try {
+            this.showExportLoading('Excel');
+
+            const currentUser = AuthService.getCurrentUser();
+            const userDepartmentNames = this.getUserDepartmentNames(currentUser);
+            const isAdmin = currentUser && currentUser.tipo === 'admin';
+
+            // Get all OKRs
+            let okrs = await OKR.getAll();
+
+            // Filter by user departments if not admin
+            if (!isAdmin && userDepartmentNames.length > 0) {
+                okrs = okrs.filter(o => userDepartmentNames.includes(o.department));
+            }
+
+            // Apply current filters
+            okrs = this.applyCurrentFilters(okrs);
+
+            // Check if there are OKRs to export
+            if (okrs.length === 0) {
+                DepartmentsPage.showToast('Nenhum OKR disponível para exportar', 'warning');
+                this.hideExportLoading();
+                return;
+            }
+
+            // Export to Excel
+            await ExportService.exportToExcel(okrs, currentUser);
+
+            DepartmentsPage.showToast(`${okrs.length} OKR(s) exportado(s) para Excel com sucesso!`, 'success');
+            this.hideExportLoading();
+        } catch (error) {
+            console.error('Erro ao exportar para Excel:', error);
+            DepartmentsPage.showToast('Erro ao gerar arquivo Excel', 'error');
+            this.hideExportLoading();
+        }
+    },
+
+    applyCurrentFilters(okrs) {
+        let filtered = [...okrs];
+
+        // Filter by status
+        if (this.currentFilter !== 'all') {
+            filtered = filtered.filter(o => o.status === this.currentFilter);
+        }
+
+        // Filter by department
+        if (this.currentDepartment !== 'all' && this.currentDepartment !== 'user-depts') {
+            filtered = filtered.filter(o => o.department === this.currentDepartment);
+        }
+
+        // Filter by mini cycle
+        if (this.currentMiniCycle !== 'all') {
+            filtered = filtered.filter(o => o.mini_cycle_id === this.currentMiniCycle);
+        }
+
+        return filtered;
+    },
+
+    showExportLoading(format) {
+        // Create loading overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'export-loading-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        `;
+
+        overlay.innerHTML = `
+            <div style="background:white;padding:32px;border-radius:12px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+                <div style="width:48px;height:48px;border:4px solid var(--border);border-top-color:var(--top-blue);border-radius:50%;margin:0 auto 16px;animation:spin 1s linear infinite;"></div>
+                <p style="font-size:16px;font-weight:600;color:var(--text-primary);margin-bottom:8px;">Gerando arquivo ${format}...</p>
+                <p style="font-size:14px;color:var(--text-muted);">Por favor, aguarde</p>
+            </div>
+        `;
+
+        // Add spinner animation if not already added
+        if (!document.getElementById('export-spinner-styles')) {
+            const style = document.createElement('style');
+            style.id = 'export-spinner-styles';
+            style.textContent = `
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        document.body.appendChild(overlay);
+    },
+
+    hideExportLoading() {
+        const overlay = document.getElementById('export-loading-overlay');
+        if (overlay) {
+            overlay.remove();
+        }
+    },
+
     addStyles() {
         if (document.getElementById('okr-styles')) return;
 
@@ -2088,6 +2245,34 @@ const OKRsPage = {
                 background: var(--top-teal);
                 color: white;
                 border-color: var(--top-teal);
+            }
+            .btn-secondary {
+                background: var(--bg-card);
+                color: var(--text-primary);
+                border: 1px solid var(--border);
+                padding: 10px 16px;
+                border-radius: var(--radius);
+                font-size: 14px;
+                font-weight: 500;
+                cursor: pointer;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                transition: all 0.2s;
+            }
+            .btn-secondary:hover {
+                background: var(--bg-hover);
+                border-color: var(--top-blue);
+                color: var(--top-blue);
+                transform: translateY(-1px);
+                box-shadow: var(--shadow-md);
+            }
+            .btn-secondary:active {
+                transform: translateY(0);
+            }
+            .btn-secondary svg {
+                width: 20px;
+                height: 20px;
             }
             .department-separator {
                 display: flex;
