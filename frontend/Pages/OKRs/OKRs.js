@@ -1,5 +1,5 @@
 import { StorageService, uid } from '../../services/storage.js';
-import { supabaseClient } from '../../services/supabase.js';
+import { supabaseClient, getProxyUrl, convertToProxyUrl, convertToDownloadUrl } from '../../services/supabase.js';
 import { AuthService } from '../../services/auth.js';
 import { ExportService } from '../../services/export.js';
 
@@ -502,7 +502,14 @@ const OKRsPage = {
                                                                 ${kr.evidence.map((ev, idx) => `
                                                                     <div class="kr-evidence-item ${ev.type}">
                                                                         ${ev.type === 'text'
-                                                                            ? `<p class="kr-evidence-text">${ev.content}</p>`
+                                                                            ? `<div class="kr-evidence-text-wrapper">
+                                                                                <p class="kr-evidence-text">${ev.content}</p>
+                                                                                ${canEdit ? `<button class="btn btn-xs btn-danger" onclick="OKRsPage.removeEvidence('${okr.id}', '${kr.id}', ${idx})" title="Remover">
+                                                                                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                                                    </svg>
+                                                                                </button>` : ''}
+                                                                            </div>`
                                                                             : `<div class="kr-evidence-file">
                                                                                 <div class="file-icon">
                                                                                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -510,16 +517,21 @@ const OKRsPage = {
                                                                                     </svg>
                                                                                 </div>
                                                                                 <div class="file-info">
-                                                                                    <a href="${ev.content}" target="_blank" rel="noopener noreferrer" class="file-download-link">
+                                                                                    <a href="${convertToProxyUrl(ev.content)}" target="_blank" rel="noopener noreferrer" class="file-download-link">
                                                                                         ${ev.name || 'Arquivo'}
                                                                                     </a>
                                                                                     ${ev.size ? `<span class="file-size-display">${this.formatFileSize(ev.size)}</span>` : ''}
                                                                                 </div>
-                                                                                <a href="${ev.content}" download class="btn btn-xs btn-secondary" title="Baixar">
+                                                                                <a href="${convertToDownloadUrl(ev.content)}" download class="btn btn-xs btn-secondary" title="Baixar">
                                                                                     <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                                                                                     </svg>
                                                                                 </a>
+                                                                                ${canEdit ? `<button class="btn btn-xs btn-danger" onclick="OKRsPage.removeEvidence('${okr.id}', '${kr.id}', ${idx})" title="Remover">
+                                                                                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                                                    </svg>
+                                                                                </button>` : ''}
                                                                             </div>`
                                                                         }
                                                                     </div>
@@ -644,7 +656,7 @@ const OKRsPage = {
                                                                                                 <div class="init-evidence-item">
                                                                                                     ${ev.type === 'text'
                                                                                                         ? `<span class="init-evidence-text">${ev.content}</span>`
-                                                                                                        : `<a href="${ev.content}" target="_blank" class="init-evidence-file">
+                                                                                                        : `<a href="${convertToProxyUrl(ev.content)}" target="_blank" class="init-evidence-file">
                                                                                                             <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                                                                                             </svg>
@@ -1121,7 +1133,7 @@ const OKRsPage = {
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                             </svg>
                                             <span class="existing-file-name">${ev.name || 'Arquivo'}</span>
-                                            <a href="${ev.content}" target="_blank" class="btn btn-xs btn-secondary">Ver</a>
+                                            <a href="${convertToProxyUrl(ev.content)}" target="_blank" class="btn btn-xs btn-secondary">Ver</a>
                                         </div>
                                         <input type="hidden" class="evidence-content" value="${ev.content}">
                                         <input type="hidden" class="evidence-filename" value="${ev.name || ''}">`
@@ -1255,13 +1267,11 @@ const OKRsPage = {
             throw error;
         }
 
-        // Pegar URL pública
-        const { data: urlData } = supabaseClient.storage
-            .from('evidencias')
-            .getPublicUrl(filePath);
+        // Usar URL de proxy em vez da URL pública do Supabase
+        const proxyUrl = getProxyUrl('evidencias', filePath);
 
         return {
-            url: urlData.publicUrl,
+            url: proxyUrl,
             name: file.name,
             size: file.size,
             path: filePath
@@ -1553,6 +1563,42 @@ const OKRsPage = {
         }
     },
 
+    async removeEvidence(okrId, krId, evidenceIndex) {
+        if (!confirm('Tem certeza que deseja remover esta evidência?')) {
+            return;
+        }
+
+        try {
+            // Buscar evidências atuais
+            const { data: krData, error: fetchError } = await supabaseClient
+                .from('key_results')
+                .select('evidence')
+                .eq('id', krId)
+                .single();
+
+            if (fetchError) throw fetchError;
+
+            const currentEvidence = krData.evidence || [];
+
+            // Remover a evidência pelo índice
+            currentEvidence.splice(evidenceIndex, 1);
+
+            // Salvar no banco
+            const { error } = await supabaseClient
+                .from('key_results')
+                .update({ evidence: currentEvidence })
+                .eq('id', krId);
+
+            if (error) throw error;
+
+            await this.renderList();
+            DepartmentsPage.showToast('Evidência removida com sucesso!', 'success');
+        } catch (error) {
+            console.error('Erro ao remover evidência:', error);
+            DepartmentsPage.showToast('Erro ao remover evidência', 'error');
+        }
+    },
+
     closeQuickModal(modalId) {
         const modal = document.getElementById(modalId);
         if (modal) modal.remove();
@@ -1768,7 +1814,7 @@ const OKRsPage = {
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                             </svg>
                                             <span class="existing-file-name">${ev.name || 'Arquivo'}</span>
-                                            <a href="${ev.content}" target="_blank" class="btn btn-xs btn-secondary">Ver</a>
+                                            <a href="${convertToProxyUrl(ev.content)}" target="_blank" class="btn btn-xs btn-secondary">Ver</a>
                                         </div>
                                         <input type="hidden" class="evidence-content" value="${ev.content}">
                                         <input type="hidden" class="evidence-filename" value="${ev.name || ''}">`
@@ -1951,12 +1997,11 @@ const OKRsPage = {
             throw error;
         }
 
-        const { data: urlData } = supabaseClient.storage
-            .from('evidencias')
-            .getPublicUrl(filePath);
+        // Usar URL de proxy em vez da URL pública do Supabase
+        const proxyUrl = getProxyUrl('evidencias', filePath);
 
         return {
-            url: urlData.publicUrl,
+            url: proxyUrl,
             name: file.name,
             size: file.size,
             path: filePath
@@ -4429,12 +4474,28 @@ const OKRsPage = {
                 margin: 4px 0;
             }
 
+            .kr-evidence-text-wrapper {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: 12px;
+                padding: 12px 16px;
+                background: var(--bg-main);
+                border: 1px solid var(--border);
+                border-radius: 8px;
+            }
+
+            .kr-evidence-text-wrapper .btn-danger {
+                flex-shrink: 0;
+            }
+
             .kr-evidence-text {
                 margin: 0;
                 font-size: 14px;
                 color: var(--text-secondary);
                 line-height: 1.6;
                 white-space: pre-wrap;
+                flex: 1;
             }
 
             .kr-evidence-file {

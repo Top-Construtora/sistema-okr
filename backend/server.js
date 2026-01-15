@@ -9,6 +9,7 @@ import userRoutes from './routes/user.routes.js';
 import okrRoutes from './routes/okr.routes.js';
 import objectiveRoutes from './routes/objective.routes.js';
 import statsRoutes from './routes/stats.routes.js';
+import evidenceRoutes from './routes/evidence.routes.js';
 
 dotenv.config();
 
@@ -64,6 +65,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/okrs', okrRoutes);
 app.use('/api/objectives', objectiveRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/evidence', evidenceRoutes);
 
 app.use('*', (req, res) => {
     res.status(404).json({ error: 'Rota não encontrada' });

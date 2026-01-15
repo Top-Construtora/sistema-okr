@@ -258,7 +258,7 @@ const CyclesPage = {
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="form-label">Inicio</label>
+                            <label class="form-label">Início</label>
                             <input type="date" id="cycle-inicio" class="form-input"
                                 value="${this.currentCycle?.data_inicio || ''}">
                         </div>
@@ -351,7 +351,7 @@ const CyclesPage = {
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="form-label">Inicio</label>
+                            <label class="form-label">Início</label>
                             <input type="date" id="mini-inicio" class="form-input"
                                 value="${this.currentMiniCycle?.data_inicio || cycle.data_inicio}"
                                 min="${cycle.data_inicio}" max="${cycle.data_fim}">
@@ -404,7 +404,7 @@ const CyclesPage = {
         const dataFim = document.getElementById('cycle-fim').value;
         const errorDiv = document.getElementById('cycle-error');
 
-        // Validacao
+        // Validação
         if (!nome) {
             this.showError(errorDiv, 'Informe o nome do ciclo');
             return;
@@ -450,7 +450,7 @@ const CyclesPage = {
         const dataFim = document.getElementById('mini-fim').value;
         const errorDiv = document.getElementById('mini-error');
 
-        // Validacao
+        // Validação
         if (!nome) {
             this.showError(errorDiv, 'Informe o nome do miniciclo');
             return;
