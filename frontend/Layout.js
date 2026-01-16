@@ -568,9 +568,17 @@ const Layout = {
     },
 
     // Logout
-    logout() {
-        if (confirm('Deseja realmente sair?')) {
-            AuthService.logout();
+    async logout() {
+        const confirmed = await Modal.confirm({
+            title: 'Sair do Sistema',
+            message: 'Deseja realmente sair do sistema?',
+            confirmLabel: 'Sair',
+            cancelLabel: 'Cancelar',
+            danger: true
+        });
+
+        if (confirmed) {
+            await AuthService.logout();
             window.location.reload();
         }
     },
