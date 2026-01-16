@@ -73,8 +73,11 @@ const AuthService = {
     // Faz logout
     async logout() {
         try {
-            // Logout do Supabase Auth
-            await supabaseClient.auth.signOut();
+            // Marca que foi logout explícito (para não auto-logar novamente)
+            localStorage.setItem('explicit_logout', Date.now().toString());
+
+            // Logout do Supabase Auth com scope global
+            await supabaseClient.auth.signOut({ scope: 'global' });
         } catch (error) {
             console.error('Erro no logout:', error);
         }
@@ -120,6 +123,103 @@ const AuthService = {
         } catch (error) {
             console.error('Erro ao verificar sessão:', error);
             return false;
+        }
+    },
+
+    // Login com Microsoft (Azure AD OAuth)
+    async loginWithMicrosoft() {
+        try {
+            const { data, error } = await supabaseClient.auth.signInWithOAuth({
+                provider: 'azure',
+                options: {
+                    scopes: 'email User.Read offline_access',
+                    redirectTo: window.location.origin,
+                },
+            });
+
+            if (error) throw error;
+            return data;
+        } catch (error) {
+            console.error('Erro no login Microsoft:', error);
+            throw error;
+        }
+    },
+
+    // Completa o login após callback OAuth (Microsoft)
+    async handleOAuthCallback() {
+        try {
+            // Verifica se há tokens na URL hash
+            const hashParams = new URLSearchParams(window.location.hash.substring(1));
+            const accessToken = hashParams.get('access_token');
+            const refreshToken = hashParams.get('refresh_token');
+
+            // Se há tokens na URL, define a sessão manualmente
+            if (accessToken) {
+                const { error: setSessionError } = await supabaseClient.auth.setSession({
+                    access_token: accessToken,
+                    refresh_token: refreshToken || ''
+                });
+
+                if (setSessionError) {
+                    console.error('Erro ao definir sessão:', setSessionError);
+                    return null;
+                }
+            }
+
+            // Pega a sessão atual do Supabase
+            const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+
+            if (sessionError || !session) {
+                console.error('Erro ao obter sessão OAuth:', sessionError);
+                return null;
+            }
+
+            const authUser = session.user;
+            const email = authUser.email;
+
+            // Busca dados do usuário na tabela users
+            const { data: userData, error: userError } = await supabaseClient
+                .from('users')
+                .select('*, departamento:departments(id, nome)')
+                .eq('email', email)
+                .eq('ativo', true)
+                .single();
+
+            if (userError || !userData) {
+                console.error('Usuário não encontrado na tabela users:', userError);
+                await supabaseClient.auth.signOut();
+                return null;
+            }
+
+            // Busca departamentos vinculados (múltiplos departamentos)
+            const { data: userDepts } = await supabaseClient
+                .from('user_departments')
+                .select('department_id, is_primary, departments(id, nome)')
+                .eq('user_id', userData.id);
+
+            if (userDepts && userDepts.length > 0) {
+                userData.departments = userDepts.map(ud => ({
+                    id: ud.departments.id,
+                    nome: ud.departments.nome,
+                    is_primary: ud.is_primary
+                }));
+            } else if (userData.departamento) {
+                userData.departments = [{
+                    id: userData.departamento.id,
+                    nome: userData.departamento.nome,
+                    is_primary: true
+                }];
+            }
+
+            // Adiciona o auth_id
+            userData.auth_id = authUser.id;
+
+            // Salva na sessão
+            StorageService.setCurrentUser(userData);
+            return userData;
+        } catch (error) {
+            console.error('Erro no callback OAuth:', error);
+            return null;
         }
     },
 

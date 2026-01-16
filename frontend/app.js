@@ -2,6 +2,7 @@
 import { StorageService } from './services/storage.js';
 import { AuthService } from './services/auth.js';
 import { User } from './Entities/User.js';
+import { supabaseClient } from './services/supabase.js';
 
 const App = {
     async init() {
@@ -22,6 +23,35 @@ const App = {
             if (publicPages.includes(path)) {
                 // Renderiza página pública
                 this.renderPublicPage(path);
+                return;
+            }
+
+            // Verifica se é callback OAuth (retorno do login Microsoft)
+            const hashParams = new URLSearchParams(window.location.hash.substring(1));
+            const queryParams = new URLSearchParams(window.location.search);
+            const hasOAuthCallback = hashParams.has('access_token') || queryParams.has('code');
+
+            // Verifica se foi logout explícito (para não auto-logar)
+            const logoutTimestamp = localStorage.getItem('explicit_logout');
+            if (logoutTimestamp) {
+                this.renderLogin();
+                return;
+            }
+
+            // Verifica também se há uma sessão OAuth ativa no Supabase (caso o hash já tenha sido processado)
+            const { data: { session: supabaseSession } } = await supabaseClient.auth.getSession();
+            const hasActiveSession = !!supabaseSession;
+            const isOAuthSession = supabaseSession?.user?.app_metadata?.providers?.includes('azure');
+
+            // Se há callback OAuth na URL OU se há sessão OAuth ativa mas usuário não está logado localmente
+            if (hasOAuthCallback || (hasActiveSession && isOAuthSession && !AuthService.isAuthenticated())) {
+                const user = await AuthService.handleOAuthCallback();
+                if (user) {
+                    window.history.replaceState({}, document.title, '/');
+                    this.renderApp();
+                } else {
+                    this.showOAuthError();
+                }
                 return;
             }
 
@@ -48,6 +78,29 @@ const App = {
         } else if (path === '/auth/callback') {
             window.PasswordRecoveryCallbackPage.render();
         }
+    },
+
+    showOAuthError() {
+        const app = document.getElementById('app');
+        app.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:sans-serif;background:linear-gradient(135deg, #1e2938 0%, #1e6076 50%, #12b0a0 100%);">
+                <div style="text-align:center;max-width:500px;padding:40px;background:white;border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+                    <div style="width:80px;height:80px;background:#fef2f2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;">
+                        <svg width="40" height="40" fill="none" stroke="#ef4444" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                    </div>
+                    <h2 style="color:#1e6076;margin-bottom:12px;font-size:24px;">Acesso não autorizado</h2>
+                    <p style="color:#64748b;margin-bottom:24px;line-height:1.6;">
+                        Seu email Microsoft não está cadastrado no sistema OKR.<br>
+                        Entre em contato com o administrador para solicitar acesso.
+                    </p>
+                    <button onclick="window.location.href='/'" style="padding:14px 28px;background:linear-gradient(135deg, #12b0a0 0%, #0d9488 100%);color:white;border:none;border-radius:12px;cursor:pointer;font-weight:600;font-size:15px;box-shadow:0 4px 14px rgba(18, 176, 160, 0.35);">
+                        Voltar ao Login
+                    </button>
+                </div>
+            </div>
+        `;
     },
 
     showError(message) {
@@ -186,6 +239,22 @@ const App = {
                                 </button>
                             </form>
 
+                            <!-- Divisor -->
+                            <div class="login-divider">
+                                <span>ou</span>
+                            </div>
+
+                            <!-- Botão Login Microsoft -->
+                            <button type="button" class="btn-microsoft" onclick="App.handleMicrosoftLogin()">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 21 21">
+                                    <path fill="#f25022" d="M1 1h9v9H1z"/>
+                                    <path fill="#00a4ef" d="M1 11h9v9H1z"/>
+                                    <path fill="#7fba00" d="M11 1h9v9H11z"/>
+                                    <path fill="#ffb900" d="M11 11h9v9H11z"/>
+                                </svg>
+                                <span>Entrar com Microsoft</span>
+                            </button>
+
                             <div class="login-card-footer">
                                 <p>Sistema protegido por autenticação segura</p>
                             </div>
@@ -228,6 +297,50 @@ const App = {
         window.location.href = '/esqueci-senha';
     },
 
+    async handleMicrosoftLogin() {
+        const errorDiv = document.getElementById('loginError');
+        const microsoftBtn = document.querySelector('.btn-microsoft');
+
+        // Remove flag de logout explícito - usuário está tentando logar
+        localStorage.removeItem('explicit_logout');
+
+        try {
+            // Desabilita o botão
+            if (microsoftBtn) {
+                microsoftBtn.disabled = true;
+                microsoftBtn.innerHTML = `
+                    <svg class="spinner" width="20" height="20" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" opacity="0.3"/>
+                        <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"/>
+                    </svg>
+                    <span>Redirecionando...</span>
+                `;
+            }
+
+            await AuthService.loginWithMicrosoft();
+            // O redirecionamento será feito automaticamente pelo Supabase
+        } catch (error) {
+            console.error('Erro no login Microsoft:', error);
+            if (errorDiv) {
+                errorDiv.textContent = 'Erro ao iniciar login com Microsoft. Tente novamente.';
+                errorDiv.style.display = 'block';
+            }
+            // Restaura o botão
+            if (microsoftBtn) {
+                microsoftBtn.disabled = false;
+                microsoftBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 21 21">
+                        <path fill="#f25022" d="M1 1h9v9H1z"/>
+                        <path fill="#00a4ef" d="M1 11h9v9H1z"/>
+                        <path fill="#7fba00" d="M11 1h9v9H11z"/>
+                        <path fill="#ffb900" d="M11 11h9v9H11z"/>
+                    </svg>
+                    <span>Entrar com Microsoft</span>
+                `;
+            }
+        }
+    },
+
     async handleLogin() {
         const email = document.getElementById('email').value;
         const senha = document.getElementById('senha').value;
@@ -235,6 +348,9 @@ const App = {
         const submitBtn = document.querySelector('#loginForm button[type="submit"]');
         const btnText = submitBtn.querySelector('.btn-text');
         const btnLoading = submitBtn.querySelector('.btn-loading');
+
+        // Remove flag de logout explícito - usuário está tentando logar
+        localStorage.removeItem('explicit_logout');
 
         // Desabilita botão e mostra loading
         submitBtn.disabled = true;
@@ -894,6 +1010,67 @@ const App = {
             .forgot-password-link a:hover {
                 color: #0d9488;
                 text-decoration: underline;
+            }
+
+            /* Divider */
+            .login-divider {
+                display: flex;
+                align-items: center;
+                margin: 24px 0 20px;
+            }
+
+            .login-divider::before,
+            .login-divider::after {
+                content: '';
+                flex: 1;
+                height: 1px;
+                background: #e2e8f0;
+            }
+
+            .login-divider span {
+                padding: 0 16px;
+                color: #94a3b8;
+                font-size: 13px;
+                font-weight: 500;
+                text-transform: uppercase;
+            }
+
+            /* Microsoft Button */
+            .btn-microsoft {
+                width: 100%;
+                height: 52px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 12px;
+                background: #ffffff;
+                border: 2px solid #e2e8f0;
+                border-radius: 12px;
+                cursor: pointer;
+                font-family: 'Segoe UI', 'Roboto', 'Helvetica', sans-serif;
+                font-size: 15px;
+                font-weight: 600;
+                color: #3c3c3c;
+                transition: all 0.2s ease;
+            }
+
+            .btn-microsoft:hover:not(:disabled) {
+                background: #f8fafc;
+                border-color: #cbd5e1;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            }
+
+            .btn-microsoft:active:not(:disabled) {
+                background: #f1f5f9;
+            }
+
+            .btn-microsoft:disabled {
+                opacity: 0.7;
+                cursor: not-allowed;
+            }
+
+            .btn-microsoft svg.spinner {
+                animation: spin 1s linear infinite;
             }
 
             /* Responsive */
