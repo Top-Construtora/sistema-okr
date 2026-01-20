@@ -358,95 +358,24 @@ const CalendarPage = {
     },
 
     /**
-     * Paleta de cores MUITO distintas e contrastantes
-     */
-    getColorPalette() {
-        return [
-            // Azul Forte
-            { background: '#DBEAFE', border: '#2563EB', text: '#1E3A8A' },
-            // Verde Esmeralda
-            { background: '#D1FAE5', border: '#059669', text: '#064E3B' },
-            // Roxo Intenso
-            { background: '#EDE9FE', border: '#7C3AED', text: '#5B21B6' },
-            // Laranja Vibrante
-            { background: '#FFEDD5', border: '#EA580C', text: '#9A3412' },
-            // Rosa Pink
-            { background: '#FCE7F3', border: '#DB2777', text: '#9F1239' },
-            // Teal Profundo
-            { background: '#CCFBF1', border: '#0D9488', text: '#134E4A' },
-            // Índigo
-            { background: '#E0E7FF', border: '#4F46E5', text: '#312E81' },
-            // Amarelo Ouro
-            { background: '#FEF3C7', border: '#D97706', text: '#78350F' },
-            // Vermelho Coral
-            { background: '#FEE2E2', border: '#DC2626', text: '#991B1B' },
-            // Ciano Elétrico
-            { background: '#CFFAFE', border: '#0891B2', text: '#164E63' },
-            // Verde Limão
-            { background: '#ECFCCB', border: '#65A30D', text: '#3F6212' },
-            // Magenta
-            { background: '#FAE8FF', border: '#C026D3', text: '#86198F' },
-            // Azul Céu
-            { background: '#E0F2FE', border: '#0284C7', text: '#075985' },
-            // Verde Floresta
-            { background: '#D1FAE5', border: '#047857', text: '#064E3B' },
-            // Laranja Fogo
-            { background: '#FED7AA', border: '#F97316', text: '#9A3412' }
-        ];
-    },
-
-    /**
-     * Gera cor consistente para departamento usando paleta pré-definida
+     * Gera cor para iniciativa: cor primária para meu departamento, cinza para outros
      */
     getDepartmentColor(deptName, isUserDept = false) {
-        const palette = this.getColorPalette();
-
-        // Hash simples para obter índice consistente
-        let hash = 0;
-        for (let i = 0; i < deptName.length; i++) {
-            hash = deptName.charCodeAt(i) + ((hash << 5) - hash);
-        }
-
-        // Seleciona cor da paleta baseado no hash
-        const colorIndex = Math.abs(hash) % palette.length;
-        const baseColor = palette[colorIndex];
-
         if (isUserDept) {
-            // Departamento do usuário: usa cores da paleta diretamente (vibrantes e saturadas)
+            // Meu departamento: cor primária do sistema (Teal)
             return {
-                background: baseColor.background,
-                border: baseColor.border,
-                text: baseColor.text
+                background: '#D1FAE5',  // Verde menta claro
+                border: '#14B8A6',       // Teal
+                text: '#0F766E'          // Teal escuro
             };
         } else {
-            // Outros departamentos: versão bem mais clara e neutra
+            // Outros departamentos: cinza neutro
             return {
-                background: this.lightenColor(baseColor.background, 0.7), // Muito mais claro
-                border: this.lightenColor(baseColor.border, 0.6), // Mais claro
-                text: this.lightenColor(baseColor.text, 0.5) // Mais claro
+                background: '#F3F4F6',  // Cinza muito claro
+                border: '#9CA3AF',       // Cinza médio
+                text: '#6B7280'          // Cinza escuro
             };
         }
-    },
-
-    /**
-     * Clareia uma cor hex (para outros departamentos)
-     */
-    lightenColor(hex, factor) {
-        // Remove # se existir
-        hex = hex.replace('#', '');
-
-        // Converte para RGB
-        const r = parseInt(hex.substring(0, 2), 16);
-        const g = parseInt(hex.substring(2, 4), 16);
-        const b = parseInt(hex.substring(4, 6), 16);
-
-        // Clareia em direção ao branco
-        const newR = Math.round(r + (255 - r) * factor);
-        const newG = Math.round(g + (255 - g) * factor);
-        const newB = Math.round(b + (255 - b) * factor);
-
-        // Converte de volta para hex
-        return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
     },
 
     /**

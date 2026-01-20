@@ -2,6 +2,7 @@ import { StorageService, uid } from '../../services/storage.js';
 import { supabaseClient } from '../../services/supabase.js';
 
 import { OKR, OKR_STATUS } from '../../Entities/OKR.js';
+import { Initiative } from '../../Entities/Initiative.js';
 
 // Página de Dashboard
 const DashboardPage = {
@@ -14,8 +15,13 @@ const DashboardPage = {
                     <div id="ranking-section">
                         <div style="padding:40px;text-align:center;">Carregando...</div>
                     </div>
-                    <div id="objectives-section">
-                        <div style="padding:40px;text-align:center;">Carregando...</div>
+                    <div class="objectives-and-activities">
+                        <div id="objectives-section">
+                            <div style="padding:40px;text-align:center;">Carregando...</div>
+                        </div>
+                        <div id="upcoming-activities-section">
+                            <div style="padding:40px;text-align:center;">Carregando...</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -24,7 +30,8 @@ const DashboardPage = {
         this.addStyles();
         await Promise.all([
             this.renderRanking(),
-            this.renderObjectives()
+            this.renderObjectives(),
+            this.renderUpcomingActivities()
         ]);
     },
 
@@ -175,15 +182,207 @@ const DashboardPage = {
 
         html += `
                 </div>
-                <div class="widget-footer">
-                    <button class="btn-link-dash" onclick="Layout.navigate('objectives')">
-                        Ver todos os objetivos →
-                    </button>
-                </div>
             </div>
         `;
 
         container.innerHTML = html;
+    },
+
+    async renderUpcomingActivities() {
+        const container = document.getElementById('upcoming-activities-section');
+
+        try {
+            // Calcular datas
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const todayStr = today.toISOString().split('T')[0];
+
+            const futureDate = new Date(today);
+            futureDate.setDate(futureDate.getDate() + 30); // Próximos 30 dias
+            const futureDateStr = futureDate.toISOString().split('T')[0];
+
+            // Buscar iniciativas dos próximos 30 dias
+            const { data, error } = await supabaseClient
+                .from('initiatives')
+                .select('id, nome, data_limite, progress, concluida, department')
+                .gte('data_limite', todayStr)
+                .lte('data_limite', futureDateStr)
+                .eq('concluida', false) // Apenas não concluídas
+                .order('data_limite', { ascending: true })
+                .limit(50); // Buscar mais para rotacionar
+
+            if (error) throw error;
+
+            const initiatives = data || [];
+
+            let html = `
+                <div class="widget widget-fixed-height">
+                    <div class="widget-header">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Próximas Atividades
+                        <span class="widget-badge">${initiatives.length}</span>
+                    </div>
+                    <div class="widget-body widget-body-carousel" id="activities-carousel">
+            `;
+
+            if (initiatives.length > 0) {
+                // Mostrar apenas 2 atividades por vez
+                const visibleCount = 2;
+                const visibleActivities = initiatives.slice(0, visibleCount);
+                const allActivities = initiatives; // Guardar todas para carousel
+
+                // Renderizar apenas as primeiras
+                visibleActivities.forEach(init => {
+                    const deadline = new Date(init.data_limite + 'T00:00:00');
+                    const daysUntil = Math.ceil((deadline - today) / (1000 * 60 * 60 * 24));
+
+                    const isUrgent = daysUntil <= 7;
+                    const isNear = daysUntil > 7 && daysUntil <= 15;
+
+                    html += `
+                        <div class="activity-item ${isUrgent ? 'urgent' : isNear ? 'near' : ''}" data-activity-id="${init.id}">
+                            <div class="activity-info">
+                                <div class="activity-name">${init.nome}</div>
+                                ${init.department ? `
+                                    <div class="activity-dept">${init.department}</div>
+                                ` : ''}
+                            </div>
+                            <div class="activity-deadline">
+                                <div class="deadline-date">${deadline.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</div>
+                                <div class="deadline-days ${isUrgent ? 'urgent' : isNear ? 'near' : ''}">
+                                    ${daysUntil === 0 ? 'Hoje' : daysUntil === 1 ? 'Amanhã' : `${daysUntil} dias`}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                // Iniciar carousel automático se tiver mais atividades
+                if (allActivities.length > visibleCount) {
+                    setTimeout(() => {
+                        this.startActivitiesCarousel(allActivities, visibleCount);
+                    }, 3000);
+                }
+            } else {
+                html += `
+                    <div style="text-align:center;padding:30px;">
+                        <p style="color:var(--text-muted);margin-bottom:12px;">Nenhuma atividade próxima</p>
+                        <small style="color:var(--text-muted);font-size:12px;">Iniciativas para os próximos 30 dias aparecerão aqui</small>
+                    </div>
+                `;
+            }
+
+            html += `
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        } catch (error) {
+            console.error('Erro ao carregar próximas atividades:', error);
+            container.innerHTML = `
+                <div class="widget widget-fixed-height">
+                    <div class="widget-header">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Próximas Atividades
+                    </div>
+                    <div class="widget-body">
+                        <p style="text-align:center;color:var(--text-muted);padding:20px;">Erro ao carregar</p>
+                    </div>
+                </div>
+            `;
+        }
+    },
+
+    startActivitiesCarousel(allActivities, visibleCount) {
+        const carousel = document.getElementById('activities-carousel');
+        if (!carousel || !allActivities || allActivities.length <= visibleCount) return;
+
+        let currentStartIndex = visibleCount; // Começa da próxima atividade não visível
+        let isPaused = false;
+        let intervalId = null;
+
+        const updateVisibleActivities = () => {
+            if (isPaused) return;
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            // Pegar próximo conjunto de atividades (rotação circular)
+            const activitiesToShow = [];
+            for (let i = 0; i < visibleCount; i++) {
+                const index = (currentStartIndex + i) % allActivities.length;
+                activitiesToShow.push(allActivities[index]);
+            }
+
+            // Fade out
+            carousel.style.opacity = '0';
+            carousel.style.transform = 'translateX(-10px)';
+
+            setTimeout(() => {
+                // Renderizar novas atividades
+                const items = activitiesToShow.map(init => {
+                    const deadline = new Date(init.data_limite + 'T00:00:00');
+                    const daysUntil = Math.ceil((deadline - today) / (1000 * 60 * 60 * 24));
+
+                    const isUrgent = daysUntil <= 7;
+                    const isNear = daysUntil > 7 && daysUntil <= 15;
+
+                    return `
+                        <div class="activity-item ${isUrgent ? 'urgent' : isNear ? 'near' : ''}" data-activity-id="${init.id}">
+                            <div class="activity-info">
+                                <div class="activity-name">${init.nome}</div>
+                                ${init.department ? `
+                                    <div class="activity-dept">${init.department}</div>
+                                ` : ''}
+                            </div>
+                            <div class="activity-deadline">
+                                <div class="deadline-date">${deadline.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</div>
+                                <div class="deadline-days ${isUrgent ? 'urgent' : isNear ? 'near' : ''}">
+                                    ${daysUntil === 0 ? 'Hoje' : daysUntil === 1 ? 'Amanhã' : `${daysUntil} dias`}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                carousel.innerHTML = items;
+
+                // Fade in
+                setTimeout(() => {
+                    carousel.style.opacity = '1';
+                    carousel.style.transform = 'translateX(0)';
+                }, 50);
+
+            }, 300);
+
+            // Avançar para próximo conjunto
+            currentStartIndex = (currentStartIndex + 1) % allActivities.length;
+        };
+
+        // Aplicar transição CSS
+        carousel.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+
+        // Atualizar a cada 5 segundos
+        intervalId = setInterval(updateVisibleActivities, 5000);
+
+        // Pausar ao passar mouse
+        carousel.addEventListener('mouseenter', () => {
+            isPaused = true;
+        });
+
+        carousel.addEventListener('mouseleave', () => {
+            isPaused = false;
+        });
+
+        // Limpar interval ao sair da página
+        window.addEventListener('beforeunload', () => {
+            if (intervalId) clearInterval(intervalId);
+        });
     },
 
     addStyles() {
@@ -196,7 +395,37 @@ const DashboardPage = {
                 display: grid;
                 grid-template-columns: 1fr 2fr;
                 gap: 24px;
-                align-items: start;
+                align-items: stretch;
+                min-height: 600px;
+            }
+
+            #ranking-section {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .objectives-and-activities {
+                display: flex;
+                flex-direction: column;
+                gap: 24px;
+                height: 100%;
+            }
+
+            #objectives-section {
+                flex: 0 0 auto;
+            }
+
+            #upcoming-activities-section {
+                flex: 1;
+                display: flex;
+                min-height: 0;
+            }
+
+            #upcoming-activities-section .widget {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                min-height: 0;
             }
 
             .widget {
@@ -430,10 +659,151 @@ const DashboardPage = {
                 color: white;
             }
 
+            /* Widget com altura fixa (alinha com ranking) */
+            .widget-fixed-height {
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .widget-fixed-height .widget-body {
+                flex: 1;
+                overflow: hidden;
+                position: relative;
+                transition: opacity 0.3s ease, transform 0.3s ease;
+            }
+
+            /* Esconder scrollbar completamente */
+            .widget-body-carousel {
+                overflow: hidden;
+                position: relative;
+                display: flex;
+                flex-direction: column;
+            }
+
+            /* Próximas Atividades */
+            .activity-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                padding: 20px 18px;
+                border-left: 4px solid transparent;
+                transition: all 0.2s ease;
+                border-bottom: 1px solid var(--border, #e2e8f0);
+                flex-shrink: 0;
+                gap: 16px;
+            }
+
+            .activity-item:last-child {
+                border-bottom: none;
+            }
+
+            .activity-item:hover {
+                background: var(--bg-main, #f8fafc);
+                border-left-color: var(--top-teal);
+                transform: translateX(4px);
+            }
+
+            .activity-item.urgent {
+                border-left-color: #ef4444;
+                background: linear-gradient(to right, #fef2f2, white);
+            }
+
+            .activity-item.near {
+                border-left-color: #f59e0b;
+                background: linear-gradient(to right, #fffbeb, white);
+            }
+
+            .activity-info {
+                flex: 1;
+            }
+
+            .activity-name {
+                font-size: 15px;
+                font-weight: 600;
+                color: var(--text-primary, #1e293b);
+                margin-bottom: 6px;
+                line-height: 1.4;
+            }
+
+            .activity-dept {
+                font-size: 12px;
+                color: var(--text-muted, #94a3b8);
+                text-transform: uppercase;
+                font-weight: 500;
+                letter-spacing: 0.5px;
+            }
+
+            .activity-deadline {
+                text-align: right;
+                display: flex;
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 4px;
+            }
+
+            .deadline-date {
+                font-size: 14px;
+                font-weight: 700;
+                color: var(--text-secondary, #64748b);
+                margin-bottom: 4px;
+            }
+
+            .deadline-days {
+                font-size: 12px;
+                padding: 4px 10px;
+                border-radius: 6px;
+                font-weight: 700;
+                background: var(--bg-main, #f8fafc);
+                color: var(--text-muted, #94a3b8);
+            }
+
+            .deadline-days.urgent {
+                background: #fef2f2;
+                color: #dc2626;
+            }
+
+            .deadline-days.near {
+                background: #fffbeb;
+                color: #d97706;
+            }
+
+            /* Indicador de carousel */
+            .carousel-indicator {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                color: var(--text-muted);
+            }
+
+            .carousel-indicator svg {
+                animation: pulse 2s ease-in-out infinite;
+            }
+
+            @keyframes pulse {
+                0%, 100% {
+                    opacity: 0.6;
+                    transform: scale(1);
+                }
+                50% {
+                    opacity: 1;
+                    transform: scale(1.1);
+                }
+            }
+
             /* Responsive */
             @media (max-width: 1024px) {
                 .dashboard-grid {
                     grid-template-columns: 1fr;
+                    min-height: auto;
+                }
+
+                .objectives-and-activities {
+                    gap: 20px;
+                }
+
+                .widget-fixed-height {
+                    max-height: 400px;
                 }
             }
 
@@ -441,6 +811,27 @@ const DashboardPage = {
                 /* Dashboard Grid Mobile */
                 .dashboard-grid {
                     gap: 18px;
+                }
+
+                .objectives-and-activities {
+                    gap: 18px;
+                }
+
+                .activity-item {
+                    padding: 12px 14px;
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 10px;
+                }
+
+                .activity-deadline {
+                    align-items: flex-start;
+                    flex-direction: row;
+                    gap: 8px;
+                }
+
+                .activity-name {
+                    font-size: 13px;
                 }
 
                 /* Widget Mobile - Melhorados */
