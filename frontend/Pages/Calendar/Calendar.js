@@ -3,12 +3,16 @@ import { supabaseClient } from '../../services/supabase.js';
 import { Initiative } from '../../Entities/Initiative.js';
 import { Reminder, REMINDER_TYPES, REMINDER_PRIORITIES } from '../../Entities/Reminder.js';
 import { Modal } from '../../Components/Modal.js';
+import { Cycle } from '../../Entities/Cycle.js';
+import { MiniCycle } from '../../Entities/MiniCycle.js';
 
 // Página de Calendário - Visualização de Iniciativas e Lembretes
 const CalendarPage = {
     calendar: null,
     initiatives: [],
     reminders: [],
+    cycles: [],
+    miniCycles: [],
     currentUser: null,
     userDepartments: [],
     selectedDate: null,
@@ -149,18 +153,22 @@ const CalendarPage = {
     },
 
     /**
-     * Carrega todos os dados (initiatives e reminders)
+     * Carrega todos os dados (initiatives, reminders, cycles e minicycles)
      */
     async loadData() {
         try {
-            // Buscar iniciativas e lembretes em paralelo
-            const [initiatives, reminders] = await Promise.all([
+            // Buscar dados em paralelo
+            const [initiatives, reminders, cycles, miniCycles] = await Promise.all([
                 this.fetchInitiatives(),
-                this.fetchReminders()
+                this.fetchReminders(),
+                this.fetchCycles(),
+                this.fetchMiniCycles()
             ]);
 
             this.initiatives = initiatives;
             this.reminders = reminders;
+            this.cycles = cycles;
+            this.miniCycles = miniCycles;
         } catch (error) {
             console.error('Erro ao carregar dados:', error);
             this.showToast('Erro ao carregar dados do calendário', 'error');
@@ -216,6 +224,30 @@ const CalendarPage = {
             return await Reminder.getAll();
         } catch (error) {
             console.error('Erro ao buscar lembretes:', error);
+            return [];
+        }
+    },
+
+    /**
+     * Busca ciclos ativos
+     */
+    async fetchCycles() {
+        try {
+            return await Cycle.getActive();
+        } catch (error) {
+            console.error('Erro ao buscar ciclos:', error);
+            return [];
+        }
+    },
+
+    /**
+     * Busca minicíclos ativos
+     */
+    async fetchMiniCycles() {
+        try {
+            return await MiniCycle.getActive();
+        } catch (error) {
+            console.error('Erro ao buscar minicíclos:', error);
             return [];
         }
     },
@@ -354,6 +386,76 @@ const CalendarPage = {
             });
         });
 
+        // Transformar ciclos - marcar início e fim
+        this.cycles.forEach(cycle => {
+            // Evento de início do ciclo
+            events.push({
+                id: `cycle_start_${cycle.id}`,
+                title: `Início: ${cycle.nome}`,
+                start: cycle.data_inicio,
+                allDay: true,
+                backgroundColor: '#bfdbfe',
+                borderColor: '#2563eb',
+                textColor: '#1e3a8a',
+                extendedProps: {
+                    type: 'cycle-start',
+                    cycle: cycle
+                },
+                classNames: ['event-cycle', 'cycle-start']
+            });
+
+            // Evento de fim do ciclo
+            events.push({
+                id: `cycle_end_${cycle.id}`,
+                title: `Fim: ${cycle.nome}`,
+                start: cycle.data_fim,
+                allDay: true,
+                backgroundColor: '#fca5a5',
+                borderColor: '#dc2626',
+                textColor: '#7f1d1d',
+                extendedProps: {
+                    type: 'cycle-end',
+                    cycle: cycle
+                },
+                classNames: ['event-cycle', 'cycle-end']
+            });
+        });
+
+        // Transformar minicíclos - marcar início e fim
+        this.miniCycles.forEach(miniCycle => {
+            // Evento de início do minicíclo
+            events.push({
+                id: `minicycle_start_${miniCycle.id}`,
+                title: `Início: ${miniCycle.nome}`,
+                start: miniCycle.data_inicio,
+                allDay: true,
+                backgroundColor: '#a7f3d0',
+                borderColor: '#059669',
+                textColor: '#064e3b',
+                extendedProps: {
+                    type: 'minicycle-start',
+                    miniCycle: miniCycle
+                },
+                classNames: ['event-minicycle', 'minicycle-start']
+            });
+
+            // Evento de fim do minicíclo
+            events.push({
+                id: `minicycle_end_${miniCycle.id}`,
+                title: `Fim: ${miniCycle.nome}`,
+                start: miniCycle.data_fim,
+                allDay: true,
+                backgroundColor: '#fcd34d',
+                borderColor: '#d97706',
+                textColor: '#78350f',
+                extendedProps: {
+                    type: 'minicycle-end',
+                    miniCycle: miniCycle
+                },
+                classNames: ['event-minicycle', 'minicycle-end']
+            });
+        });
+
         return events;
     },
 
@@ -398,14 +500,12 @@ const CalendarPage = {
         const element = info.el;
         const props = info.event.extendedProps;
 
-        // Aplicar cores como CSS variables
-        if (props.colors) {
+        // Aplicar cores como CSS variables para iniciativas
+        if (props.type === 'initiative' && props.colors) {
             element.style.setProperty('--fc-event-bg-color', props.colors.background);
             element.style.setProperty('--fc-event-border-color', props.colors.border);
             element.style.setProperty('--fc-event-text-color', props.colors.text);
-        }
 
-        if (props.type === 'initiative') {
             const initiative = props.initiative;
 
             // Verificar se está realmente atrasada
@@ -427,6 +527,15 @@ const CalendarPage = {
                 element.style.fontWeight = '600';
             }
         }
+
+        // Para ciclos e minicíclos, forçar as cores diretamente
+        if (props.type === 'cycle-start' || props.type === 'cycle-end' ||
+            props.type === 'minicycle-start' || props.type === 'minicycle-end') {
+            const event = info.event;
+            element.style.setProperty('--fc-event-bg-color', event.backgroundColor);
+            element.style.setProperty('--fc-event-border-color', event.borderColor);
+            element.style.setProperty('--fc-event-text-color', event.textColor);
+        }
     },
 
     /**
@@ -439,6 +548,10 @@ const CalendarPage = {
             this.openInitiativeModal(props.initiative);
         } else if (props.type === 'reminder') {
             this.editReminder(props.reminder.id);
+        } else if (props.type === 'cycle-start' || props.type === 'cycle-end') {
+            this.openCycleModal(props.cycle, props.type);
+        } else if (props.type === 'minicycle-start' || props.type === 'minicycle-end') {
+            this.openMiniCycleModal(props.miniCycle, props.type);
         }
     },
 
@@ -666,6 +779,164 @@ const CalendarPage = {
      */
     closeInitiativeModal() {
         const modal = document.getElementById('initiative-detail-modal');
+        if (modal) {
+            modal.remove();
+        }
+    },
+
+    /**
+     * Abre modal com detalhes do ciclo
+     */
+    openCycleModal(cycle, eventType) {
+        const isStart = eventType === 'cycle-start';
+        const title = isStart ? `Início do Ciclo: ${cycle.nome}` : `Fim do Ciclo: ${cycle.nome}`;
+        const date = isStart ? cycle.data_inicio : cycle.data_fim;
+
+        const modal = document.createElement('div');
+        modal.id = 'cycle-detail-modal';
+        modal.className = 'modal-overlay';
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                this.closeCycleModal();
+            }
+        };
+
+        const modalHTML = `
+            <div class="modal-container" onclick="event.stopPropagation()">
+                <div class="modal-header" style="border-bottom: 3px solid ${isStart ? '#3b82f6' : '#ef4444'};">
+                    <div class="modal-title-group">
+                        <h3 class="modal-title">${title}</h3>
+                    </div>
+                    <button class="modal-close" onclick="CalendarPage.closeCycleModal()">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="details-grid">
+                        <div class="detail-item">
+                            <strong>Data</strong>
+                            <p>${this.formatDate(date)}</p>
+                        </div>
+
+                        <div class="detail-item">
+                            <strong>Período Completo</strong>
+                            <p>${this.formatDate(cycle.data_inicio)} até ${this.formatDate(cycle.data_fim)}</p>
+                        </div>
+
+                        ${cycle.descricao ? `
+                            <div class="detail-item">
+                                <strong>Descrição</strong>
+                                <p>${cycle.descricao}</p>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="CalendarPage.closeCycleModal()">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        `;
+
+        modal.innerHTML = modalHTML;
+        document.body.appendChild(modal);
+    },
+
+    /**
+     * Fecha modal de ciclo
+     */
+    closeCycleModal() {
+        const modal = document.getElementById('cycle-detail-modal');
+        if (modal) {
+            modal.remove();
+        }
+    },
+
+    /**
+     * Abre modal com detalhes do minicíclo
+     */
+    openMiniCycleModal(miniCycle, eventType) {
+        const isStart = eventType === 'minicycle-start';
+        const title = isStart ? `Início do Minicíclo: ${miniCycle.nome}` : `Fim do Minicíclo: ${miniCycle.nome}`;
+        const date = isStart ? miniCycle.data_inicio : miniCycle.data_fim;
+
+        const modal = document.createElement('div');
+        modal.id = 'minicycle-detail-modal';
+        modal.className = 'modal-overlay';
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                this.closeMiniCycleModal();
+            }
+        };
+
+        const cycleName = miniCycle.cycle?.nome || 'Carregando...';
+
+        const modalHTML = `
+            <div class="modal-container" onclick="event.stopPropagation()">
+                <div class="modal-header" style="border-bottom: 3px solid ${isStart ? '#22c55e' : '#f97316'};">
+                    <div class="modal-title-group">
+                        <h3 class="modal-title">${title}</h3>
+                    </div>
+                    <button class="modal-close" onclick="CalendarPage.closeMiniCycleModal()">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="details-grid">
+                        <div class="detail-item">
+                            <strong>Data</strong>
+                            <p>${this.formatDate(date)}</p>
+                        </div>
+
+                        <div class="detail-item">
+                            <strong>Período Completo</strong>
+                            <p>${this.formatDate(miniCycle.data_inicio)} até ${this.formatDate(miniCycle.data_fim)}</p>
+                        </div>
+
+                        <div class="detail-item">
+                            <strong>Ciclo</strong>
+                            <p>${cycleName}</p>
+                        </div>
+
+                        <div class="detail-item">
+                            <strong>Ordem</strong>
+                            <p>${miniCycle.ordem}º período</p>
+                        </div>
+
+                        ${miniCycle.descricao ? `
+                            <div class="detail-item">
+                                <strong>Descrição</strong>
+                                <p>${miniCycle.descricao}</p>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="CalendarPage.closeMiniCycleModal()">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        `;
+
+        modal.innerHTML = modalHTML;
+        document.body.appendChild(modal);
+    },
+
+    /**
+     * Fecha modal de minicíclo
+     */
+    closeMiniCycleModal() {
+        const modal = document.getElementById('minicycle-detail-modal');
         if (modal) {
             modal.remove();
         }
@@ -1230,6 +1501,41 @@ const CalendarPage = {
             .fc-event.event-reminder {
                 border-style: dashed !important;
                 font-style: italic;
+            }
+
+            /* Eventos de ciclo */
+            .fc-event.event-cycle {
+                font-weight: 700 !important;
+                border-width: 3px !important;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+            }
+
+            .fc-event.cycle-start {
+                border-left-width: 6px !important;
+                background-image: linear-gradient(to right, rgba(37, 99, 235, 0.2), transparent) !important;
+            }
+
+            .fc-event.cycle-end {
+                border-right-width: 6px !important;
+                background-image: linear-gradient(to left, rgba(220, 38, 38, 0.2), transparent) !important;
+            }
+
+            /* Eventos de minicíclo */
+            .fc-event.event-minicycle {
+                font-weight: 600 !important;
+                border-width: 2px !important;
+                font-size: 11px !important;
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12) !important;
+            }
+
+            .fc-event.minicycle-start {
+                border-left-width: 5px !important;
+                background-image: linear-gradient(to right, rgba(5, 150, 105, 0.2), transparent) !important;
+            }
+
+            .fc-event.minicycle-end {
+                border-right-width: 5px !important;
+                background-image: linear-gradient(to left, rgba(217, 119, 6, 0.2), transparent) !important;
             }
 
             /* Painel de Lembretes */
