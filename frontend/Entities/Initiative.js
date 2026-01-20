@@ -14,6 +14,7 @@ class Initiative {
         this.position = data.position || 0;
         this.comment = data.comment ?? '';
         this.evidence = (data.evidence && Array.isArray(data.evidence)) ? data.evidence : [];
+        this.department = data.department || null; // NEW: Departamento desnormalizado
         this.created_at = data.created_at || null;
         this.updated_at = data.updated_at || null;
         // Dados do responsável (quando vem de join) - LEGACY

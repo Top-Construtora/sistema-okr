@@ -59,6 +59,8 @@ const Layout = {
             '/': 'dashboard',
             '/dashboard': 'dashboard',
             '/okrs': 'okrs',
+            '/calendario': 'calendar',
+            '/calendar': 'calendar',
             '/ciclos': 'cycles',
             '/cycles': 'cycles',
             '/objetivos': 'objectives',
@@ -81,6 +83,7 @@ const Layout = {
         const paths = {
             'dashboard': '/dashboard',
             'okrs': '/okrs',
+            'calendar': '/calendario',
             'cycles': '/ciclos',
             'objectives': '/objetivos',
             'approval': '/approval',
@@ -127,6 +130,12 @@ const Layout = {
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                             </svg>
                             <span>OKRs</span>
+                        </a>
+                        <a class="nav-item" data-page="calendar" title="Calendário">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            <span>Calendário</span>
                         </a>
                         <a class="nav-item" data-page="cycles" title="Ciclos">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -291,6 +300,7 @@ const Layout = {
         const titles = {
             dashboard: 'Dashboard',
             okrs: "Gestão de OKRs",
+            calendar: 'Calendário de Iniciativas',
             cycles: 'Gestão de Ciclos',
             objectives: 'Objetivos Estratégicos',
             approval: 'Comitê de Aprovação',
@@ -306,6 +316,7 @@ const Layout = {
         const subtitles = {
             dashboard: 'Visão geral do progresso dos objetivos',
             okrs: "Gerencie os OKR's da empresa",
+            calendar: 'Visualize iniciativas e gerencie seus lembretes',
             cycles: "Configure ciclos e miniciclos para organizar os OKR's",
             objectives: 'Gerencie os objetivos estratégicos da empresa',
             approval: 'Aprove e acompanhe os OKRs submetidos',
@@ -384,6 +395,9 @@ const Layout = {
                     break;
                 case 'okrs':
                     OKRsPage.render();
+                    break;
+                case 'calendar':
+                    CalendarPage.render();
                     break;
                 case 'cycles':
                     CyclesPage.render();

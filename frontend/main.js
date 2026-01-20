@@ -17,6 +17,7 @@ import { User } from './Entities/User.js'
 import { OKR, OKR_STATUS } from './Entities/OKR.js'
 import './Entities/KeyResult.js'
 import { Initiative } from './Entities/Initiative.js'
+import { Reminder, REMINDER_TYPES, REMINDER_PRIORITIES } from './Entities/Reminder.js'
 
 // 2.5 Importa Components
 import { Modal } from './Components/Modal.js'
@@ -28,6 +29,7 @@ import { Layout } from './Layout.js'
 // 4. Importa Pages
 import { DashboardPage } from './Pages/Dashboard/Dashboard.js'
 import { ObjectivesPage } from './Pages/Objectives/Objectives.js'
+import { CalendarPage } from './Pages/Calendar/Calendar.js'
 import { CyclesPage } from './Pages/Cycles/Cycles.js'
 import { DepartmentsPage } from './Pages/Departments/Departments.js'
 import { UsersPage } from './Pages/Users/Users.js'
@@ -49,11 +51,15 @@ window.User = User;
 window.OKR = OKR;
 window.OKR_STATUS = OKR_STATUS;
 window.Initiative = Initiative;
+window.Reminder = Reminder;
+window.REMINDER_TYPES = REMINDER_TYPES;
+window.REMINDER_PRIORITIES = REMINDER_PRIORITIES;
 window.Modal = Modal;
 window.InitiativeManager = InitiativeManager;
 window.Layout = Layout;
 window.DashboardPage = DashboardPage;
 window.ObjectivesPage = ObjectivesPage;
+window.CalendarPage = CalendarPage;
 window.CyclesPage = CyclesPage;
 window.DepartmentsPage = DepartmentsPage;
 window.UsersPage = UsersPage;
