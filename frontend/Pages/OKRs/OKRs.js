@@ -27,6 +27,38 @@ const OKRsPage = {
     expandedKRs: new Set(),
     currentInitiative: null,
 
+    /**
+     * Verifica se OKR pode ser editado (título, descrição, etc.)
+     */
+    canEditOKR(okr) {
+        // Não pode editar se aprovado, concluído ou homologado
+        return okr.status === 'pending' || okr.status === 'adjust';
+    },
+
+    /**
+     * Verifica se KR pode ser editado
+     */
+    canEditKR(okr) {
+        // KR só pode ser editado se OKR não foi aprovado ainda
+        return okr.status === 'pending' || okr.status === 'adjust';
+    },
+
+    /**
+     * Verifica se pode editar apenas evidências e iniciativas
+     */
+    canEditEvidenceAndInitiatives(okr) {
+        // Pode editar evidências/iniciativas se aprovado
+        // Não pode se homologado
+        return okr.status === 'approved' || okr.status === 'pending' || okr.status === 'adjust';
+    },
+
+    /**
+     * Verifica se OKR está completamente bloqueado (homologado)
+     */
+    isOKRLocked(okr) {
+        return okr.status === 'homologated' || okr.status === 'completed';
+    },
+
     // Retorna apenas primeiro e segundo nome do usuário
     getShortName(fullName) {
         if (!fullName) return '';
@@ -262,6 +294,12 @@ const OKRsPage = {
         const isOKRExpanded = this.expandedOKRs.has(okr.id);
         const okrIdentifier = `O${index + 1}`;
 
+        // Verificações de permissão baseadas no status
+        const canEditOKRData = canEdit && this.canEditOKR(okr); // Editar dados do OKR (título, etc)
+        const canEditKRData = canEdit && this.canEditKR(okr); // Editar KRs
+        const canEditEvidence = canEdit && this.canEditEvidenceAndInitiatives(okr); // Evidências e iniciativas
+        const isLocked = this.isOKRLocked(okr); // Completamente bloqueado
+
         // Configuração de status do OKR
         const okrStatusConfig = {
             'pending': { label: 'Pendente', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)', icon: '⏳' },
@@ -333,7 +371,7 @@ const OKRsPage = {
                             </div>
                         </div>
                     </div>
-                    ${canEdit ? `
+                    ${canEditOKRData ? `
                     <div class="okr-header-right" onclick="event.stopPropagation();">
                         <div class="action-menu">
                             <button class="action-menu-btn-header" onclick="OKRsPage.toggleOKRMenu(event, '${okr.id}')" title="Ações">
@@ -357,10 +395,40 @@ const OKRsPage = {
                             </div>
                         </div>
                     </div>
+                    ` : isLocked ? `
+                    <div class="okr-header-right">
+                        <span class="locked-badge">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                            </svg>
+                            Bloqueado
+                        </span>
+                    </div>
                     ` : ''}
                 </div>
 
                 <div class="okr-accordion-body ${isOKRExpanded ? 'expanded' : ''}" data-okr-id="${okr.id}">
+                    ${isLocked ? `
+                    <div class="okr-locked-notice">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                        </svg>
+                        <div>
+                            <strong>OKR Bloqueado</strong>
+                            <p>Este OKR foi ${okr.status === 'homologated' ? 'homologado' : 'concluído'} e não pode mais ser editado.</p>
+                        </div>
+                    </div>
+                    ` : okr.status === 'approved' ? `
+                    <div class="okr-approved-notice">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <div>
+                            <strong>OKR Aprovado</strong>
+                            <p>Apenas evidências e iniciativas podem ser editadas. O OKR e os KRs estão bloqueados.</p>
+                        </div>
+                    </div>
+                    ` : ''}
                     <div class="krs-section">
                         <div class="krs-section-header">
                             <div class="section-title">
@@ -369,7 +437,7 @@ const OKRsPage = {
                                 </svg>
                                 KR's
                             </div>
-                            ${canEdit ? `
+                            ${canEditKRData ? `
                             <button class="btn btn-sm btn-secondary" onclick="OKRsPage.addKR('${okr.id}')">
                                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -383,7 +451,7 @@ const OKRsPage = {
                             ${okr.keyResults.length === 0 ? `
                                 <div class="empty-krs">
                                     <p style="color:var(--text-muted);font-size:14px;margin:0;">Nenhum Key Result cadastrado ainda</p>
-                                    ${canEdit ? `
+                                    ${canEditKRData ? `
                                     <button class="btn btn-sm btn-primary" onclick="OKRsPage.addKR('${okr.id}')" style="margin-top:12px;">
                                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -429,7 +497,7 @@ const OKRsPage = {
                                             <span class="kr-status-badge" style="background:${statusInfo.bg};color:${statusInfo.color};">
                                                 ${statusInfo.label}
                                             </span>
-                                            ${canEdit ? `
+                                            ${canEditKRData ? `
                                             <div class="action-menu">
                                                 <button class="action-menu-btn" onclick="OKRsPage.toggleKRMenu(event, '${kr.id}')" title="Ações">
                                                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -466,7 +534,7 @@ const OKRsPage = {
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
                                                         </svg>
                                                         <span>Comentário</span>
-                                                        ${canEdit ? `
+                                                        ${!isLocked ? `
                                                         <button class="btn btn-xs btn-outline" onclick="OKRsPage.openQuickCommentEditor('${okr.id}', '${kr.id}')" style="margin-left:auto;" title="${kr.comment && kr.comment.trim() ? 'Editar' : 'Adicionar'} comentário">
                                                             <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${kr.comment && kr.comment.trim() ? 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z' : 'M12 4v16m8-8H4'}"/>
@@ -494,7 +562,7 @@ const OKRsPage = {
                                                             ? `<span class="kr-count-badge">${kr.evidence.length}</span>`
                                                             : ''
                                                         }
-                                                        ${canEdit ? `
+                                                        ${canEditEvidence ? `
                                                         <button class="btn btn-xs btn-outline" onclick="OKRsPage.openQuickEvidenceModal('${okr.id}', '${kr.id}')" style="margin-left:auto;" title="Adicionar evidência">
                                                             <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -511,7 +579,7 @@ const OKRsPage = {
                                                                         ${ev.type === 'text'
                                                                             ? `<div class="kr-evidence-text-wrapper">
                                                                                 <p class="kr-evidence-text">${ev.content}</p>
-                                                                                ${canEdit ? `<button class="btn btn-xs btn-danger" onclick="OKRsPage.removeEvidence('${okr.id}', '${kr.id}', ${idx})" title="Remover">
+                                                                                ${canEditEvidence ? `<button class="btn btn-xs btn-danger" onclick="OKRsPage.removeEvidence('${okr.id}', '${kr.id}', ${idx})" title="Remover">
                                                                                     <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                                                                     </svg>
@@ -534,7 +602,7 @@ const OKRsPage = {
                                                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                                                                                     </svg>
                                                                                 </a>
-                                                                                ${canEdit ? `<button class="btn btn-xs btn-danger" onclick="OKRsPage.removeEvidence('${okr.id}', '${kr.id}', ${idx})" title="Remover">
+                                                                                ${canEditEvidence ? `<button class="btn btn-xs btn-danger" onclick="OKRsPage.removeEvidence('${okr.id}', '${kr.id}', ${idx})" title="Remover">
                                                                                     <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                                                                     </svg>
@@ -597,7 +665,7 @@ const OKRsPage = {
                                                                         <div class="initiative-header-row">
                                                                             <div class="initiative-name">${init.nome}</div>
                                                                             <div class="initiative-progress-inline">
-                                                                                ${canEdit ? `
+                                                                                ${canEditEvidence ? `
                                                                                 <input
                                                                                     type="range"
                                                                                     min="0"
@@ -2581,6 +2649,66 @@ const OKRsPage = {
                 letter-spacing: 0.3px;
                 white-space: nowrap;
                 transform: translateY(-2px);
+            }
+
+            .locked-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 6px 12px;
+                border-radius: 6px;
+                font-size: 12px;
+                font-weight: 600;
+                background: #fee2e2;
+                color: #991b1b;
+                border: 1px solid #fecaca;
+            }
+
+            .locked-badge svg {
+                width: 16px;
+                height: 16px;
+            }
+
+            .okr-locked-notice,
+            .okr-approved-notice {
+                display: flex;
+                gap: 12px;
+                padding: 16px 20px;
+                margin: 20px;
+                border-radius: 8px;
+                border-left: 4px solid;
+            }
+
+            .okr-locked-notice {
+                background: #fef2f2;
+                border-left-color: #dc2626;
+                color: #991b1b;
+            }
+
+            .okr-approved-notice {
+                background: #fffbeb;
+                border-left-color: #f59e0b;
+                color: #92400e;
+            }
+
+            .okr-locked-notice svg,
+            .okr-approved-notice svg {
+                flex-shrink: 0;
+                margin-top: 2px;
+            }
+
+            .okr-locked-notice strong,
+            .okr-approved-notice strong {
+                display: block;
+                font-size: 14px;
+                margin-bottom: 4px;
+            }
+
+            .okr-locked-notice p,
+            .okr-approved-notice p {
+                margin: 0;
+                font-size: 13px;
+                opacity: 0.9;
             }
 
             .okr-accordion-header {
