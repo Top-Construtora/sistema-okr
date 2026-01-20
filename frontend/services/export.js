@@ -113,11 +113,25 @@ export const ExportService = {
             for (const kr of keyResults) {
                 kr.initiatives = await this.fetchInitiativesForKR(kr.id);
 
-                // For each initiative, fetch responsible user
+                // For each initiative, fetch responsible users (multiple)
                 for (const initiative of kr.initiatives) {
+                    initiative.responsible_users = await this.fetchResponsibleUsersForInitiative(initiative.id);
+
+                    // Keep backward compatibility with single responsavel
                     if (initiative.responsavel_id) {
                         initiative.responsavel = await this.fetchUserById(initiative.responsavel_id);
                     }
+
+                    // Add helper method to get responsible users
+                    initiative.getResponsibleUsers = function() {
+                        if (this.responsible_users && this.responsible_users.length > 0) {
+                            return this.responsible_users;
+                        }
+                        if (this.responsavel) {
+                            return [{ ...this.responsavel, is_primary: true }];
+                        }
+                        return [];
+                    };
                 }
             }
 
@@ -196,6 +210,36 @@ export const ExportService = {
         } catch (error) {
             console.error('[ExportService] Exception in fetchUserById:', error);
             return null;
+        }
+    },
+
+    /**
+     * Fetch Responsible Users for an Initiative (many-to-many)
+     */
+    async fetchResponsibleUsersForInitiative(initiativeId) {
+        try {
+            const { data, error } = await supabaseClient
+                .from('initiative_responsible_users')
+                .select(`
+                    user_id,
+                    is_primary,
+                    user:users(id, nome, email)
+                `)
+                .eq('initiative_id', initiativeId);
+
+            if (error) {
+                console.error('[ExportService] Error fetching responsible users:', error);
+                return [];
+            }
+
+            // Transform to flatten the structure
+            return (data || []).map(ru => ({
+                ...ru.user,
+                is_primary: ru.is_primary
+            }));
+        } catch (error) {
+            console.error('[ExportService] Exception in fetchResponsibleUsersForInitiative:', error);
+            return [];
         }
     },
 
@@ -438,14 +482,22 @@ export const ExportService = {
                     doc.text('Iniciativas:', margin + 5, currentY);
                     currentY += 6;
 
-                    const initiativeTableData = kr.initiatives.map((init, initIdx) => [
-                        `${initIdx + 1}`,
-                        init.nome || init.title || 'N/A',
-                        init.responsavel ? init.responsavel.nome : 'N/A',
-                        init.data_limite ? new Date(init.data_limite).toLocaleDateString('pt-BR') : 'N/A',
-                        `${init.progress}%`,
-                        init.concluida ? 'Sim' : 'Não'
-                    ]);
+                    const initiativeTableData = kr.initiatives.map((init, initIdx) => {
+                        // Get responsible users (support multiple)
+                        const responsibleUsers = init.responsible_users || [];
+                        const responsibleNames = responsibleUsers.length > 0
+                            ? responsibleUsers.map(u => u.nome).join(', ')
+                            : (init.responsavel ? init.responsavel.nome : 'N/A');
+
+                        return [
+                            `${initIdx + 1}`,
+                            init.nome || init.title || 'N/A',
+                            responsibleNames,
+                            init.data_limite ? new Date(init.data_limite).toLocaleDateString('pt-BR') : 'N/A',
+                            `${init.progress}%`,
+                            init.concluida ? 'Sim' : 'Não'
+                        ];
+                    });
 
                     autoTable(doc, {
                         startY: currentY,
@@ -734,8 +786,22 @@ export const ExportService = {
                                 'Título do KR': kr.title,
                                 'ID do OKR': okr.id,
                                 'Título do OKR': okr.title,
-                                'Responsável': init.responsavel ? init.responsavel.nome : 'N/A',
-                                'Email do Responsável': init.responsavel ? init.responsavel.email : '',
+                                'Responsáveis': (() => {
+                                    const users = init.getResponsibleUsers ? init.getResponsibleUsers() :
+                                                  (init.responsavel ? [init.responsavel] : []);
+                                    return users.map(u => u.nome).join(', ') || 'N/A';
+                                })(),
+                                'Emails dos Responsáveis': (() => {
+                                    const users = init.getResponsibleUsers ? init.getResponsibleUsers() :
+                                                  (init.responsavel ? [init.responsavel] : []);
+                                    return users.map(u => u.email).join(', ') || '';
+                                })(),
+                                'Responsável Principal': (() => {
+                                    const users = init.getResponsibleUsers ? init.getResponsibleUsers() :
+                                                  (init.responsavel ? [init.responsavel] : []);
+                                    const primary = users.find(u => u.is_primary) || users[0];
+                                    return primary ? primary.nome : 'N/A';
+                                })(),
                                 'Data Limite': this.formatDateForExcel(init.data_limite),
                                 'Progresso (%)': init.progress / 100,
                                 'Concluída': init.concluida ? 'Sim' : 'Não',
@@ -753,27 +819,28 @@ export const ExportService = {
 
         // Set column widths
         ws['!cols'] = [
-            { wch: 10 },  // ID Iniciativa
-            { wch: 40 },  // Nome
+            { wch: 10 },  // ID da Iniciativa
+            { wch: 40 },  // Nome da Iniciativa
             { wch: 50 },  // Descrição
-            { wch: 10 },  // ID KR
-            { wch: 35 },  // Título KR
-            { wch: 10 },  // ID OKR
-            { wch: 35 },  // Título OKR
-            { wch: 25 },  // Responsável
-            { wch: 30 },  // Email
+            { wch: 10 },  // ID do KR
+            { wch: 35 },  // Título do KR
+            { wch: 10 },  // ID do OKR
+            { wch: 35 },  // Título do OKR
+            { wch: 35 },  // Responsáveis (widened)
+            { wch: 40 },  // Emails dos Responsáveis (widened)
+            { wch: 25 },  // Responsável Principal (new)
             { wch: 15 },  // Data Limite
-            { wch: 12 },  // Progresso
+            { wch: 12 },  // Progresso (%)
             { wch: 10 },  // Concluída
             { wch: 40 },  // Comentário
-            { wch: 12 },  // Qtd Evidências
+            { wch: 12 },  // Quantidade de Evidências
             { wch: 10 }   // Atrasada
         ];
 
         // Format progress column
         const range = XLSX.utils.decode_range(ws['!ref']);
         for (let R = range.s.r + 1; R <= range.e.r; R++) {
-            const progressCell = XLSX.utils.encode_cell({ r: R, c: 10 });
+            const progressCell = XLSX.utils.encode_cell({ r: R, c: 11 }); // Changed from 10 to 11
             if (ws[progressCell]) ws[progressCell].z = '0%';
         }
 

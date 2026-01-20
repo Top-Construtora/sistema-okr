@@ -16,8 +16,37 @@ class Initiative {
         this.evidence = (data.evidence && Array.isArray(data.evidence)) ? data.evidence : [];
         this.created_at = data.created_at || null;
         this.updated_at = data.updated_at || null;
-        // Dados do responsável (quando vem de join)
+        // Dados do responsável (quando vem de join) - LEGACY
         this.responsavel = data.responsavel || null;
+        // NEW: Array de usuários responsáveis (many-to-many)
+        this.responsible_users = data.responsible_users || [];
+    }
+
+    // Get array of responsible user objects with full data
+    getResponsibleUsers() {
+        // If we have the new many-to-many data, use it
+        if (this.responsible_users && this.responsible_users.length > 0) {
+            return this.responsible_users;
+        }
+        // Fallback to legacy single responsible user
+        if (this.responsavel) {
+            return [{ ...this.responsavel, is_primary: true }];
+        }
+        return [];
+    }
+
+    // Get array of responsible user IDs
+    getResponsibleUserIds() {
+        if (this.responsible_users && this.responsible_users.length > 0) {
+            return this.responsible_users.map(u => typeof u === 'string' ? u : u.id);
+        }
+        return this.responsavel_id ? [this.responsavel_id] : [];
+    }
+
+    // Get primary responsible user
+    getPrimaryResponsibleUser() {
+        const users = this.getResponsibleUsers();
+        return users.find(u => u.is_primary) || users[0] || null;
     }
 
     // Aliases para compatibilidade
@@ -85,11 +114,16 @@ class Initiative {
             throw new Error(errors.join(', '));
         }
 
+        // Determine primary responsible user for backward compatibility
+        const primaryUserId = this.responsible_users && this.responsible_users.length > 0
+            ? (this.responsible_users.find(u => u.is_primary)?.id || this.responsible_users[0]?.id || this.responsible_users[0])
+            : this.responsavel_id;
+
         const initiativeData = {
             key_result_id: this.key_result_id,
             nome: this.nome,
             descricao: this.descricao,
-            responsavel_id: this.responsavel_id,
+            responsavel_id: primaryUserId, // Keep for backward compatibility
             data_limite: this.data_limite,
             progress: this.progress,
             concluida: this.concluida,
@@ -109,6 +143,9 @@ class Initiative {
 
             if (error) throw error;
             Object.assign(this, data);
+
+            // Update responsible users junction table
+            await this.updateResponsibleUsers();
         } else {
             // Insert
             const { data, error } = await supabaseClient
@@ -119,9 +156,43 @@ class Initiative {
 
             if (error) throw error;
             Object.assign(this, data);
+
+            // Insert responsible users
+            await this.updateResponsibleUsers();
         }
 
         return this;
+    }
+
+    // Update responsible users junction table (follows user_departments pattern)
+    async updateResponsibleUsers() {
+        if (!this.id) return;
+
+        try {
+            // Step 1: Delete existing relationships
+            await supabaseClient
+                .from('initiative_responsible_users')
+                .delete()
+                .eq('initiative_id', this.id);
+
+            // Step 2: Insert new relationships
+            if (this.responsible_users && this.responsible_users.length > 0) {
+                const records = this.responsible_users.map((user, idx) => ({
+                    initiative_id: this.id,
+                    user_id: typeof user === 'string' ? user : user.id,
+                    is_primary: idx === 0 || user.is_primary === true
+                }));
+
+                const { error } = await supabaseClient
+                    .from('initiative_responsible_users')
+                    .insert(records);
+
+                if (error) throw error;
+            }
+        } catch (error) {
+            console.error('Erro ao atualizar usuários responsáveis:', error);
+            throw error;
+        }
     }
 
     // Deletar
@@ -185,7 +256,12 @@ class Initiative {
             .from('initiatives')
             .select(`
                 *,
-                responsavel:users(id, nome, email)
+                responsavel:users!initiatives_responsavel_id_fkey(id, nome, email),
+                responsible_users:initiative_responsible_users(
+                    user_id,
+                    is_primary,
+                    user:users(id, nome, email)
+                )
             `)
             .eq('key_result_id', keyResultId)
             .order('created_at', { ascending: true });
@@ -195,7 +271,16 @@ class Initiative {
             return [];
         }
 
-        return (data || []).map(i => new Initiative(i));
+        // Transform responsible_users to flatten the nested structure
+        return (data || []).map(i => {
+            if (i.responsible_users) {
+                i.responsible_users = i.responsible_users.map(ru => ({
+                    ...ru.user,
+                    is_primary: ru.is_primary
+                }));
+            }
+            return new Initiative(i);
+        });
     }
 
     // Obter iniciativa por ID
@@ -204,7 +289,12 @@ class Initiative {
             .from('initiatives')
             .select(`
                 *,
-                responsavel:users(id, nome, email)
+                responsavel:users!initiatives_responsavel_id_fkey(id, nome, email),
+                responsible_users:initiative_responsible_users(
+                    user_id,
+                    is_primary,
+                    user:users(id, nome, email)
+                )
             `)
             .eq('id', id)
             .single();
@@ -212,6 +302,14 @@ class Initiative {
         if (error) {
             console.error('Erro ao buscar iniciativa:', error);
             return null;
+        }
+
+        // Transform responsible_users
+        if (data && data.responsible_users) {
+            data.responsible_users = data.responsible_users.map(ru => ({
+                ...ru.user,
+                is_primary: ru.is_primary
+            }));
         }
 
         return data ? new Initiative(data) : null;

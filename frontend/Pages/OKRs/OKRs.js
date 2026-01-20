@@ -27,6 +27,13 @@ const OKRsPage = {
     expandedKRs: new Set(),
     currentInitiative: null,
 
+    // Retorna apenas primeiro e segundo nome do usuário
+    getShortName(fullName) {
+        if (!fullName) return '';
+        const parts = fullName.trim().split(/\s+/);
+        return parts.slice(0, 2).join(' ');
+    },
+
     // Retorna array de nomes de departamentos do usuário
     getUserDepartmentNames(user) {
         if (!user) return [];
@@ -610,26 +617,40 @@ const OKRsPage = {
                                                                                 <span class="progress-value-inline" id="progress-value-${init.id}">${init.progress || 0}%</span>
                                                                             </div>
                                                                         </div>
-                                                                        ${init.responsavel || init.data_limite ? `
-                                                                            <div class="initiative-meta">
-                                                                                ${init.responsavel ? `
-                                                                                    <span class="initiative-responsavel">
-                                                                                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                                                                                        </svg>
-                                                                                        ${init.responsavel.nome}
-                                                                                    </span>
-                                                                                ` : ''}
-                                                                                ${init.data_limite ? `
-                                                                                    <span class="initiative-deadline ${init.isOverdue() ? 'overdue' : ''}">
-                                                                                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                                                                        </svg>
-                                                                                        ${this.formatDate(init.data_limite)}
-                                                                                    </span>
-                                                                                ` : ''}
-                                                                            </div>
-                                                                        ` : ''}
+                                                                        ${(() => {
+                                                                            const responsibleUsers = init.getResponsibleUsers ? init.getResponsibleUsers() : [];
+                                                                            const hasResponsibleUsers = responsibleUsers.length > 0;
+                                                                            const hasDeadline = init.data_limite;
+
+                                                                            if (!hasResponsibleUsers && !hasDeadline) return '';
+
+                                                                            return `
+                                                                                <div class="initiative-meta">
+                                                                                    ${hasResponsibleUsers ? `
+                                                                                        <div class="initiative-responsible-users">
+                                                                                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                                                                            </svg>
+                                                                                            <div class="responsible-user-badges">
+                                                                                                ${responsibleUsers.map(user => `
+                                                                                                    <span class="responsible-user-badge ${user.is_primary ? 'primary' : ''}">
+                                                                                                        ${this.getShortName(user.nome)}
+                                                                                                    </span>
+                                                                                                `).join('')}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    ` : ''}
+                                                                                    ${hasDeadline ? `
+                                                                                        <span class="initiative-deadline ${init.isOverdue() ? 'overdue' : ''}">
+                                                                                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                                                                            </svg>
+                                                                                            ${this.formatDate(init.data_limite)}
+                                                                                        </span>
+                                                                                    ` : ''}
+                                                                                </div>
+                                                                            `;
+                                                                        })()}
                                                                         ${(init.comment && init.comment.trim()) || (init.evidence && Array.isArray(init.evidence) && init.evidence.length > 0) ? `
                                                                             <div class="initiative-extra-info">
                                                                                 ${init.comment && init.comment.trim() ? `
@@ -1709,7 +1730,12 @@ const OKRsPage = {
         this.currentInitiative = initiativeId ? await Initiative.getById(initiativeId) : null;
         this.currentInitiative = this.currentInitiative || { key_result_id: keyResultId };
 
-        const users = await User.getAll();
+        // Buscar todos os usuários e filtrar consultores e admin@sistema.com
+        const allUsers = await User.getAll();
+        const users = allUsers.filter(user =>
+            user.tipo !== 'consultor' &&
+            user.email !== 'admin@sistema.com'
+        );
         const modal = document.createElement('div');
         modal.id = 'initiative-modal';
         modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:1000;';
@@ -1737,23 +1763,43 @@ const OKRsPage = {
                             placeholder="Detalhes sobre a iniciativa (opcional)">${this.currentInitiative.descricao || ''}</textarea>
                     </div>
 
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
-                        <div class="form-group">
-                            <label class="form-label">Responsável</label>
-                            <select id="init-responsavel" class="form-control">
-                                <option value="">Sem responsável</option>
-                                ${users.map(user => `
-                                    <option value="${user.id}" ${this.currentInitiative.responsavel_id === user.id ? 'selected' : ''}>
-                                        ${user.nome}
-                                    </option>
-                                `).join('')}
-                            </select>
+                    <div class="form-group" style="margin-top:16px;">
+                        <label class="form-label">
+                            Responsáveis
+                            <small style="font-weight:normal;color:var(--text-muted);">(selecione um ou mais)</small>
+                        </label>
+                        <div class="responsible-users-checkbox-list" id="init-responsible-users">
+                            ${users.map(u => {
+                                const responsibleUserIds = this.currentInitiative.responsible_users?.map(ru => ru.id || ru.user_id || ru) ||
+                                                           (this.currentInitiative.responsavel_id ? [this.currentInitiative.responsavel_id] : []);
+                                const isChecked = responsibleUserIds.includes(u.id);
+                                const isPrimary = this.currentInitiative.responsible_users?.find(ru => (ru.id || ru.user_id) === u.id)?.is_primary || false;
+
+                                return `
+                                    <label class="responsible-user-checkbox-item ${isChecked ? 'checked' : ''}">
+                                        <input
+                                            type="checkbox"
+                                            name="init-responsible"
+                                            value="${u.id}"
+                                            ${isChecked ? 'checked' : ''}
+                                            data-is-primary="${isPrimary}"
+                                            onchange="this.parentElement.classList.toggle('checked', this.checked)"
+                                        >
+                                        <span class="responsible-checkbox-name">${u.nome}</span>
+                                        ${isPrimary ? '<span class="primary-badge">Principal</span>' : ''}
+                                    </label>
+                                `;
+                            }).join('')}
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">Data Limite</label>
-                            <input type="date" id="init-data-limite" class="form-control"
-                                value="${this.currentInitiative.data_limite || ''}">
-                        </div>
+                        <small style="color:var(--text-muted);font-size:11px;display:block;margin-top:6px;">
+                            O primeiro usuário selecionado será marcado como responsável principal
+                        </small>
+                    </div>
+
+                    <div class="form-group" style="margin-top:16px;">
+                        <label class="form-label">Data Limite</label>
+                        <input type="date" id="init-data-limite" class="form-control"
+                            value="${this.currentInitiative.data_limite || ''}">
                     </div>
 
                     <div class="form-group" style="margin-top:16px;">
@@ -2012,7 +2058,14 @@ const OKRsPage = {
         const keyResultId = document.getElementById('init-kr-id').value;
         const nome = document.getElementById('init-nome').value.trim();
         const descricao = document.getElementById('init-descricao').value.trim();
-        const responsavelId = document.getElementById('init-responsavel').value || null;
+
+        // Collect selected responsible users from checkboxes
+        const selectedUsers = Array.from(document.querySelectorAll('input[name="init-responsible"]:checked'))
+            .map((cb, idx) => ({
+                id: cb.value,
+                is_primary: idx === 0 // First selected is primary
+            }));
+
         const dataLimite = document.getElementById('init-data-limite').value || null;
         const progress = parseInt(document.getElementById('init-progress').value, 10) || 0;
         const concluida = document.getElementById('init-concluida').checked;
@@ -2035,7 +2088,8 @@ const OKRsPage = {
             initiative.key_result_id = keyResultId;
             initiative.nome = nome;
             initiative.descricao = descricao;
-            initiative.responsavel_id = responsavelId;
+            initiative.responsible_users = selectedUsers;
+            initiative.responsavel_id = selectedUsers.length > 0 ? selectedUsers[0].id : null; // Backward compat
             initiative.data_limite = dataLimite;
             initiative.progress = progress;
             initiative.concluida = concluida;

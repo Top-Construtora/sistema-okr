@@ -4,6 +4,15 @@ import { Modal } from './Modal.js';
 // Componente para gerenciar Iniciativas de um Key Result
 const InitiativeManager = {
     /**
+     * Retorna apenas primeiro e segundo nome do usuário
+     */
+    getShortName(fullName) {
+        if (!fullName) return '';
+        const parts = fullName.trim().split(/\s+/);
+        return parts.slice(0, 2).join(' ');
+    },
+
+    /**
      * Renderiza o gerenciador de iniciativas para um Key Result
      * @param {string} keyResultId - ID do Key Result
      * @param {Array} initiatives - Lista de iniciativas (opcional, será carregada se não fornecida)
@@ -96,14 +105,25 @@ const InitiativeManager = {
                                 ${new Date(initiative.data_limite).toLocaleDateString('pt-BR')}
                             </span>
                         ` : ''}
-                        ${initiative.responsavel ? `
-                            <span class="initiative-responsible">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                                </svg>
-                                ${initiative.responsavel.nome}
-                            </span>
-                        ` : ''}
+                        ${(() => {
+                            const responsibleUsers = initiative.getResponsibleUsers();
+                            if (responsibleUsers.length === 0) return '';
+
+                            return `
+                                <div class="initiative-responsible-users">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                    </svg>
+                                    <div class="responsible-user-badges">
+                                        ${responsibleUsers.map(user => `
+                                            <span class="responsible-user-badge ${user.is_primary ? 'primary' : ''}">
+                                                ${this.getShortName(user.nome)}
+                                            </span>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `;
+                        })()}
                     </div>
                 </div>
 
@@ -175,9 +195,13 @@ const InitiativeManager = {
      * Renderiza o formulário de iniciativa
      */
     async renderForm(keyResultId, initiative = null) {
-        // Busca usuários para o select de responsável
+        // Busca usuários para o select de responsável e filtra consultores e admin@sistema.com
         const { User } = window;
-        const users = await User.getAll();
+        const allUsers = await User.getAll();
+        const users = allUsers.filter(user =>
+            user.tipo !== 'consultor' &&
+            user.email !== 'admin@sistema.com'
+        );
 
         return `
             <div class="form-group">
@@ -202,28 +226,46 @@ const InitiativeManager = {
                 >${initiative?.descricao || ''}</textarea>
             </div>
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="initiative-responsavel">Responsável</label>
-                    <select id="initiative-responsavel" class="form-control">
-                        <option value="">Sem responsável</option>
-                        ${users.map(u => `
-                            <option value="${u.id}" ${initiative?.responsavel_id === u.id ? 'selected' : ''}>
-                                ${u.nome}
-                            </option>
-                        `).join('')}
-                    </select>
-                </div>
+            <div class="form-group" style="grid-column: 1 / -1;">
+                <label class="form-label">
+                    Responsáveis
+                    <small style="font-weight:normal;color:var(--text-muted);">(selecione um ou mais)</small>
+                </label>
+                <div class="responsible-users-checkbox-list" id="initiative-responsible-users">
+                    ${users.map(u => {
+                        const responsibleUserIds = initiative?.getResponsibleUserIds() || [];
+                        const isChecked = responsibleUserIds.includes(u.id);
+                        const isPrimary = initiative?.responsible_users?.find(ru => ru.id === u.id)?.is_primary || false;
 
-                <div class="form-group">
-                    <label for="initiative-data-limite">Data Limite</label>
-                    <input
-                        type="date"
-                        id="initiative-data-limite"
-                        class="form-control"
-                        value="${initiative?.data_limite || ''}"
-                    >
+                        return `
+                            <label class="responsible-user-checkbox-item ${isChecked ? 'checked' : ''}">
+                                <input
+                                    type="checkbox"
+                                    name="initiative-responsible"
+                                    value="${u.id}"
+                                    ${isChecked ? 'checked' : ''}
+                                    data-is-primary="${isPrimary}"
+                                    onchange="this.parentElement.classList.toggle('checked', this.checked)"
+                                >
+                                <span class="responsible-checkbox-name">${u.nome}</span>
+                                ${isPrimary ? '<span class="primary-badge">Principal</span>' : ''}
+                            </label>
+                        `;
+                    }).join('')}
                 </div>
+                <small style="color:var(--text-muted);font-size:11px;display:block;margin-top:6px;">
+                    O primeiro usuário selecionado será marcado como responsável principal
+                </small>
+            </div>
+
+            <div class="form-group">
+                <label for="initiative-data-limite">Data Limite</label>
+                <input
+                    type="date"
+                    id="initiative-data-limite"
+                    class="form-control"
+                    value="${initiative?.data_limite || ''}"
+                >
             </div>
 
             <div class="form-group">
@@ -283,10 +325,18 @@ const InitiativeManager = {
 
         // Evento de salvar
         document.getElementById('save-initiative-btn').addEventListener('click', async () => {
+            // Collect selected responsible users
+            const selectedUsers = Array.from(document.querySelectorAll('input[name="initiative-responsible"]:checked'))
+                .map((cb, idx) => ({
+                    id: cb.value,
+                    is_primary: idx === 0 // First selected is primary
+                }));
+
             const formData = {
                 nome: document.getElementById('initiative-nome').value.trim(),
                 descricao: document.getElementById('initiative-descricao').value.trim(),
-                responsavel_id: document.getElementById('initiative-responsavel').value || null,
+                responsible_users: selectedUsers,
+                responsavel_id: selectedUsers.length > 0 ? selectedUsers[0].id : null, // Backward compat
                 data_limite: document.getElementById('initiative-data-limite').value || null,
                 progress: parseInt(document.getElementById('initiative-progress').value, 10)
             };
@@ -548,6 +598,98 @@ const InitiativeManager = {
                 gap: 16px;
             }
 
+            /* Responsible Users Display */
+            .initiative-responsible-users {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                color: var(--text-muted);
+            }
+
+            .responsible-user-badges {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 4px;
+            }
+
+            .responsible-user-badge {
+                display: inline-flex;
+                align-items: center;
+                padding: 3px 8px;
+                background: linear-gradient(135deg, var(--top-teal) 0%, #2c9f8a 100%);
+                color: white;
+                border-radius: 4px;
+                font-size: 11px;
+                font-weight: 500;
+            }
+
+            .responsible-user-badge.primary {
+                background: linear-gradient(135deg, var(--top-blue) 0%, #1a5570 100%);
+                font-weight: 600;
+            }
+
+            /* Responsible Users Checkbox List (Form) */
+            .responsible-users-checkbox-list {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                gap: 8px;
+                padding: 12px;
+                background: var(--bg-main);
+                border-radius: 8px;
+                border: 1px solid var(--border);
+                max-height: 240px;
+                overflow-y: auto;
+            }
+
+            .responsible-user-checkbox-item {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 10px 12px;
+                background: white;
+                border: 2px solid var(--border);
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.2s;
+                position: relative;
+            }
+
+            .responsible-user-checkbox-item:hover {
+                border-color: var(--top-teal);
+            }
+
+            .responsible-user-checkbox-item.checked {
+                border-color: var(--top-teal);
+                background: rgba(45, 212, 191, 0.05);
+            }
+
+            .responsible-user-checkbox-item input[type="checkbox"] {
+                width: 18px;
+                height: 18px;
+                accent-color: var(--top-teal);
+                cursor: pointer;
+            }
+
+            .responsible-checkbox-name {
+                font-size: 13px;
+                font-weight: 500;
+                color: var(--text-main);
+                flex: 1;
+            }
+
+            .primary-badge {
+                display: inline-flex;
+                align-items: center;
+                padding: 2px 6px;
+                background: var(--top-blue);
+                color: white;
+                border-radius: 4px;
+                font-size: 9px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
             @media (max-width: 640px) {
                 .initiative-header {
                     flex-direction: column;
@@ -557,6 +699,16 @@ const InitiativeManager = {
 
                 .form-row {
                     grid-template-columns: 1fr;
+                }
+
+                .responsible-users-checkbox-list {
+                    grid-template-columns: 1fr;
+                    max-height: 200px;
+                }
+
+                .responsible-user-badges {
+                    flex-direction: column;
+                    align-items: flex-start;
                 }
             }
         `;
@@ -571,3 +723,4 @@ InitiativeManager.addStyles();
 window.initiativeManager = InitiativeManager;
 
 export { InitiativeManager };
+// Cache-bust: 1768907596
