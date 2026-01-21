@@ -4771,3 +4771,389 @@
         align-items: flex-start;
     }
 }
+
+/* =====================================================
+   GIO GLOBAL STYLES - Visual System
+   ===================================================== */
+
+/* Page Container GIO */
+.page-gio {
+    padding: 24px;
+    background: #f5f9ff;
+    min-height: calc(100vh - 64px);
+}
+
+/* Page Actions GIO */
+.page-actions-gio {
+    margin-bottom: 20px;
+}
+
+/* Card GIO */
+.card-gio {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+}
+
+/* Table GIO */
+.table-gio {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table-gio thead {
+    background: linear-gradient(135deg, #1e6076 0%, #154555 100%);
+}
+
+.table-gio thead th {
+    padding: 14px 18px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.table-gio tbody tr {
+    border-bottom: 1px solid #E5E7EB;
+    transition: all 0.2s ease;
+}
+
+.table-gio tbody tr:hover {
+    background: rgba(18, 176, 160, 0.03);
+}
+
+.table-gio tbody tr:last-child {
+    border-bottom: none;
+}
+
+.table-gio tbody td {
+    padding: 14px 18px;
+    font-size: 14px;
+    color: #374151;
+    vertical-align: middle;
+}
+
+.table-row-gio {
+    transition: all 0.2s ease;
+}
+
+.table-row-gio:hover {
+    background: rgba(18, 176, 160, 0.03);
+}
+
+/* Button GIO Primary */
+.btn-gio-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #12b0a0 0%, #0d9488 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(18, 176, 160, 0.3);
+}
+
+.btn-gio-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(18, 176, 160, 0.4);
+}
+
+.btn-gio-primary svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* Button GIO Secondary */
+.btn-gio-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: white;
+    color: #374151;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-gio-secondary:hover {
+    background: #F9FAFB;
+    border-color: #D1D5DB;
+}
+
+/* Action Buttons GIO */
+.actions-cell-gio {
+    text-align: center;
+}
+
+.action-buttons-gio {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.action-btn-gio {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: 1px solid #E5E7EB;
+    background: white;
+    color: #6B7280;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.action-btn-gio:hover {
+    transform: translateY(-1px);
+}
+
+.action-btn-gio.edit:hover {
+    background: #12b0a0;
+    border-color: #12b0a0;
+    color: white;
+}
+
+.action-btn-gio.delete:hover {
+    background: #ef4444;
+    border-color: #ef4444;
+    color: white;
+}
+
+.action-btn-gio.toggle:hover {
+    background: #f59e0b;
+    border-color: #f59e0b;
+    color: white;
+}
+
+/* Modal GIO */
+.modal-gio-container {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-overlay-gio {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+.modal-content-gio {
+    position: relative;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modal-header-gio {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid #E5E7EB;
+    background: linear-gradient(135deg, #1e6076 0%, #154555 100%);
+    color: white;
+}
+
+.modal-header-gio h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.modal-header-gio p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    opacity: 0.8;
+}
+
+.modal-close-gio {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.modal-close-gio:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.modal-body-gio {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.modal-footer-gio {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 24px;
+    border-top: 1px solid #E5E7EB;
+    background: #F9FAFB;
+}
+
+/* Form GIO */
+.form-group-gio {
+    margin-bottom: 16px;
+}
+
+.form-label-gio {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 6px;
+}
+
+.form-control-gio {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #1F2937;
+    background: white;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.form-control-gio:focus {
+    outline: none;
+    border-color: #12b0a0;
+    box-shadow: 0 0 0 3px rgba(18, 176, 160, 0.15);
+}
+
+.form-control-gio::placeholder {
+    color: #9CA3AF;
+}
+
+textarea.form-control-gio {
+    resize: vertical;
+    min-height: 80px;
+}
+
+select.form-control-gio {
+    cursor: pointer;
+}
+
+.form-hint-gio {
+    display: block;
+    font-size: 11px;
+    color: #9CA3AF;
+    margin-top: 4px;
+}
+
+/* Error Message GIO */
+.error-message-gio {
+    padding: 12px 16px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 8px;
+    color: #dc2626;
+    font-size: 13px;
+    margin-top: 16px;
+}
+
+/* Status Badge GIO */
+.status-badge-gio {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.status-badge-gio.active {
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
+}
+
+.status-badge-gio.inactive {
+    background: rgba(107, 114, 128, 0.12);
+    color: #6B7280;
+}
+
+/* Mobile Responsivo GIO */
+@media (max-width: 768px) {
+    .page-gio {
+        padding: 16px;
+    }
+
+    .modal-content-gio {
+        max-width: calc(100% - 32px);
+        max-height: calc(100vh - 40px);
+        margin: 20px 16px;
+    }
+
+    .modal-header-gio {
+        padding: 16px 20px;
+    }
+
+    .modal-header-gio h3 {
+        font-size: 16px;
+    }
+
+    .modal-body-gio {
+        padding: 20px;
+    }
+
+    .modal-footer-gio {
+        padding: 12px 20px;
+        flex-direction: column;
+    }
+
+    .modal-footer-gio .btn-gio-primary,
+    .modal-footer-gio .btn-gio-secondary {
+        width: 100%;
+        justify-content: center;
+    }
+}
