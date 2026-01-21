@@ -48,26 +48,10 @@ const ApprovalPage = {
         };
 
         content.innerHTML = `
-            <div class="approval-page">
-                <!-- Header -->
-                <div class="approval-header">
-                    <div class="approval-header-info">
-                        <h1 class="approval-title">
-                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
-                            </svg>
-                            Comitê de Aprovação
-                        </h1>
-                        <p class="approval-subtitle">
-                            Gerencie o fluxo de aprovação dos OKRs
-                            ${!isAdmin && userDepartmentNames.length > 0 ? `<span class="dept-badge">${userDepartmentNames.join(', ')}</span>` : ''}
-                        </p>
-                    </div>
-                </div>
-
+            <div class="page-gio approval-page-gio">
                 <!-- Mobile Tabs Navigation -->
-                <div class="mobile-tabs-nav">
-                    <button class="mobile-tab-btn ${this.currentMobileTab === 'pending' ? 'active' : ''}"
+                <div class="mobile-tabs-nav-gio">
+                    <button class="mobile-tab-btn-gio ${this.currentMobileTab === 'pending' ? 'active' : ''}"
                             data-status="pending"
                             onclick="ApprovalPage.switchMobileTab('pending')">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -76,7 +60,7 @@ const ApprovalPage = {
                         <span class="tab-label">Revisão</span>
                         <span class="tab-count">${stats.pending}</span>
                     </button>
-                    <button class="mobile-tab-btn ${this.currentMobileTab === 'adjust' ? 'active' : ''}"
+                    <button class="mobile-tab-btn-gio ${this.currentMobileTab === 'adjust' ? 'active' : ''}"
                             data-status="adjust"
                             onclick="ApprovalPage.switchMobileTab('adjust')">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -85,7 +69,7 @@ const ApprovalPage = {
                         <span class="tab-label">Ajustes</span>
                         <span class="tab-count">${stats.adjust}</span>
                     </button>
-                    <button class="mobile-tab-btn ${this.currentMobileTab === 'approved' ? 'active' : ''}"
+                    <button class="mobile-tab-btn-gio ${this.currentMobileTab === 'approved' ? 'active' : ''}"
                             data-status="approved"
                             onclick="ApprovalPage.switchMobileTab('approved')">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -94,7 +78,7 @@ const ApprovalPage = {
                         <span class="tab-label">Andamento</span>
                         <span class="tab-count">${stats.approved}</span>
                     </button>
-                    <button class="mobile-tab-btn ${this.currentMobileTab === 'completed' ? 'active' : ''}"
+                    <button class="mobile-tab-btn-gio ${this.currentMobileTab === 'completed' ? 'active' : ''}"
                             data-status="completed"
                             onclick="ApprovalPage.switchMobileTab('completed')">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -103,7 +87,7 @@ const ApprovalPage = {
                         <span class="tab-label">Concluídos</span>
                         <span class="tab-count">${stats.completed}</span>
                     </button>
-                    <button class="mobile-tab-btn ${this.currentMobileTab === 'homologated' ? 'active' : ''}"
+                    <button class="mobile-tab-btn-gio ${this.currentMobileTab === 'homologated' ? 'active' : ''}"
                             data-status="homologated"
                             onclick="ApprovalPage.switchMobileTab('homologated')">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -115,9 +99,9 @@ const ApprovalPage = {
                 </div>
 
                 <!-- Kanban Container -->
-                <div class="kanban-container">
-                    <div class="kanban-scroll-area">
-                        <div id="kanban-board" class="kanban-board"></div>
+                <div class="kanban-container-gio">
+                    <div class="kanban-scroll-area-gio">
+                        <div id="kanban-board" class="kanban-board-gio"></div>
                     </div>
                 </div>
             </div>
@@ -154,7 +138,7 @@ const ApprovalPage = {
     },
 
     initScrollBehavior() {
-        const wrapper = document.querySelector('.kanban-scroll-area');
+        const wrapper = document.querySelector('.kanban-scroll-area-gio');
         if (!wrapper) return;
 
         let isDown = false;
@@ -163,7 +147,7 @@ const ApprovalPage = {
 
         wrapper.addEventListener('mousedown', (e) => {
             // Não interferir com cliques em cards ou botões
-            if (e.target.closest('.okr-card') || e.target.closest('button')) return;
+            if (e.target.closest('.okr-card-gio') || e.target.closest('button')) return;
             isDown = true;
             wrapper.classList.add('grabbing');
             startX = e.pageX - wrapper.offsetLeft;
@@ -190,7 +174,7 @@ const ApprovalPage = {
 
         // Scroll horizontal apenas quando fora das colunas
         wrapper.addEventListener('wheel', (e) => {
-            const colBody = e.target.closest('.kanban-col-body');
+            const colBody = e.target.closest('.kanban-col-body-gio');
 
             // Se está dentro de uma coluna, deixa o scroll vertical natural
             if (colBody) {
@@ -262,22 +246,22 @@ const ApprovalPage = {
         for (const col of columns) {
             const items = okrs.filter(okr => okr.status === col.key);
             const cardsHTML = items.length === 0
-                ? `<div class="kanban-empty-state">
-                        <div class="empty-icon">${col.icon}</div>
+                ? `<div class="kanban-empty-state-gio">
+                        <div class="empty-icon-gio">${col.icon}</div>
                         <p>Nenhum OKR</p>
                    </div>`
                 : (await Promise.all(items.map(okr => this.renderKanbanCard(okr, col)))).join('');
 
             html += `
-                <div class="kanban-column" data-status="${col.key}">
-                    <div class="kanban-col-header" style="--col-color: ${col.color}; --col-bg: ${col.bg}">
-                        <div class="col-header-icon">${col.icon}</div>
-                        <div class="col-header-info">
-                            <h3 class="col-title">${col.title}</h3>
-                            <span class="col-count">${items.length} ${items.length === 1 ? 'OKR' : 'OKRs'}</span>
+                <div class="kanban-column-gio" data-status="${col.key}">
+                    <div class="kanban-col-header-gio" style="--col-color: ${col.color}; --col-bg: ${col.bg}">
+                        <div class="col-header-icon-gio">${col.icon}</div>
+                        <div class="col-header-info-gio">
+                            <h3 class="col-title-gio">${col.title}</h3>
+                            <span class="col-count-gio">${items.length} ${items.length === 1 ? 'OKR' : 'OKRs'}</span>
                         </div>
                     </div>
-                    <div class="kanban-col-body">
+                    <div class="kanban-col-body-gio">
                         ${cardsHTML}
                     </div>
                 </div>
@@ -292,25 +276,25 @@ const ApprovalPage = {
         const progressColor = okr.progress >= 70 ? '#10b981' : okr.progress >= 40 ? '#f59e0b' : '#ef4444';
 
         return `
-            <div class="okr-card" style="--card-accent: ${column.color}">
-                <div class="okr-card-top">
-                    <span class="okr-dept">${okr.department}</span>
-                    <span class="okr-progress-badge" style="background: ${progressColor}15; color: ${progressColor}">
+            <div class="okr-card-gio" style="--card-accent: ${column.color}">
+                <div class="okr-card-top-gio">
+                    <span class="okr-dept-gio">${okr.department}</span>
+                    <span class="okr-progress-badge-gio" style="background: ${progressColor}15; color: ${progressColor}">
                         ${okr.progress}%
                     </span>
                 </div>
 
-                <h4 class="okr-title">${okr.title}</h4>
+                <h4 class="okr-title-gio">${okr.title}</h4>
 
-                <div class="okr-objective">
+                <div class="okr-objective-gio">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/>
                     </svg>
                     <span>${objective?.text ? (objective.text.length > 60 ? objective.text.substring(0, 60) + '...' : objective.text) : 'N/A'}</span>
                 </div>
 
-                <div class="okr-meta">
-                    <div class="okr-krs">
+                <div class="okr-meta-gio">
+                    <div class="okr-krs-gio">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                         </svg>
@@ -318,14 +302,14 @@ const ApprovalPage = {
                     </div>
                 </div>
 
-                <div class="okr-progress-bar">
-                    <div class="progress-track">
-                        <div class="progress-fill" style="width: ${okr.progress}%; background: ${progressColor}"></div>
+                <div class="okr-progress-bar-gio">
+                    <div class="progress-track-gio">
+                        <div class="progress-fill-gio" style="width: ${okr.progress}%; background: ${progressColor}"></div>
                     </div>
                 </div>
 
                 ${okr.committeeComment ? `
-                    <div class="okr-comment">
+                    <div class="okr-comment-gio">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
                         </svg>
@@ -333,7 +317,7 @@ const ApprovalPage = {
                     </div>
                 ` : ''}
 
-                <div class="okr-actions">
+                <div class="okr-actions-gio">
                     ${this.renderActions(okr, column.key)}
                 </div>
             </div>
@@ -390,7 +374,7 @@ const ApprovalPage = {
             // Mensagem diferente para consultor vs fluxo finalizado
             if (isConsultor && currentStatus !== 'homologated') {
                 return `
-                    <div class="actions-completed" style="color: var(--text-muted); font-style: italic;">
+                    <div class="actions-completed-gio" style="color: #6b7280; font-style: italic;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
                         </svg>
@@ -399,7 +383,7 @@ const ApprovalPage = {
                 `;
             }
             return `
-                <div class="actions-completed">
+                <div class="actions-completed-gio">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
@@ -409,7 +393,7 @@ const ApprovalPage = {
         }
 
         return currentActions.map(a => `
-            <button class="action-btn ${a.variant}" onclick="ApprovalPage.changeStatus('${okr.id}', '${a.action}')">
+            <button class="action-btn-gio ${a.variant}" onclick="ApprovalPage.changeStatus('${okr.id}', '${a.action}')">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     ${icons[a.icon]}
                 </svg>
@@ -452,7 +436,7 @@ const ApprovalPage = {
         this.currentMobileTab = status;
 
         // Atualiza botões ativos
-        document.querySelectorAll('.mobile-tab-btn').forEach(btn => {
+        document.querySelectorAll('.mobile-tab-btn-gio').forEach(btn => {
             btn.classList.remove('active');
             if (btn.dataset.status === status) {
                 btn.classList.add('active');
@@ -460,7 +444,7 @@ const ApprovalPage = {
         });
 
         // Animação suave ao trocar tabs
-        const board = document.querySelector('.kanban-board');
+        const board = document.querySelector('.kanban-board-gio');
         if (board) {
             board.style.opacity = '0';
             board.style.transform = 'translateY(10px)';
@@ -468,7 +452,7 @@ const ApprovalPage = {
 
         setTimeout(() => {
             // Mostra/esconde colunas correspondentes
-            document.querySelectorAll('.kanban-column').forEach(col => {
+            document.querySelectorAll('.kanban-column-gio').forEach(col => {
                 if (col.dataset.status === status) {
                     col.style.display = 'flex';
                 } else {
@@ -489,127 +473,44 @@ const ApprovalPage = {
     },
 
     addStyles() {
-        if (document.getElementById('approval-styles-v2')) return;
+        if (document.getElementById('approval-styles-gio')) return;
 
         const style = document.createElement('style');
-        style.id = 'approval-styles-v2';
+        style.id = 'approval-styles-gio';
         style.textContent = `
             /* Force ALL parent containers to not scroll */
-            .main:has(.approval-page),
-            .content:has(.approval-page) {
+            .main:has(.approval-page-gio),
+            .content:has(.approval-page-gio) {
                 overflow: hidden !important;
             }
 
-            #content:has(.approval-page) {
+            #content:has(.approval-page-gio) {
                 overflow: hidden !important;
                 display: flex;
                 flex-direction: column;
             }
 
-            .approval-page {
+            .approval-page-gio {
                 flex: 1;
                 display: flex;
                 flex-direction: column;
                 min-height: 0;
                 overflow: hidden !important;
-            }
-
-            /* Header - fixed */
-            .approval-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: flex-start;
-                margin-bottom: 20px;
-                flex-wrap: wrap;
-                gap: 20px;
-                flex-shrink: 0;
-            }
-
-            .approval-title {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                font-size: 24px;
-                font-weight: 700;
-                color: var(--top-blue);
-                margin: 0 0 8px 0;
-            }
-
-            .approval-title svg {
-                color: var(--top-teal);
-            }
-
-            .approval-subtitle {
-                color: var(--text-muted);
-                font-size: 14px;
-                margin: 0;
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                flex-wrap: wrap;
-            }
-
-            .dept-badge {
-                background: var(--top-teal);
-                color: white;
-                padding: 4px 12px;
-                border-radius: 20px;
-                font-size: 12px;
-                font-weight: 600;
-            }
-
-            .approval-stats {
-                display: flex;
-                align-items: center;
-                gap: 16px;
-                background: white;
-                padding: 12px 20px;
-                border-radius: 12px;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-            }
-
-            .stat-item {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                min-width: 60px;
-            }
-
-            .stat-number {
-                font-size: 24px;
-                font-weight: 700;
-                color: var(--text-primary);
-            }
-
-            .stat-label {
-                font-size: 11px;
-                color: var(--text-muted);
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-            }
-
-            .stat-item.pending .stat-number { color: #f59e0b; }
-            .stat-item.adjust .stat-number { color: #ef4444; }
-            .stat-item.approved .stat-number { color: #3b82f6; }
-
-            .stat-divider {
-                width: 1px;
-                height: 40px;
-                background: var(--border);
+                background: #f5f9ff;
             }
 
             /* Kanban Container - contains the scroll */
-            .kanban-container {
+            .kanban-container-gio {
                 flex: 1;
                 min-height: 0;
                 position: relative;
-                background: var(--bg-main);
+                background: #f5f9ff;
                 border-radius: 16px;
                 overflow: hidden;
             }
 
             /* Scroll Area - ONLY this scrolls horizontally */
-            .kanban-scroll-area {
+            .kanban-scroll-area-gio {
                 width: 100%;
                 height: 100%;
                 overflow-x: auto;
@@ -620,31 +521,31 @@ const ApprovalPage = {
                 padding-bottom: 24px;
             }
 
-            .kanban-scroll-area.grabbing {
+            .kanban-scroll-area-gio.grabbing {
                 cursor: grabbing;
                 scroll-behavior: auto;
             }
 
-            .kanban-scroll-area::-webkit-scrollbar {
+            .kanban-scroll-area-gio::-webkit-scrollbar {
                 height: 10px;
             }
 
-            .kanban-scroll-area::-webkit-scrollbar-track {
-                background: var(--border-light);
+            .kanban-scroll-area-gio::-webkit-scrollbar-track {
+                background: #e5e7eb;
                 border-radius: 5px;
             }
 
-            .kanban-scroll-area::-webkit-scrollbar-thumb {
-                background: linear-gradient(135deg, var(--top-teal), var(--top-blue));
+            .kanban-scroll-area-gio::-webkit-scrollbar-thumb {
+                background: linear-gradient(135deg, #12b0a0, #1e6076);
                 border-radius: 5px;
             }
 
-            .kanban-scroll-area::-webkit-scrollbar-thumb:hover {
-                background: var(--top-blue);
+            .kanban-scroll-area-gio::-webkit-scrollbar-thumb:hover {
+                background: #1e6076;
             }
 
             /* Kanban board */
-            .kanban-board {
+            .kanban-board-gio {
                 display: inline-flex;
                 gap: 16px;
                 height: 100%;
@@ -652,239 +553,252 @@ const ApprovalPage = {
             }
 
             /* Kanban column */
-            .kanban-column {
+            .kanban-column-gio {
                 flex: 0 0 300px;
                 background: white;
-                border-radius: 12px;
+                border-radius: 16px;
                 display: flex;
                 flex-direction: column;
                 height: 100%;
                 min-height: 400px;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+                box-shadow: 0 2px 12px rgba(0,0,0,0.06);
                 overflow: hidden;
             }
 
-            .kanban-col-header {
-                padding: 14px 16px;
-                background: var(--col-bg);
-                border-radius: 12px 12px 0 0;
-                border-bottom: 3px solid var(--col-color);
+            .kanban-col-header-gio {
+                padding: 16px;
+                background: linear-gradient(135deg, #1e6076 0%, #154555 100%);
+                border-radius: 16px 16px 0 0;
                 display: flex;
                 align-items: center;
                 gap: 12px;
                 flex-shrink: 0;
             }
 
-            .col-header-icon {
-                width: 36px;
-                height: 36px;
-                background: white;
-                border-radius: 8px;
+            .col-header-icon-gio {
+                width: 40px;
+                height: 40px;
+                background: rgba(255,255,255,0.15);
+                border-radius: 10px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                color: var(--col-color);
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                color: white;
             }
 
-            .col-title {
-                font-size: 13px;
+            .col-header-icon-gio svg {
+                color: white;
+            }
+
+            .col-title-gio {
+                font-size: 14px;
                 font-weight: 700;
-                color: var(--text-primary);
+                color: white;
                 margin: 0;
             }
 
-            .col-count {
-                font-size: 11px;
-                color: var(--text-muted);
+            .col-count-gio {
+                font-size: 12px;
+                color: rgba(255,255,255,0.8);
             }
 
-            .kanban-col-body {
+            .kanban-col-body-gio {
                 flex: 1;
                 padding: 12px;
                 overflow-y: auto;
                 overflow-x: hidden;
                 display: flex;
                 flex-direction: column;
-                gap: 10px;
+                gap: 12px;
                 min-height: 0;
+                background: #f5f9ff;
             }
 
-            .kanban-col-body::-webkit-scrollbar {
+            .kanban-col-body-gio::-webkit-scrollbar {
                 width: 6px;
             }
 
-            .kanban-col-body::-webkit-scrollbar-track {
-                background: var(--bg-main);
+            .kanban-col-body-gio::-webkit-scrollbar-track {
+                background: #e5e7eb;
                 border-radius: 3px;
             }
 
-            .kanban-col-body::-webkit-scrollbar-thumb {
-                background: var(--border);
+            .kanban-col-body-gio::-webkit-scrollbar-thumb {
+                background: #12b0a0;
                 border-radius: 3px;
             }
 
-            .kanban-col-body::-webkit-scrollbar-thumb:hover {
-                background: var(--text-muted);
+            .kanban-col-body-gio::-webkit-scrollbar-thumb:hover {
+                background: #0d9488;
             }
 
             /* Empty state */
-            .kanban-empty-state {
+            .kanban-empty-state-gio {
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
                 padding: 40px 20px;
-                color: var(--text-muted);
+                color: #6b7280;
                 text-align: center;
             }
 
-            .empty-icon {
+            .empty-icon-gio {
                 opacity: 0.3;
                 margin-bottom: 12px;
             }
 
-            .empty-icon svg {
+            .empty-icon-gio svg {
                 width: 40px;
                 height: 40px;
             }
 
             /* OKR Card */
-            .okr-card {
-                background: var(--bg-main);
-                border-radius: 10px;
-                padding: 14px;
-                border: 1px solid var(--border);
+            .okr-card-gio {
+                background: white;
+                border-radius: 12px;
+                padding: 16px;
+                border: 1px solid #e5e7eb;
                 border-left: 4px solid var(--card-accent);
                 transition: all 0.2s ease;
                 flex-shrink: 0;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.04);
             }
 
-            .okr-card:hover {
-                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-                background: white;
+            .okr-card-gio:hover {
+                box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+                transform: translateY(-2px);
             }
 
-            .okr-card-top {
+            .okr-card-top-gio {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                margin-bottom: 8px;
+                margin-bottom: 10px;
             }
 
-            .okr-dept {
+            .okr-dept-gio {
                 font-size: 10px;
                 font-weight: 700;
-                color: var(--top-teal);
+                color: white;
+                background: linear-gradient(135deg, #12b0a0 0%, #0d9488 100%);
+                padding: 4px 10px;
+                border-radius: 6px;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
             }
 
-            .okr-progress-badge {
-                font-size: 10px;
+            .okr-progress-badge-gio {
+                font-size: 11px;
                 font-weight: 700;
-                padding: 2px 8px;
-                border-radius: 20px;
+                padding: 4px 10px;
+                border-radius: 6px;
             }
 
-            .okr-title {
-                font-size: 13px;
+            .okr-title-gio {
+                font-size: 14px;
                 font-weight: 600;
-                color: var(--text-primary);
-                margin: 0 0 10px 0;
-                line-height: 1.4;
+                color: #1f2937;
+                margin: 0 0 12px 0;
+                line-height: 1.5;
             }
 
-            .okr-objective {
+            .okr-objective-gio {
                 display: flex;
                 align-items: flex-start;
-                gap: 6px;
-                padding: 8px;
-                background: white;
-                border-radius: 6px;
-                font-size: 11px;
-                color: var(--text-secondary);
-                margin-bottom: 10px;
+                gap: 8px;
+                padding: 10px 12px;
+                background: linear-gradient(135deg, rgba(18, 176, 160, 0.08) 0%, rgba(18, 176, 160, 0.03) 100%);
+                border-radius: 8px;
+                border-left: 3px solid #12b0a0;
+                font-size: 12px;
+                color: #4b5563;
+                margin-bottom: 12px;
             }
 
-            .okr-objective svg {
+            .okr-objective-gio svg {
                 flex-shrink: 0;
                 margin-top: 1px;
-                color: var(--top-teal);
-                width: 12px;
-                height: 12px;
+                color: #12b0a0;
+                width: 14px;
+                height: 14px;
             }
 
-            .okr-meta {
+            .okr-meta-gio {
                 display: flex;
                 align-items: center;
                 gap: 12px;
-                margin-bottom: 10px;
+                margin-bottom: 12px;
             }
 
-            .okr-krs {
+            .okr-krs-gio {
                 display: flex;
                 align-items: center;
-                gap: 4px;
-                font-size: 11px;
-                color: var(--text-muted);
+                gap: 6px;
+                font-size: 12px;
+                color: #1e6076;
+                font-weight: 500;
+                padding: 6px 10px;
+                background: rgba(30, 96, 118, 0.08);
+                border-radius: 6px;
             }
 
-            .okr-krs svg {
-                width: 12px;
-                height: 12px;
+            .okr-krs-gio svg {
+                width: 14px;
+                height: 14px;
             }
 
-            .okr-progress-bar {
-                margin-bottom: 10px;
+            .okr-progress-bar-gio {
+                margin-bottom: 12px;
             }
 
-            .progress-track {
-                height: 5px;
-                background: white;
+            .progress-track-gio {
+                height: 6px;
+                background: #e5e7eb;
                 border-radius: 3px;
                 overflow: hidden;
             }
 
-            .progress-fill {
+            .progress-fill-gio {
                 height: 100%;
                 border-radius: 3px;
                 transition: width 0.3s ease;
             }
 
-            .okr-comment {
+            .okr-comment-gio {
                 display: flex;
                 align-items: flex-start;
-                gap: 6px;
-                padding: 8px;
+                gap: 8px;
+                padding: 10px 12px;
                 background: #fef2f2;
                 border: 1px solid #fecaca;
-                border-radius: 6px;
-                font-size: 11px;
+                border-left: 3px solid #ef4444;
+                border-radius: 8px;
+                font-size: 12px;
                 color: #dc2626;
-                margin-bottom: 10px;
+                margin-bottom: 12px;
             }
 
-            .okr-comment svg {
+            .okr-comment-gio svg {
                 flex-shrink: 0;
                 margin-top: 1px;
             }
 
             /* Actions */
-            .okr-actions {
+            .okr-actions-gio {
                 display: flex;
                 gap: 8px;
                 padding-top: 12px;
-                border-top: 1px solid var(--border-light);
+                border-top: 1px solid #e5e7eb;
             }
 
-            .action-btn {
+            .action-btn-gio {
                 flex: 1;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 gap: 6px;
-                padding: 8px 12px;
+                padding: 10px 14px;
                 border: none;
                 border-radius: 8px;
                 font-size: 12px;
@@ -893,92 +807,70 @@ const ApprovalPage = {
                 transition: all 0.2s;
             }
 
-            .action-btn.success {
-                background: #d1fae5;
-                color: #059669;
+            .action-btn-gio.success {
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                color: white;
+                box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
             }
-            .action-btn.success:hover {
-                background: #a7f3d0;
-            }
-
-            .action-btn.danger {
-                background: #fee2e2;
-                color: #dc2626;
-            }
-            .action-btn.danger:hover {
-                background: #fecaca;
+            .action-btn-gio.success:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
             }
 
-            .action-btn.secondary {
-                background: var(--bg-main);
-                color: var(--text-secondary);
+            .action-btn-gio.danger {
+                background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+                color: white;
+                box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
             }
-            .action-btn.secondary:hover {
-                background: var(--border);
-            }
-
-            .action-btn.primary {
-                background: #dbeafe;
-                color: #2563eb;
-            }
-            .action-btn.primary:hover {
-                background: #bfdbfe;
+            .action-btn-gio.danger:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
             }
 
-            .actions-completed {
+            .action-btn-gio.secondary {
+                background: #f3f4f6;
+                color: #4b5563;
+                border: 1px solid #e5e7eb;
+            }
+            .action-btn-gio.secondary:hover {
+                background: #e5e7eb;
+            }
+
+            .action-btn-gio.primary {
+                background: linear-gradient(135deg, #12b0a0 0%, #0d9488 100%);
+                color: white;
+                box-shadow: 0 2px 6px rgba(18, 176, 160, 0.3);
+            }
+            .action-btn-gio.primary:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(18, 176, 160, 0.4);
+            }
+
+            .actions-completed-gio {
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 gap: 8px;
-                padding: 8px;
-                color: var(--text-muted);
+                padding: 10px;
+                color: #6b7280;
                 font-size: 12px;
                 width: 100%;
             }
 
-            .actions-completed svg {
+            .actions-completed-gio svg {
                 color: #10b981;
             }
 
             /* Responsive */
             /* Esconde tabs no desktop */
-            .mobile-tabs-nav {
+            .mobile-tabs-nav-gio {
                 display: none;
             }
 
             /* RESPONSIVO MOBILE */
             @media (max-width: 768px) {
-                /* Header */
-                .approval-header {
-                    flex-direction: column;
-                    margin-bottom: 16px;
-                }
-
-                .approval-title {
-                    font-size: 20px;
-                }
-
-                .approval-title svg {
-                    width: 24px;
-                    height: 24px;
-                }
-
-                .approval-subtitle {
-                    font-size: 13px;
-                }
-
-                .dept-badge {
-                    font-size: 11px;
-                    padding: 3px 10px;
-                }
-
-                /* Esconde stats no mobile para economizar espaço */
-                .approval-stats {
-                    display: none;
-                }
-
                 /* Mobile Tabs Navigation - MOSTRA */
-                .mobile-tabs-nav {
+                .mobile-tabs-nav-gio {
                     display: flex;
                     gap: 6px;
                     margin-bottom: 16px;
@@ -988,11 +880,11 @@ const ApprovalPage = {
                     padding-bottom: 4px;
                 }
 
-                .mobile-tabs-nav::-webkit-scrollbar {
+                .mobile-tabs-nav-gio::-webkit-scrollbar {
                     display: none;
                 }
 
-                .mobile-tab-btn {
+                .mobile-tab-btn-gio {
                     display: flex;
                     flex-direction: column;
                     align-items: center;
@@ -1000,46 +892,47 @@ const ApprovalPage = {
                     gap: 4px;
                     padding: 10px 12px;
                     background: white;
-                    border: 2px solid var(--border);
-                    border-radius: 10px;
+                    border: 2px solid #e5e7eb;
+                    border-radius: 12px;
                     cursor: pointer;
                     transition: all 0.2s;
                     flex-shrink: 0;
                     min-width: 80px;
+                    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
                 }
 
-                .mobile-tab-btn svg {
-                    color: var(--text-muted);
+                .mobile-tab-btn-gio svg {
+                    color: #6b7280;
                     transition: all 0.2s;
                 }
 
-                .mobile-tab-btn .tab-label {
+                .mobile-tab-btn-gio .tab-label {
                     font-size: 11px;
                     font-weight: 600;
-                    color: var(--text-secondary);
+                    color: #4b5563;
                     text-align: center;
                     line-height: 1.2;
                 }
 
-                .mobile-tab-btn .tab-count {
+                .mobile-tab-btn-gio .tab-count {
                     font-size: 12px;
                     font-weight: 700;
-                    color: var(--text-muted);
+                    color: #6b7280;
                 }
 
                 /* Tab ativa */
-                .mobile-tab-btn {
+                .mobile-tab-btn-gio {
                     position: relative;
                 }
 
-                .mobile-tab-btn.active {
-                    border-color: var(--top-teal);
+                .mobile-tab-btn-gio.active {
+                    border-color: #12b0a0;
                     background: linear-gradient(135deg, rgba(18, 176, 160, 0.12) 0%, rgba(18, 176, 160, 0.06) 100%);
-                    box-shadow: 0 2px 8px rgba(18, 176, 160, 0.15);
+                    box-shadow: 0 4px 12px rgba(18, 176, 160, 0.2);
                 }
 
                 /* Indicador inferior da tab ativa */
-                .mobile-tab-btn.active::after {
+                .mobile-tab-btn-gio.active::after {
                     content: '';
                     position: absolute;
                     bottom: -6px;
@@ -1047,124 +940,124 @@ const ApprovalPage = {
                     transform: translateX(-50%);
                     width: 30px;
                     height: 3px;
-                    background: var(--top-teal);
+                    background: #12b0a0;
                     border-radius: 2px 2px 0 0;
                 }
 
-                .mobile-tab-btn.active svg {
-                    color: var(--top-teal);
+                .mobile-tab-btn-gio.active svg {
+                    color: #12b0a0;
                 }
 
-                .mobile-tab-btn.active .tab-label {
-                    color: var(--top-teal);
+                .mobile-tab-btn-gio.active .tab-label {
+                    color: #12b0a0;
                 }
 
-                .mobile-tab-btn.active .tab-count {
+                .mobile-tab-btn-gio.active .tab-count {
                     color: white;
-                    background: var(--top-teal);
+                    background: #12b0a0;
                     padding: 2px 8px;
                     border-radius: 10px;
                 }
 
                 /* Cores específicas por status - Tabs */
-                .mobile-tab-btn[data-status="pending"].active {
+                .mobile-tab-btn-gio[data-status="pending"].active {
                     border-color: #f59e0b;
                     background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(245, 158, 11, 0.06) 100%);
                 }
 
-                .mobile-tab-btn[data-status="pending"].active::after {
+                .mobile-tab-btn-gio[data-status="pending"].active::after {
                     background: #f59e0b;
                 }
 
-                .mobile-tab-btn[data-status="pending"].active svg,
-                .mobile-tab-btn[data-status="pending"].active .tab-label {
+                .mobile-tab-btn-gio[data-status="pending"].active svg,
+                .mobile-tab-btn-gio[data-status="pending"].active .tab-label {
                     color: #f59e0b;
                 }
 
-                .mobile-tab-btn[data-status="pending"].active .tab-count {
+                .mobile-tab-btn-gio[data-status="pending"].active .tab-count {
                     background: #f59e0b;
                 }
 
-                .mobile-tab-btn[data-status="adjust"].active {
+                .mobile-tab-btn-gio[data-status="adjust"].active {
                     border-color: #ef4444;
                     background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(239, 68, 68, 0.06) 100%);
                 }
 
-                .mobile-tab-btn[data-status="adjust"].active::after {
+                .mobile-tab-btn-gio[data-status="adjust"].active::after {
                     background: #ef4444;
                 }
 
-                .mobile-tab-btn[data-status="adjust"].active svg,
-                .mobile-tab-btn[data-status="adjust"].active .tab-label {
+                .mobile-tab-btn-gio[data-status="adjust"].active svg,
+                .mobile-tab-btn-gio[data-status="adjust"].active .tab-label {
                     color: #ef4444;
                 }
 
-                .mobile-tab-btn[data-status="adjust"].active .tab-count {
+                .mobile-tab-btn-gio[data-status="adjust"].active .tab-count {
                     background: #ef4444;
                 }
 
-                .mobile-tab-btn[data-status="approved"].active {
+                .mobile-tab-btn-gio[data-status="approved"].active {
                     border-color: #3b82f6;
                     background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(59, 130, 246, 0.06) 100%);
                 }
 
-                .mobile-tab-btn[data-status="approved"].active::after {
+                .mobile-tab-btn-gio[data-status="approved"].active::after {
                     background: #3b82f6;
                 }
 
-                .mobile-tab-btn[data-status="approved"].active svg,
-                .mobile-tab-btn[data-status="approved"].active .tab-label {
+                .mobile-tab-btn-gio[data-status="approved"].active svg,
+                .mobile-tab-btn-gio[data-status="approved"].active .tab-label {
                     color: #3b82f6;
                 }
 
-                .mobile-tab-btn[data-status="approved"].active .tab-count {
+                .mobile-tab-btn-gio[data-status="approved"].active .tab-count {
                     background: #3b82f6;
                 }
 
-                .mobile-tab-btn[data-status="completed"].active {
+                .mobile-tab-btn-gio[data-status="completed"].active {
                     border-color: #10b981;
                     background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.06) 100%);
                 }
 
-                .mobile-tab-btn[data-status="completed"].active::after {
+                .mobile-tab-btn-gio[data-status="completed"].active::after {
                     background: #10b981;
                 }
 
-                .mobile-tab-btn[data-status="completed"].active svg,
-                .mobile-tab-btn[data-status="completed"].active .tab-label {
+                .mobile-tab-btn-gio[data-status="completed"].active svg,
+                .mobile-tab-btn-gio[data-status="completed"].active .tab-label {
                     color: #10b981;
                 }
 
-                .mobile-tab-btn[data-status="completed"].active .tab-count {
+                .mobile-tab-btn-gio[data-status="completed"].active .tab-count {
                     background: #10b981;
                 }
 
-                .mobile-tab-btn[data-status="homologated"].active {
+                .mobile-tab-btn-gio[data-status="homologated"].active {
                     border-color: #8b5cf6;
                     background: linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(139, 92, 246, 0.06) 100%);
                 }
 
-                .mobile-tab-btn[data-status="homologated"].active::after {
+                .mobile-tab-btn-gio[data-status="homologated"].active::after {
                     background: #8b5cf6;
                 }
 
-                .mobile-tab-btn[data-status="homologated"].active svg,
-                .mobile-tab-btn[data-status="homologated"].active .tab-label {
+                .mobile-tab-btn-gio[data-status="homologated"].active svg,
+                .mobile-tab-btn-gio[data-status="homologated"].active .tab-label {
                     color: #8b5cf6;
                 }
 
-                .mobile-tab-btn[data-status="homologated"].active .tab-count {
+                .mobile-tab-btn-gio[data-status="homologated"].active .tab-count {
                     background: #8b5cf6;
                 }
 
                 /* Kanban Container - Layout vertical em mobile */
-                .kanban-container {
+                .kanban-container-gio {
                     border-radius: 0;
                     background: transparent;
                     overflow: visible;
                 }
 
-                .kanban-scroll-area {
+                .kanban-scroll-area-gio {
                     padding: 0;
                     overflow: visible;
                     cursor: default;
@@ -1172,7 +1065,7 @@ const ApprovalPage = {
                 }
 
                 /* Board - Layout vertical */
-                .kanban-board {
+                .kanban-board-gio {
                     display: flex;
                     flex-direction: column;
                     gap: 0;
@@ -1180,31 +1073,32 @@ const ApprovalPage = {
                 }
 
                 /* Colunas ocupam largura total e layout vertical */
-                .kanban-column {
+                .kanban-column-gio {
                     flex: 1 1 auto;
                     width: 100%;
                     min-height: auto;
                     margin-bottom: 0;
-                    border-radius: 12px;
+                    border-radius: 16px;
                     box-shadow: none;
                 }
 
                 /* Esconde header das colunas (info está nas tabs) */
-                .kanban-col-header {
+                .kanban-col-header-gio {
                     display: none;
                 }
 
-                .kanban-col-body {
+                .kanban-col-body-gio {
                     padding: 0;
                     gap: 12px;
                     overflow-y: visible;
                     max-height: none;
+                    background: transparent;
                 }
 
                 /* Cards OKR - Totalmente redesenhados para mobile */
-                .okr-card {
+                .okr-card-gio {
                     padding: 0;
-                    border-radius: 12px;
+                    border-radius: 16px;
                     margin-bottom: 12px;
                     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
                     border-left-width: 4px;
@@ -1212,281 +1106,219 @@ const ApprovalPage = {
                     background: white;
                 }
 
-                .okr-card:last-child {
+                .okr-card-gio:last-child {
                     margin-bottom: 0;
                 }
 
-                .okr-card:hover {
+                .okr-card-gio:hover {
                     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+                    transform: none;
                 }
 
                 /* Topo do card */
-                .okr-card-top {
-                    padding: 12px 14px;
-                    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 1) 100%);
-                    border-bottom: 1px solid var(--border-light);
+                .okr-card-top-gio {
+                    padding: 14px 16px;
+                    background: linear-gradient(135deg, rgba(245, 249, 255, 1) 0%, rgba(255, 255, 255, 1) 100%);
+                    border-bottom: 1px solid #e5e7eb;
                     margin-bottom: 0;
                 }
 
-                .okr-dept {
+                .okr-dept-gio {
                     font-size: 10px;
-                    padding: 4px 10px;
-                    background: linear-gradient(135deg, var(--top-teal) 0%, #0d9488 100%);
-                    color: white;
-                    border-radius: 6px;
-                    font-weight: 600;
-                    letter-spacing: 0.3px;
+                    padding: 5px 12px;
                 }
 
-                .okr-progress-badge {
-                    font-size: 11px;
-                    padding: 4px 10px;
-                    font-weight: 700;
-                    border-radius: 6px;
+                .okr-progress-badge-gio {
+                    font-size: 12px;
+                    padding: 5px 12px;
                 }
 
                 /* Título do OKR */
-                .okr-title {
-                    font-size: 14px;
-                    margin: 14px 14px 12px 14px;
+                .okr-title-gio {
+                    font-size: 15px;
+                    margin: 16px 16px 14px 16px;
                     line-height: 1.6;
-                    font-weight: 600;
-                    color: var(--text-primary);
                 }
 
                 /* Objetivo estratégico */
-                .okr-objective {
-                    padding: 10px 12px;
-                    font-size: 11px;
-                    margin: 0 14px 12px 14px;
+                .okr-objective-gio {
+                    padding: 12px 14px;
+                    font-size: 12px;
+                    margin: 0 16px 14px 16px;
                     line-height: 1.5;
-                    background: linear-gradient(135deg, rgba(18, 176, 160, 0.05) 0%, rgba(18, 176, 160, 0.02) 100%);
-                    border-left: 3px solid var(--top-teal);
                 }
 
-                .okr-objective svg {
-                    width: 14px;
-                    height: 14px;
-                    color: var(--top-teal);
-                }
-
-                .okr-objective span {
-                    flex: 1;
-                    color: var(--text-secondary);
+                .okr-objective-gio svg {
+                    width: 16px;
+                    height: 16px;
                 }
 
                 /* Meta (KRs) */
-                .okr-meta {
-                    margin: 0 14px 12px 14px;
+                .okr-meta-gio {
+                    margin: 0 16px 14px 16px;
                 }
 
-                .okr-krs {
-                    font-size: 11px;
-                    padding: 8px 10px;
-                    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.04) 100%);
-                    border-radius: 8px;
-                    font-weight: 500;
-                    color: #3b82f6;
+                .okr-krs-gio {
+                    font-size: 12px;
+                    padding: 10px 12px;
                 }
 
-                .okr-krs svg {
-                    width: 14px;
-                    height: 14px;
+                .okr-krs-gio svg {
+                    width: 16px;
+                    height: 16px;
                 }
 
                 /* Barra de progresso */
-                .okr-progress-bar {
-                    margin: 0 14px 12px 14px;
+                .okr-progress-bar-gio {
+                    margin: 0 16px 14px 16px;
                 }
 
-                .progress-track {
+                .progress-track-gio {
                     height: 8px;
                     border-radius: 4px;
-                    background: var(--bg-main);
-                    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
                 }
 
-                .progress-fill {
+                .progress-fill-gio {
                     border-radius: 4px;
-                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
                 }
 
                 /* Comentário do comitê */
-                .okr-comment {
-                    padding: 10px 12px;
-                    font-size: 12px;
-                    margin: 0 14px 12px 14px;
-                    line-height: 1.5;
-                    background: #fef2f2;
-                    border: 1px solid #fecaca;
-                    border-left-width: 3px;
-                }
-
-                .okr-comment svg {
-                    width: 16px;
-                    height: 16px;
-                    color: #dc2626;
-                }
-
-                /* Ações - Botões maiores e mais fáceis de clicar */
-                .okr-actions {
-                    flex-direction: column;
-                    gap: 8px;
-                    padding: 12px 14px 14px 14px;
-                    background: var(--bg-main);
-                    margin: 0;
-                    border-top: 1px solid var(--border-light);
-                }
-
-                .action-btn {
-                    padding: 14px 16px;
+                .okr-comment-gio {
+                    padding: 12px 14px;
                     font-size: 13px;
-                    border-radius: 8px;
-                    font-weight: 600;
-                    transition: all 0.15s;
-                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-                    border-width: 2px;
+                    margin: 0 16px 14px 16px;
+                    line-height: 1.5;
                 }
 
-                .action-btn:active {
-                    transform: scale(0.97);
-                    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-                }
-
-                .action-btn svg {
+                .okr-comment-gio svg {
                     width: 18px;
                     height: 18px;
                 }
 
-                /* Cores dos botões */
-                .action-btn.success {
-                    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-                    border-color: #10b981;
-                    color: white;
+                /* Ações - Botões maiores e mais fáceis de clicar */
+                .okr-actions-gio {
+                    flex-direction: column;
+                    gap: 10px;
+                    padding: 14px 16px 16px 16px;
+                    background: #f5f9ff;
+                    margin: 0;
+                    border-top: 1px solid #e5e7eb;
                 }
 
-                .action-btn.danger {
-                    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-                    border-color: #ef4444;
-                    color: white;
+                .action-btn-gio {
+                    padding: 14px 18px;
+                    font-size: 14px;
+                    border-radius: 10px;
                 }
 
-                .action-btn.secondary {
-                    background: white;
-                    border-color: var(--border);
-                    color: var(--text-secondary);
+                .action-btn-gio:active {
+                    transform: scale(0.97);
                 }
 
-                .action-btn.primary {
-                    background: linear-gradient(135deg, var(--top-blue) 0%, #1a5570 100%);
-                    border-color: var(--top-blue);
-                    color: white;
+                .action-btn-gio svg {
+                    width: 18px;
+                    height: 18px;
                 }
 
                 /* Empty state */
-                .kanban-empty-state {
+                .kanban-empty-state-gio {
                     padding: 60px 20px;
                     min-height: 300px;
                     display: flex;
                     flex-direction: column;
                     align-items: center;
                     justify-content: center;
+                    background: white;
+                    border-radius: 16px;
+                    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
                 }
 
-                .empty-icon {
+                .empty-icon-gio {
                     margin-bottom: 16px;
                 }
 
-                .empty-icon svg {
+                .empty-icon-gio svg {
                     width: 48px;
                     height: 48px;
-                    color: var(--text-muted);
+                    color: #6b7280;
                     opacity: 0.4;
                 }
 
-                .kanban-empty-state p {
+                .kanban-empty-state-gio p {
                     font-size: 14px;
-                    color: var(--text-muted);
+                    color: #6b7280;
                     text-align: center;
                 }
             }
 
             /* Telas muito pequenas */
             @media (max-width: 480px) {
-                .approval-title {
-                    font-size: 18px;
-                }
-
-                .approval-subtitle {
-                    font-size: 12px;
-                }
-
-                .mobile-tab-btn {
+                .mobile-tab-btn-gio {
                     min-width: 70px;
                     padding: 8px 10px;
                 }
 
-                .mobile-tab-btn .tab-label {
+                .mobile-tab-btn-gio .tab-label {
                     font-size: 10px;
                 }
 
-                .mobile-tab-btn .tab-count {
+                .mobile-tab-btn-gio .tab-count {
                     font-size: 11px;
                 }
 
-                .okr-card {
-                    border-radius: 10px;
+                .okr-card-gio {
+                    border-radius: 12px;
                 }
 
-                .okr-card-top {
-                    padding: 10px 12px;
-                }
-
-                .okr-dept {
-                    font-size: 9px;
-                    padding: 3px 8px;
-                }
-
-                .okr-title {
-                    font-size: 13px;
-                    margin: 12px 12px 10px 12px;
-                }
-
-                .okr-objective {
-                    font-size: 10px;
-                    padding: 8px 10px;
-                    margin: 0 12px 10px 12px;
-                }
-
-                .okr-krs {
-                    font-size: 10px;
-                    padding: 6px 8px;
-                }
-
-                .okr-progress-bar {
-                    margin: 0 12px 10px 12px;
-                }
-
-                .progress-track {
-                    height: 6px;
-                }
-
-                .okr-comment {
-                    font-size: 11px;
-                    padding: 8px 10px;
-                    margin: 0 12px 10px 12px;
-                }
-
-                .okr-actions {
-                    padding: 10px 12px 12px 12px;
-                }
-
-                .action-btn {
-                    font-size: 12px;
+                .okr-card-top-gio {
                     padding: 12px 14px;
                 }
 
-                .action-btn svg {
+                .okr-dept-gio {
+                    font-size: 9px;
+                    padding: 4px 10px;
+                }
+
+                .okr-title-gio {
+                    font-size: 14px;
+                    margin: 14px 14px 12px 14px;
+                }
+
+                .okr-objective-gio {
+                    font-size: 11px;
+                    padding: 10px 12px;
+                    margin: 0 14px 12px 14px;
+                }
+
+                .okr-krs-gio {
+                    font-size: 11px;
+                    padding: 8px 10px;
+                }
+
+                .okr-progress-bar-gio {
+                    margin: 0 14px 12px 14px;
+                }
+
+                .progress-track-gio {
+                    height: 6px;
+                }
+
+                .okr-comment-gio {
+                    font-size: 12px;
+                    padding: 10px 12px;
+                    margin: 0 14px 12px 14px;
+                }
+
+                .okr-actions-gio {
+                    padding: 12px 14px 14px 14px;
+                }
+
+                .action-btn-gio {
+                    font-size: 13px;
+                    padding: 12px 16px;
+                }
+
+                .action-btn-gio svg {
                     width: 16px;
                     height: 16px;
                 }
@@ -1497,6 +1329,8 @@ const ApprovalPage = {
         // Remove old styles
         const oldStyle = document.getElementById('approval-styles');
         if (oldStyle) oldStyle.remove();
+        const oldStyleV2 = document.getElementById('approval-styles-v2');
+        if (oldStyleV2) oldStyleV2.remove();
     }
 };
 
