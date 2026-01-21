@@ -10,17 +10,18 @@ const DashboardPage = {
         const content = document.getElementById('content');
 
         content.innerHTML = `
-            <div id="dashboard-content">
+            <div id="dashboard-content" class="dashboard-gio">
+                <!-- Main Dashboard Grid -->
                 <div class="dashboard-grid">
                     <div id="ranking-section">
-                        <div style="padding:40px;text-align:center;">Carregando...</div>
+                        <div class="widget-skeleton"></div>
                     </div>
                     <div class="objectives-and-activities">
                         <div id="objectives-section">
-                            <div style="padding:40px;text-align:center;">Carregando...</div>
+                            <div class="widget-skeleton"></div>
                         </div>
                         <div id="upcoming-activities-section">
-                            <div style="padding:40px;text-align:center;">Carregando...</div>
+                            <div class="widget-skeleton"></div>
                         </div>
                     </div>
                 </div>
@@ -71,9 +72,10 @@ const DashboardPage = {
 
         if (ranking.length > 0) {
             ranking.forEach((dept, idx) => {
+                const posClass = idx === 0 ? 'gold' : idx === 1 ? 'silver' : idx === 2 ? 'bronze' : '';
                 html += `
                     <div class="ranking-item">
-                        <div class="ranking-pos ${idx === 0 ? 'gold' : ''}">${idx + 1}</div>
+                        <div class="ranking-pos ${posClass}">${idx + 1}</div>
                         <div class="ranking-info">
                             <div class="ranking-name">${dept.name}</div>
                             <div class="ranking-bar">
@@ -87,7 +89,17 @@ const DashboardPage = {
                 `;
             });
         } else {
-            html += '<p style="text-align:center;color:var(--text-muted);padding:20px;">Nenhum dado disponível</p>';
+            html += `
+                <div style="text-align:center;padding:40px 20px;">
+                    <div style="width:64px;height:64px;border-radius:16px;background:rgba(18,176,160,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+                        <svg width="28" height="28" fill="none" stroke="#12b0a0" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                        </svg>
+                    </div>
+                    <p style="color:#64748b;font-weight:600;margin-bottom:4px;">Nenhum dado disponível</p>
+                    <p style="color:#94a3b8;font-size:12px;">Os rankings serão exibidos quando houver OKRs cadastrados</p>
+                </div>
+            `;
         }
 
         html += `
@@ -391,12 +403,46 @@ const DashboardPage = {
         const style = document.createElement('style');
         style.id = 'dashboard-styles';
         style.textContent = `
+            /* ===== DASHBOARD GIO STYLES ===== */
+            .dashboard-gio {
+                background: #f5f9ff;
+                margin: -24px;
+                padding: 24px;
+                min-height: calc(100vh - 140px);
+            }
+
+            /* ===== SKELETON LOADING ===== */
+            .widget-skeleton {
+                background: white;
+                border-radius: 24px;
+                height: 300px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+                position: relative;
+                overflow: hidden;
+            }
+
+            .widget-skeleton::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+                animation: shimmer 1.5s infinite;
+            }
+
+            @keyframes shimmer {
+                0% { left: -100%; }
+                100% { left: 100%; }
+            }
+
+            /* ===== DASHBOARD GRID ===== */
             .dashboard-grid {
                 display: grid;
                 grid-template-columns: 1fr 2fr;
-                gap: 24px;
-                align-items: stretch;
-                min-height: 600px;
+                gap: 20px;
+                align-items: start;
             }
 
             #ranking-section {
@@ -407,8 +453,7 @@ const DashboardPage = {
             .objectives-and-activities {
                 display: flex;
                 flex-direction: column;
-                gap: 24px;
-                height: 100%;
+                gap: 20px;
             }
 
             #objectives-section {
@@ -428,41 +473,51 @@ const DashboardPage = {
                 min-height: 0;
             }
 
+            /* ===== WIDGETS GIO STYLE ===== */
             .widget {
                 background: white;
-                border-radius: 12px;
-                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                border-radius: 16px;
+                box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
                 overflow: hidden;
                 display: flex;
                 flex-direction: column;
+                transition: all 0.3s ease;
+            }
+
+            .widget:hover {
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
             }
 
             .widget-header {
                 display: flex;
                 align-items: center;
                 gap: 10px;
-                padding: 16px 20px;
-                background: linear-gradient(135deg, var(--top-blue) 0%, #1a5570 100%);
+                padding: 14px 18px;
+                background: linear-gradient(135deg, #1e6076 0%, #154555 100%);
                 color: white;
                 font-weight: 600;
-                font-size: 14px;
+                font-size: 13px;
+                letter-spacing: 0.3px;
             }
 
             .widget-header svg {
-                width: 20px;
-                height: 20px;
+                width: 18px;
+                height: 18px;
+                opacity: 0.9;
             }
 
             .widget-badge {
                 margin-left: auto;
                 background: rgba(255,255,255,0.2);
-                padding: 2px 10px;
+                backdrop-filter: blur(10px);
+                padding: 3px 10px;
                 border-radius: 12px;
-                font-size: 12px;
+                font-size: 11px;
+                font-weight: 700;
             }
 
             .widget-body {
-                padding: 16px 20px;
+                padding: 12px 16px;
                 flex: 1;
             }
 
@@ -471,34 +526,39 @@ const DashboardPage = {
             }
 
             .widget-footer {
-                padding: 12px 20px;
-                background: var(--bg-main);
-                border-top: 1px solid var(--border-light);
+                padding: 10px 16px;
+                background: #f8fafc;
+                border-top: 1px solid #e2e8f0;
                 text-align: right;
             }
 
             .btn-link-dash {
                 background: none;
                 border: none;
-                color: var(--top-teal);
+                color: #12b0a0;
                 font-size: 13px;
-                font-weight: 600;
+                font-weight: 700;
                 cursor: pointer;
                 padding: 0;
+                transition: all 0.2s ease;
             }
 
             .btn-link-dash:hover {
-                color: var(--top-blue);
-                text-decoration: underline;
+                color: #1e6076;
             }
 
-            /* Ranking Styles */
+            /* ===== RANKING STYLES GIO ===== */
             .ranking-item {
                 display: flex;
                 align-items: center;
                 gap: 12px;
-                padding: 12px 0;
-                border-bottom: 1px solid var(--border-light);
+                padding: 10px 0;
+                border-bottom: 1px solid #f1f5f9;
+                transition: all 0.2s ease;
+            }
+
+            .ranking-item:hover {
+                transform: translateX(2px);
             }
 
             .ranking-item:last-child {
@@ -508,55 +568,68 @@ const DashboardPage = {
             .ranking-pos {
                 width: 28px;
                 height: 28px;
-                border-radius: 50%;
-                background: var(--bg-main);
+                border-radius: 8px;
+                background: #f1f5f9;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 font-weight: 700;
                 font-size: 12px;
-                color: var(--text-secondary);
+                color: #64748b;
+                flex-shrink: 0;
             }
 
             .ranking-pos.gold {
                 background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
                 color: white;
+                box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
+            }
+
+            .ranking-pos.silver {
+                background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
+                color: white;
+            }
+
+            .ranking-pos.bronze {
+                background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+                color: white;
             }
 
             .ranking-info {
                 flex: 1;
+                min-width: 0;
             }
 
             .ranking-name {
                 font-weight: 600;
                 font-size: 13px;
-                color: var(--text-primary);
-                margin-bottom: 6px;
+                color: #1f2937;
+                margin-bottom: 5px;
             }
 
             .ranking-bar .progress {
                 height: 6px;
-                background: var(--border-light);
+                background: #e2e8f0;
                 border-radius: 3px;
                 overflow: hidden;
             }
 
             .ranking-bar .progress-bar {
                 height: 100%;
-                background: linear-gradient(90deg, var(--top-teal) 0%, #13a692 100%);
+                background: linear-gradient(90deg, #12b0a0 0%, #0d9488 100%);
                 border-radius: 3px;
                 transition: width 0.5s ease;
             }
 
             .ranking-percent {
                 font-weight: 700;
-                font-size: 14px;
-                color: var(--top-blue);
-                min-width: 45px;
+                font-size: 13px;
+                color: #12b0a0;
+                min-width: 40px;
                 text-align: right;
             }
 
-            /* Objectives Table Styles */
+            /* ===== OBJECTIVES TABLE GIO ===== */
             .dashboard-objectives-table {
                 width: 100%;
                 border-collapse: collapse;
@@ -564,22 +637,22 @@ const DashboardPage = {
             }
 
             .dashboard-objectives-table thead {
-                background: var(--bg-main);
+                background: rgba(30, 96, 118, 0.04);
             }
 
             .dashboard-objectives-table thead th {
-                padding: 12px 16px;
+                padding: 10px 14px;
                 text-align: left;
-                font-size: 11px;
-                font-weight: 600;
-                color: var(--text-secondary);
+                font-size: 10px;
+                font-weight: 700;
+                color: #64748b;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
-                border-bottom: 1px solid var(--border-light);
+                border-bottom: 1px solid #e2e8f0;
             }
 
             .dashboard-objectives-table .col-cat {
-                width: 110px;
+                width: 100px;
             }
 
             .dashboard-objectives-table .col-obj {
@@ -587,17 +660,17 @@ const DashboardPage = {
             }
 
             .dashboard-objectives-table .col-okrs {
-                width: 70px;
+                width: 60px;
                 text-align: center;
             }
 
             .obj-row {
-                border-bottom: 1px solid var(--border-light);
-                transition: background 0.2s;
+                border-bottom: 1px solid #f1f5f9;
+                transition: all 0.2s ease;
             }
 
             .obj-row:hover {
-                background: var(--bg-main);
+                background: rgba(18, 176, 160, 0.04);
             }
 
             .obj-row:last-child {
@@ -605,35 +678,35 @@ const DashboardPage = {
             }
 
             .obj-row td {
-                padding: 12px 16px;
+                padding: 10px 14px;
                 vertical-align: middle;
             }
 
             .obj-badge {
                 display: inline-block;
-                padding: 4px 10px;
+                padding: 4px 8px;
                 border-radius: 6px;
-                font-size: 10px;
+                font-size: 9px;
                 font-weight: 700;
                 text-transform: uppercase;
                 letter-spacing: 0.3px;
             }
 
             .obj-text {
-                font-size: 13px;
-                font-weight: 500;
-                color: var(--text-primary);
+                font-size: 12px;
+                font-weight: 600;
+                color: #1f2937;
                 line-height: 1.4;
             }
 
             .obj-meta {
                 font-size: 11px;
-                color: var(--text-muted);
+                color: #64748b;
                 margin-top: 4px;
                 padding: 4px 8px;
-                background: var(--bg-main);
+                background: rgba(18, 176, 160, 0.08);
                 border-radius: 4px;
-                border-left: 2px solid var(--top-teal);
+                border-left: 2px solid #12b0a0;
                 display: inline-block;
             }
 
@@ -647,19 +720,21 @@ const DashboardPage = {
                 justify-content: center;
                 width: 28px;
                 height: 28px;
-                border-radius: 50%;
-                background: var(--bg-main);
+                border-radius: 8px;
+                background: #f1f5f9;
                 font-size: 12px;
                 font-weight: 700;
-                color: var(--text-muted);
+                color: #64748b;
+                transition: all 0.2s ease;
             }
 
             .okr-count-badge.has-okrs {
-                background: var(--top-teal);
+                background: linear-gradient(135deg, #12b0a0 0%, #0d9488 100%);
                 color: white;
+                box-shadow: 0 2px 8px rgba(18, 176, 160, 0.3);
             }
 
-            /* Widget com altura fixa (alinha com ranking) */
+            /* ===== ACTIVITIES GIO ===== */
             .widget-fixed-height {
                 height: 100%;
                 display: flex;
@@ -673,7 +748,6 @@ const DashboardPage = {
                 transition: opacity 0.3s ease, transform 0.3s ease;
             }
 
-            /* Esconder scrollbar completamente */
             .widget-body-carousel {
                 overflow: hidden;
                 position: relative;
@@ -681,17 +755,16 @@ const DashboardPage = {
                 flex-direction: column;
             }
 
-            /* Próximas Atividades */
             .activity-item {
                 display: flex;
                 justify-content: space-between;
                 align-items: flex-start;
-                padding: 20px 18px;
-                border-left: 4px solid transparent;
-                transition: all 0.2s ease;
-                border-bottom: 1px solid var(--border, #e2e8f0);
+                padding: 12px 16px;
+                border-left: 3px solid transparent;
+                transition: all 0.3s ease;
+                border-bottom: 1px solid #f1f5f9;
                 flex-shrink: 0;
-                gap: 16px;
+                gap: 12px;
             }
 
             .activity-item:last-child {
@@ -699,38 +772,39 @@ const DashboardPage = {
             }
 
             .activity-item:hover {
-                background: var(--bg-main, #f8fafc);
-                border-left-color: var(--top-teal);
-                transform: translateX(4px);
+                background: rgba(18, 176, 160, 0.04);
+                border-left-color: #12b0a0;
+                transform: translateX(2px);
             }
 
             .activity-item.urgent {
                 border-left-color: #ef4444;
-                background: linear-gradient(to right, #fef2f2, white);
+                background: linear-gradient(to right, rgba(254, 242, 242, 0.8), white);
             }
 
             .activity-item.near {
                 border-left-color: #f59e0b;
-                background: linear-gradient(to right, #fffbeb, white);
+                background: linear-gradient(to right, rgba(255, 251, 235, 0.8), white);
             }
 
             .activity-info {
                 flex: 1;
+                min-width: 0;
             }
 
             .activity-name {
-                font-size: 15px;
+                font-size: 13px;
                 font-weight: 600;
-                color: var(--text-primary, #1e293b);
-                margin-bottom: 6px;
+                color: #1f2937;
+                margin-bottom: 4px;
                 line-height: 1.4;
             }
 
             .activity-dept {
-                font-size: 12px;
-                color: var(--text-muted, #94a3b8);
+                font-size: 10px;
+                color: #94a3b8;
                 text-transform: uppercase;
-                font-weight: 500;
+                font-weight: 600;
                 letter-spacing: 0.5px;
             }
 
@@ -743,37 +817,36 @@ const DashboardPage = {
             }
 
             .deadline-date {
-                font-size: 14px;
+                font-size: 13px;
                 font-weight: 700;
-                color: var(--text-secondary, #64748b);
-                margin-bottom: 4px;
+                color: #1e6076;
             }
 
             .deadline-days {
-                font-size: 12px;
-                padding: 4px 10px;
+                font-size: 10px;
+                padding: 3px 8px;
                 border-radius: 6px;
                 font-weight: 700;
-                background: var(--bg-main, #f8fafc);
-                color: var(--text-muted, #94a3b8);
+                background: #f1f5f9;
+                color: #64748b;
             }
 
             .deadline-days.urgent {
-                background: #fef2f2;
+                background: rgba(239, 68, 68, 0.12);
                 color: #dc2626;
             }
 
             .deadline-days.near {
-                background: #fffbeb;
+                background: rgba(245, 158, 11, 0.12);
                 color: #d97706;
             }
 
-            /* Indicador de carousel */
+            /* ===== CAROUSEL INDICATOR ===== */
             .carousel-indicator {
                 display: flex;
                 align-items: center;
                 gap: 6px;
-                color: var(--text-muted);
+                color: #94a3b8;
             }
 
             .carousel-indicator svg {
@@ -791,7 +864,7 @@ const DashboardPage = {
                 }
             }
 
-            /* Responsive */
+            /* ===== RESPONSIVE ===== */
             @media (max-width: 1024px) {
                 .dashboard-grid {
                     grid-template-columns: 1fr;
@@ -808,129 +881,67 @@ const DashboardPage = {
             }
 
             @media (max-width: 768px) {
-                /* Dashboard Grid Mobile */
-                .dashboard-grid {
-                    gap: 18px;
+                .dashboard-gio {
+                    margin: -16px;
+                    padding: 16px;
                 }
 
-                .objectives-and-activities {
-                    gap: 18px;
+                .dashboard-grid {
+                    gap: 16px;
+                }
+
+                .widget {
+                    border-radius: 20px;
+                }
+
+                .widget-header {
+                    padding: 16px 20px;
+                    font-size: 14px;
+                }
+
+                .widget-body {
+                    padding: 16px 20px;
                 }
 
                 .activity-item {
-                    padding: 12px 14px;
+                    padding: 14px 16px;
                     flex-direction: column;
                     align-items: flex-start;
-                    gap: 10px;
+                    gap: 12px;
                 }
 
                 .activity-deadline {
                     align-items: flex-start;
                     flex-direction: row;
-                    gap: 8px;
-                }
-
-                .activity-name {
-                    font-size: 13px;
-                }
-
-                /* Widget Mobile - Melhorados */
-                .widget {
-                    border-radius: 14px;
-                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-                    border: 1px solid rgba(30, 96, 118, 0.08);
-                    overflow: hidden;
-                }
-
-                .widget-header {
-                    padding: 16px 18px;
-                    font-size: 14px;
-                    font-weight: 700;
-                    background: linear-gradient(135deg, var(--top-blue) 0%, #1a5570 100%);
-                    color: white;
-                    display: flex;
-                    align-items: center;
                     gap: 10px;
                 }
 
-                .widget-header svg {
-                    width: 20px;
-                    height: 20px;
-                    flex-shrink: 0;
+                .activity-name {
+                    font-size: 14px;
                 }
 
-                .widget-badge {
-                    margin-left: auto;
-                    background: rgba(255, 255, 255, 0.25);
-                    backdrop-filter: blur(10px);
-                    padding: 4px 12px;
-                    border-radius: 20px;
-                    font-size: 12px;
-                    font-weight: 700;
-                }
-
-                .widget-body {
-                    padding: 16px 18px;
-                }
-
-                .widget-footer {
-                    padding: 12px 18px;
-                    background: linear-gradient(135deg, var(--bg-main) 0%, white 100%);
-                }
-
-                /* Ranking Mobile - Melhorado */
                 .ranking-item {
-                    padding: 12px 0;
+                    padding: 14px 0;
                     gap: 12px;
-                    border-bottom: 1px solid rgba(226, 232, 240, 0.5);
-                }
-
-                .ranking-item:last-child {
-                    border-bottom: none;
                 }
 
                 .ranking-pos {
-                    width: 36px;
-                    height: 36px;
-                    font-size: 14px;
-                    font-weight: 700;
-                    flex-shrink: 0;
-                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-                }
-
-                .ranking-pos.gold {
-                    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-                    color: white;
-                    box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+                    width: 32px;
+                    height: 32px;
+                    font-size: 13px;
+                    border-radius: 10px;
                 }
 
                 .ranking-name {
-                    font-size: 15px;
-                    font-weight: 600;
-                    margin-bottom: 6px;
-                    color: var(--text-primary);
-                }
-
-                .ranking-bar .progress {
-                    height: 8px;
-                    border-radius: 4px;
-                    background: rgba(226, 232, 240, 0.8);
-                }
-
-                .ranking-bar .progress-bar {
-                    background: linear-gradient(90deg, var(--top-teal) 0%, #0d9488 100%);
-                    box-shadow: 0 2px 4px rgba(18, 176, 160, 0.2);
-                    border-radius: 4px;
+                    font-size: 13px;
                 }
 
                 .ranking-percent {
-                    font-size: 16px;
-                    font-weight: 800;
-                    min-width: 55px;
-                    color: var(--top-teal);
+                    font-size: 14px;
+                    min-width: 45px;
                 }
 
-                /* Objectives Table Mobile - Cards Melhorados */
+                /* Objectives Mobile */
                 .dashboard-objectives-table thead {
                     display: none;
                 }
@@ -946,23 +957,8 @@ const DashboardPage = {
                     display: flex;
                     flex-direction: column;
                     gap: 12px;
-                    padding: 16px 18px !important;
-                    border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+                    padding: 16px !important;
                     border-radius: 0;
-                    background: white;
-                    transition: background 0.2s ease;
-                }
-
-                .obj-row:hover {
-                    background: linear-gradient(135deg, rgba(248, 250, 252, 1) 0%, white 100%);
-                }
-
-                .obj-row:first-child {
-                    border-top: none;
-                }
-
-                .obj-row:last-child {
-                    border-bottom: none;
                 }
 
                 .obj-row td {
@@ -977,34 +973,6 @@ const DashboardPage = {
                     gap: 10px;
                 }
 
-                .obj-badge {
-                    font-size: 10px;
-                    font-weight: 700;
-                    padding: 5px 12px;
-                    border-radius: 8px;
-                    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-                    flex-shrink: 0;
-                }
-
-                .obj-text {
-                    font-size: 15px;
-                    font-weight: 600;
-                    line-height: 1.5;
-                    margin-bottom: 8px;
-                    color: var(--text-primary);
-                }
-
-                .obj-meta {
-                    font-size: 12px;
-                    margin-top: 8px;
-                    display: block;
-                    width: fit-content;
-                    padding: 6px 10px;
-                    background: linear-gradient(135deg, rgba(18, 176, 160, 0.08) 0%, rgba(13, 148, 136, 0.05) 100%);
-                    border-radius: 6px;
-                    border-left: 3px solid var(--top-teal);
-                }
-
                 .obj-count {
                     text-align: left !important;
                     display: flex;
@@ -1012,55 +980,22 @@ const DashboardPage = {
                     gap: 10px;
                     margin-top: 8px;
                     padding-top: 12px;
-                    border-top: 1px solid rgba(226, 232, 240, 0.5);
+                    border-top: 1px solid #f1f5f9;
                 }
 
                 .obj-count::before {
                     content: 'OKRs:';
                     font-size: 11px;
                     font-weight: 700;
-                    color: var(--text-muted);
+                    color: #94a3b8;
                     text-transform: uppercase;
                     letter-spacing: 0.5px;
                 }
-
-                .okr-count-badge {
-                    width: 34px;
-                    height: 34px;
-                    font-size: 14px;
-                    font-weight: 800;
-                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-                }
-
-                .okr-count-badge.has-okrs {
-                    background: linear-gradient(135deg, var(--top-teal) 0%, #0d9488 100%);
-                    color: white;
-                    box-shadow: 0 4px 12px rgba(18, 176, 160, 0.3);
-                }
-
-                /* Botões Mobile */
-                .btn-link-dash {
-                    font-size: 14px;
-                    font-weight: 600;
-                    padding: 8px 0;
-                    color: var(--top-teal);
-                    transition: all 0.2s ease;
-                }
-
-                .btn-link-dash:hover {
-                    color: var(--top-blue);
-                    transform: translateX(2px);
-                }
             }
 
-            /* Mobile Extra Small (< 480px) */
             @media (max-width: 480px) {
-                .dashboard-grid {
-                    gap: 14px;
-                }
-
                 .widget {
-                    border-radius: 12px;
+                    border-radius: 16px;
                 }
 
                 .widget-header {
@@ -1068,75 +1003,8 @@ const DashboardPage = {
                     font-size: 13px;
                 }
 
-                .widget-header svg {
-                    width: 18px;
-                    height: 18px;
-                }
-
-                .widget-badge {
-                    padding: 3px 10px;
-                    font-size: 11px;
-                }
-
                 .widget-body {
                     padding: 14px 16px;
-                }
-
-                .widget-footer {
-                    padding: 10px 16px;
-                }
-
-                .ranking-item {
-                    gap: 10px;
-                    padding: 10px 0;
-                }
-
-                .ranking-pos {
-                    width: 32px;
-                    height: 32px;
-                    font-size: 13px;
-                }
-
-                .ranking-name {
-                    font-size: 14px;
-                }
-
-                .ranking-bar .progress {
-                    height: 7px;
-                }
-
-                .ranking-percent {
-                    font-size: 15px;
-                    min-width: 50px;
-                }
-
-                .obj-row {
-                    padding: 14px 16px !important;
-                    gap: 10px;
-                }
-
-                .obj-badge {
-                    font-size: 9px;
-                    padding: 4px 10px;
-                }
-
-                .obj-text {
-                    font-size: 14px;
-                }
-
-                .obj-meta {
-                    font-size: 11px;
-                    padding: 5px 9px;
-                }
-
-                .okr-count-badge {
-                    width: 32px;
-                    height: 32px;
-                    font-size: 13px;
-                }
-
-                .btn-link-dash {
-                    font-size: 13px;
                 }
             }
         `;
