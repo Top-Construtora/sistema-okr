@@ -123,45 +123,38 @@ class User {
             Object.assign(this, result);
             return result;
         } else {
-            // CREATE - cria usuário no Supabase Auth primeiro
+            // CREATE - usa API do backend para criar usuário (bypass de restrições de signup)
             if (!this.senha) {
                 throw new Error('Senha é obrigatória para novos usuários');
             }
 
             try {
-                // 1. Criar usuário no Supabase Auth
-                const { data: authData, error: authError } = await supabaseClient.auth.signUp({
-                    email: this.email,
-                    password: this.senha,
-                    options: {
-                        data: {
-                            nome: this.nome,
-                            tipo: this.tipo,
-                            departamento_id: primaryDeptId
-                        }
-                    }
+                const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+
+                const response = await fetch(`${backendUrl}/api/users`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        nome: this.nome,
+                        email: this.email,
+                        senha: this.senha,
+                        tipo: this.tipo,
+                        departamento_id: primaryDeptId,
+                        departments: this.departments
+                    })
                 });
 
-                if (authError) throw authError;
+                const result = await response.json();
 
-                // 2. A trigger handle_new_user() no Supabase cria automaticamente o registro na tabela users
-                // Vamos buscar o usuário criado
-                await new Promise(resolve => setTimeout(resolve, 500)); // Pequeno delay para trigger processar
-
-                const createdUser = await User.getByEmail(this.email);
-                if (createdUser) {
-                    this.id = createdUser.id;
-
-                    // 3. Adicionar vínculos de departamentos
-                    if (this.departments && this.departments.length > 0) {
-                        await this.updateDepartments();
-                    }
-
-                    Object.assign(this, createdUser);
-                    return createdUser;
+                if (!response.ok) {
+                    throw new Error(result.error || 'Erro ao criar usuário');
                 }
 
-                throw new Error('Usuário criado no Auth mas não encontrado na tabela users');
+                this.id = result.id;
+                Object.assign(this, result);
+                return result;
             } catch (error) {
                 throw new Error('Erro ao criar usuário: ' + error.message);
             }
