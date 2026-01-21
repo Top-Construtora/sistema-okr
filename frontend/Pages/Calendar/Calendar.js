@@ -35,17 +35,17 @@ const CalendarPage = {
 
         // Estrutura HTML
         content.innerHTML = `
-            <div class="calendar-page-container">
+            <div class="page-gio calendar-page-gio">
                 <!-- Calendário Principal -->
-                <div class="calendar-main">
+                <div class="calendar-main-gio">
                     <div id="fullcalendar"></div>
                 </div>
 
                 <!-- Painel de Lembretes -->
-                <div class="reminders-panel">
-                    <div class="reminders-header">
+                <div class="reminders-panel-gio">
+                    <div class="reminders-header-gio">
                         <h3>Lembretes</h3>
-                        <button class="btn btn-primary btn-sm" onclick="CalendarPage.showReminderForm()">
+                        <button class="btn-gio-primary btn-sm-gio" onclick="CalendarPage.showReminderForm()">
                             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                             </svg>
@@ -53,35 +53,35 @@ const CalendarPage = {
                         </button>
                     </div>
 
-                    <div class="selected-date-info" id="selected-date-info">
-                        <span class="date-display">Selecione uma data no calendário</span>
+                    <div class="selected-date-info-gio" id="selected-date-info">
+                        <span class="date-display-gio">Selecione uma data no calendário</span>
                     </div>
 
-                    <div class="reminders-list" id="reminders-list">
+                    <div class="reminders-list-gio" id="reminders-list">
                         <!-- Lista de lembretes será renderizada aqui -->
                     </div>
 
                     <!-- Formulário de Lembrete (oculto por padrão) -->
-                    <div class="reminder-form-container" id="reminder-form-container" style="display: none;">
+                    <div class="reminder-form-container-gio" id="reminder-form-container" style="display: none;">
                         <form id="reminder-form" onsubmit="CalendarPage.saveReminder(event); return false;">
-                            <div class="form-group">
-                                <label>Data *</label>
-                                <input type="date" name="reminder_date" id="reminder-date" required class="form-control" />
+                            <div class="form-group-gio">
+                                <label class="form-label-gio">Data *</label>
+                                <input type="date" name="reminder_date" id="reminder-date" required class="form-control-gio" />
                             </div>
 
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Tipo *</label>
-                                    <select name="type" id="reminder-type" required class="form-control">
+                            <div class="form-row-gio">
+                                <div class="form-group-gio">
+                                    <label class="form-label-gio">Tipo *</label>
+                                    <select name="type" id="reminder-type" required class="form-control-gio">
                                         <option value="note">Nota</option>
                                         <option value="reminder">Lembrete</option>
                                         <option value="task">Tarefa</option>
                                     </select>
                                 </div>
 
-                                <div class="form-group">
-                                    <label>Prioridade</label>
-                                    <select name="priority" id="reminder-priority" class="form-control">
+                                <div class="form-group-gio">
+                                    <label class="form-label-gio">Prioridade</label>
+                                    <select name="priority" id="reminder-priority" class="form-control-gio">
                                         <option value="normal">Normal</option>
                                         <option value="high">Alta</option>
                                         <option value="urgent">Urgente</option>
@@ -90,20 +90,23 @@ const CalendarPage = {
                                 </div>
                             </div>
 
-                            <div class="form-group">
-                                <label>Conteúdo *</label>
+                            <div class="form-group-gio">
+                                <label class="form-label-gio">Conteúdo *</label>
                                 <textarea name="content" id="reminder-content" rows="4" maxlength="500"
-                                    required class="form-control"
+                                    required class="form-control-gio"
                                     placeholder="Descreva seu lembrete..."
                                     oninput="CalendarPage.updateCharCount()"></textarea>
-                                <small class="char-count" id="char-count">0/500</small>
+                                <small class="char-count-gio" id="char-count">0/500</small>
                             </div>
 
-                            <div class="form-actions">
-                                <button type="button" class="btn btn-secondary" onclick="CalendarPage.cancelReminderForm()">
+                            <div class="form-actions-gio">
+                                <button type="button" class="btn-gio-secondary" onclick="CalendarPage.cancelReminderForm()">
                                     Cancelar
                                 </button>
-                                <button type="submit" class="btn btn-primary">
+                                <button type="submit" class="btn-gio-primary">
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
                                     Salvar
                                 </button>
                             </div>
@@ -1016,7 +1019,10 @@ const CalendarPage = {
 
         if (this.reminders.length === 0) {
             list.innerHTML = `
-                <div class="empty-state">
+                <div class="empty-state-gio">
+                    <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                    </svg>
                     <p>Nenhum lembrete cadastrado</p>
                     <small>Clique em "Novo" para criar um lembrete</small>
                 </div>
@@ -1038,8 +1044,8 @@ const CalendarPage = {
             const dateObj = new Date(date + 'T00:00:00');
             const formatted = dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
 
-            html += `<div class="reminder-date-group">
-                <div class="reminder-date-header">${formatted}</div>`;
+            html += `<div class="reminder-date-group-gio">
+                <div class="reminder-date-header-gio">${formatted}</div>`;
 
             grouped[date].forEach(reminder => {
                 html += this.renderReminderItem(reminder);
@@ -1062,10 +1068,13 @@ const CalendarPage = {
 
         if (reminders.length === 0) {
             list.innerHTML = `
-                <div class="empty-state">
+                <div class="empty-state-gio">
                     <p>Nenhum lembrete para esta data</p>
-                    <button class="btn btn-sm btn-primary" onclick="CalendarPage.showReminderForm('${dateStr}')">
-                        + Adicionar Lembrete
+                    <button class="btn-gio-primary btn-sm-gio" onclick="CalendarPage.showReminderForm('${dateStr}')">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        Adicionar Lembrete
                     </button>
                 </div>
             `;
@@ -1108,29 +1117,29 @@ const CalendarPage = {
         };
 
         return `
-            <div class="reminder-item ${reminder.completed ? 'completed' : ''} ${reminder.isOverdue() ? 'overdue' : ''}"
+            <div class="reminder-item-gio ${reminder.completed ? 'completed' : ''} ${reminder.isOverdue() ? 'overdue' : ''}"
                  data-id="${reminder.id}">
-                <div class="reminder-header">
-                    <span class="reminder-type-icon">${typeIcons[reminder.type]}</span>
-                    <span class="reminder-type-label">${reminder.getTypeLabel()}</span>
+                <div class="reminder-item-header-gio">
+                    <span class="reminder-type-icon-gio">${typeIcons[reminder.type]}</span>
+                    <span class="reminder-type-label-gio">${reminder.getTypeLabel()}</span>
                     ${reminder.created_by_name ? `
-                        <span class="reminder-author">
+                        <span class="reminder-author-gio">
                             <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="vertical-align:middle;">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                             </svg>
                             ${this.getShortName(reminder.created_by_name)}
                         </span>
                     ` : ''}
-                    <span class="reminder-priority" style="background: ${priorityColors[reminder.priority]};">
+                    <span class="reminder-priority-gio" style="background: ${priorityColors[reminder.priority]};">
                         ${reminder.getPriorityLabel()}
                     </span>
                 </div>
-                <div class="reminder-content ${reminder.completed ? 'strikethrough' : ''}">
+                <div class="reminder-content-gio ${reminder.completed ? 'strikethrough' : ''}">
                     ${reminder.content}
                 </div>
-                <div class="reminder-actions">
+                <div class="reminder-actions-gio">
                     ${reminder.type === 'task' ? `
-                        <button class="btn-icon" onclick="CalendarPage.toggleReminderComplete('${reminder.id}')"
+                        <button class="action-btn-gio ${reminder.completed ? 'toggle' : 'edit'}" onclick="CalendarPage.toggleReminderComplete('${reminder.id}')"
                                 title="${reminder.completed ? 'Desmarcar' : 'Marcar como concluída'}">
                             ${reminder.completed ? `
                                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1144,12 +1153,12 @@ const CalendarPage = {
                         </button>
                     ` : ''}
                     ${this.canEditReminder(reminder) ? `
-                        <button class="btn-icon" onclick="CalendarPage.editReminder('${reminder.id}')" title="Editar">
+                        <button class="action-btn-gio edit" onclick="CalendarPage.editReminder('${reminder.id}')" title="Editar">
                             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                             </svg>
                         </button>
-                        <button class="btn-icon text-danger" onclick="CalendarPage.deleteReminder('${reminder.id}')" title="Excluir">
+                        <button class="action-btn-gio delete" onclick="CalendarPage.deleteReminder('${reminder.id}')" title="Excluir">
                             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                             </svg>
@@ -1389,49 +1398,120 @@ const CalendarPage = {
      * Adiciona estilos CSS da página
      */
     addStyles() {
-        if (document.getElementById('calendar-page-styles')) return;
+        if (document.getElementById('calendar-page-styles-gio')) return;
 
         const style = document.createElement('style');
-        style.id = 'calendar-page-styles';
+        style.id = 'calendar-page-styles-gio';
         style.textContent = `
-            /* Container Principal */
-            .calendar-page-container {
+            /* ========== CALENDAR PAGE GIO ========== */
+
+            .calendar-page-gio {
                 display: grid;
-                grid-template-columns: 1fr 350px;
+                grid-template-columns: 1fr 380px;
                 gap: 24px;
                 padding: 24px;
-                max-width: 1600px;
+                max-width: 1700px;
                 margin: 0 auto;
             }
 
-            /* Calendário */
-            .calendar-main {
-                background: var(--bg-card, white);
-                border-radius: var(--radius, 8px);
-                padding: 20px;
-                box-shadow: var(--shadow-md, 0 4px 6px rgba(0,0,0,0.1));
+            /* Calendário Principal GIO */
+            .calendar-main-gio {
+                background: white;
+                border-radius: 16px;
+                padding: 24px;
+                box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
             }
 
-            /* Ajustes do FullCalendar */
+            /* Ajustes do FullCalendar GIO */
             #fullcalendar {
                 font-family: inherit;
             }
 
+            .fc .fc-toolbar-title {
+                font-size: 1.3rem !important;
+                font-weight: 600 !important;
+                color: #1e6076 !important;
+            }
+
             .fc .fc-button-primary {
-                background-color: var(--top-blue, #1e6076) !important;
-                border-color: var(--top-blue, #1e6076) !important;
+                background: linear-gradient(135deg, #12b0a0 0%, #0d9488 100%) !important;
+                border: none !important;
+                font-weight: 500 !important;
+                padding: 8px 16px !important;
+                border-radius: 8px !important;
+                box-shadow: 0 2px 6px rgba(18, 176, 160, 0.3) !important;
+                transition: all 0.2s ease !important;
             }
 
             .fc .fc-button-primary:hover {
-                background-color: var(--top-teal, #2dd4bf) !important;
-                border-color: var(--top-teal, #2dd4bf) !important;
+                transform: translateY(-1px) !important;
+                box-shadow: 0 4px 12px rgba(18, 176, 160, 0.4) !important;
+            }
+
+            .fc .fc-button-primary:not(:disabled).fc-button-active {
+                background: linear-gradient(135deg, #1e6076 0%, #154555 100%) !important;
             }
 
             .fc .fc-button-primary:disabled {
                 opacity: 0.5;
             }
 
-            /* Estilos dos eventos - FORÇA cores customizadas */
+            .fc .fc-col-header-cell {
+                background: linear-gradient(135deg, #1e6076 0%, #154555 100%) !important;
+                color: white !important;
+                padding: 10px 0 !important;
+            }
+
+            .fc .fc-col-header-cell-cushion {
+                color: white !important;
+                font-weight: 600 !important;
+                text-transform: uppercase !important;
+                font-size: 11px !important;
+                letter-spacing: 0.5px !important;
+                padding: 8px 4px !important;
+            }
+
+            /* Fix: Dia atual na view de Semana - garante contraste */
+            .fc .fc-day-today .fc-col-header-cell-cushion,
+            .fc .fc-col-header-cell.fc-day-today .fc-col-header-cell-cushion,
+            .fc-timegrid .fc-col-header-cell.fc-day-today .fc-col-header-cell-cushion {
+                color: #1e6076 !important;
+                font-weight: 700 !important;
+            }
+
+            .fc .fc-col-header-cell.fc-day-today {
+                background: rgba(18, 176, 160, 0.15) !important;
+            }
+
+            .fc .fc-daygrid-day-number {
+                color: #374151 !important;
+                font-weight: 500 !important;
+                padding: 8px !important;
+            }
+
+            .fc .fc-day-today {
+                background: rgba(18, 176, 160, 0.08) !important;
+            }
+
+            .fc-daygrid-day.fc-day-today .fc-daygrid-day-top {
+                display: flex;
+                justify-content: flex-end;
+            }
+
+            .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
+                background: linear-gradient(135deg, #12b0a0 0%, #0d9488 100%) !important;
+                color: white !important;
+                border-radius: 50% !important;
+                width: 28px !important;
+                height: 28px !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                margin: 4px !important;
+                padding: 0 !important;
+            }
+
+            /* Estilos dos eventos GIO */
             .fc-event {
                 border-radius: 6px !important;
                 padding: 4px 8px !important;
@@ -1449,7 +1529,6 @@ const CalendarPage = {
                 z-index: 10 !important;
             }
 
-            /* CRITICAL: Força cores customizadas a sobrescrever padrões do FullCalendar */
             .fc-event,
             .fc-event-main,
             .fc-daygrid-event,
@@ -1468,7 +1547,6 @@ const CalendarPage = {
                 font-weight: inherit !important;
             }
 
-            /* Eventos de iniciativa - departamento do usuário */
             .fc-event.event-initiative.user-dept {
                 border-width: 3px !important;
                 font-weight: 700 !important;
@@ -1476,7 +1554,6 @@ const CalendarPage = {
                 font-size: 13px !important;
             }
 
-            /* Eventos de iniciativa - outros departamentos */
             .fc-event.event-initiative.other-dept {
                 border-width: 1px !important;
                 font-weight: 400 !important;
@@ -1484,26 +1561,22 @@ const CalendarPage = {
                 font-size: 11px !important;
             }
 
-            /* Eventos concluídos */
             .fc-event.completed {
                 opacity: 0.5 !important;
                 text-decoration: line-through !important;
             }
 
-            /* Overdue - indicador vermelho forte */
             .fc-event.event-initiative.overdue:not(.completed) {
                 border-left-width: 5px !important;
                 border-left-color: #ef4444 !important;
                 background-image: linear-gradient(to right, rgba(239, 68, 68, 0.1), transparent) !important;
             }
 
-            /* Eventos de lembrete */
             .fc-event.event-reminder {
                 border-style: dashed !important;
                 font-style: italic;
             }
 
-            /* Eventos de ciclo */
             .fc-event.event-cycle {
                 font-weight: 700 !important;
                 border-width: 3px !important;
@@ -1520,7 +1593,6 @@ const CalendarPage = {
                 background-image: linear-gradient(to left, rgba(220, 38, 38, 0.2), transparent) !important;
             }
 
-            /* Eventos de minicíclo */
             .fc-event.event-minicycle {
                 font-weight: 600 !important;
                 border-width: 2px !important;
@@ -1538,518 +1610,223 @@ const CalendarPage = {
                 background-image: linear-gradient(to left, rgba(217, 119, 6, 0.2), transparent) !important;
             }
 
-            /* Painel de Lembretes */
-            .reminders-panel {
-                background: var(--bg-card, white);
-                border-radius: var(--radius, 8px);
+            /* ========== REMINDERS PANEL GIO ========== */
+
+            .reminders-panel-gio {
+                background: white;
+                border-radius: 16px;
                 padding: 20px;
-                box-shadow: var(--shadow-md, 0 4px 6px rgba(0,0,0,0.1));
+                box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
                 display: flex;
                 flex-direction: column;
                 max-height: calc(100vh - 150px);
                 overflow: hidden;
             }
 
-            .reminders-header {
+            .reminders-header-gio {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
                 margin-bottom: 16px;
-                padding-bottom: 12px;
-                border-bottom: 2px solid var(--border, #e2e8f0);
+                padding-bottom: 16px;
+                border-bottom: 2px solid #E5E7EB;
             }
 
-            .reminders-header h3 {
+            .reminders-header-gio h3 {
                 margin: 0;
                 font-size: 18px;
-                color: var(--text-primary, #1e293b);
+                font-weight: 600;
+                color: #1e6076;
             }
 
-            .selected-date-info {
+            .selected-date-info-gio {
                 margin-bottom: 16px;
-                padding: 12px;
-                background: var(--bg-main, #f8fafc);
-                border-radius: 6px;
+                padding: 14px;
+                background: linear-gradient(135deg, rgba(18, 176, 160, 0.08) 0%, rgba(30, 96, 118, 0.05) 100%);
+                border-radius: 10px;
                 text-align: center;
+                border: 1px solid rgba(18, 176, 160, 0.15);
             }
 
-            .date-display {
+            .date-display-gio {
                 font-size: 13px;
-                color: var(--text-secondary, #64748b);
-                font-weight: 500;
+                color: #1e6076;
+                font-weight: 600;
                 text-transform: capitalize;
             }
 
-            .reminders-list {
+            .reminders-list-gio {
                 flex: 1;
                 overflow-y: auto;
                 margin-bottom: 16px;
             }
 
-            .reminder-date-group {
+            .reminder-date-group-gio {
                 margin-bottom: 16px;
             }
 
-            .reminder-date-header {
+            .reminder-date-header-gio {
                 font-size: 11px;
-                font-weight: 600;
-                color: var(--text-muted, #94a3b8);
+                font-weight: 700;
+                color: #12b0a0;
                 text-transform: uppercase;
                 margin-bottom: 8px;
                 padding-left: 4px;
+                letter-spacing: 0.5px;
             }
 
-            .reminder-item {
+            /* ========== REMINDER ITEM GIO ========== */
+
+            .reminder-item-gio {
                 background: white;
-                border: 1px solid var(--border, #e2e8f0);
-                border-radius: 8px;
-                padding: 12px;
-                margin-bottom: 8px;
-                transition: all 0.2s;
+                border: 1px solid #E5E7EB;
+                border-radius: 12px;
+                padding: 14px;
+                margin-bottom: 10px;
+                transition: all 0.2s ease;
             }
 
-            .reminder-item:hover {
-                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                border-color: var(--top-teal, #2dd4bf);
+            .reminder-item-gio:hover {
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+                border-color: #12b0a0;
+                transform: translateY(-2px);
             }
 
-            .reminder-item.completed {
+            .reminder-item-gio.completed {
                 opacity: 0.6;
-                background: #f9fafb;
+                background: #F9FAFB;
             }
 
-            .reminder-item.overdue {
-                border-left: 3px solid #ef4444;
+            .reminder-item-gio.overdue {
+                border-left: 4px solid #ef4444;
             }
 
-            .reminder-header {
+            .reminder-item-header-gio {
                 display: flex;
                 align-items: center;
-                gap: 6px;
-                margin-bottom: 8px;
+                gap: 8px;
+                margin-bottom: 10px;
             }
 
-            .reminder-type-icon {
+            .reminder-type-icon-gio {
                 display: inline-flex;
                 align-items: center;
+                color: #6B7280;
             }
 
-            .reminder-type-icon svg {
+            .reminder-type-icon-gio svg {
                 width: 16px;
                 height: 16px;
             }
 
-            .reminder-type-label {
-                font-size: 11px;
-                color: var(--text-muted, #94a3b8);
+            .reminder-type-label-gio {
+                font-size: 10px;
+                color: #6B7280;
                 text-transform: uppercase;
-                font-weight: 600;
+                font-weight: 700;
+                letter-spacing: 0.3px;
             }
 
-            .reminder-author {
+            .reminder-author-gio {
                 font-size: 11px;
-                color: var(--text-muted, #94a3b8);
+                color: #9CA3AF;
                 display: inline-flex;
                 align-items: center;
-                gap: 3px;
+                gap: 4px;
             }
 
-            .reminder-priority {
+            .reminder-priority-gio {
                 margin-left: auto;
-                padding: 2px 6px;
-                border-radius: 4px;
+                padding: 3px 8px;
+                border-radius: 10px;
                 font-size: 9px;
                 color: white;
-                font-weight: 600;
+                font-weight: 700;
                 text-transform: uppercase;
+                letter-spacing: 0.3px;
             }
 
-            .reminder-content {
+            .reminder-content-gio {
                 font-size: 13px;
-                color: var(--text-primary, #1e293b);
-                margin-bottom: 8px;
+                color: #1F2937;
+                margin-bottom: 10px;
                 line-height: 1.5;
             }
 
-            .reminder-content.strikethrough {
+            .reminder-content-gio.strikethrough {
                 text-decoration: line-through;
+                color: #9CA3AF;
             }
 
-            .reminder-actions {
+            .reminder-actions-gio {
                 display: flex;
-                gap: 4px;
+                gap: 6px;
                 justify-content: flex-end;
             }
 
-            .btn-icon {
-                background: none;
-                border: none;
-                cursor: pointer;
-                padding: 4px 8px;
-                border-radius: 4px;
-                font-size: 14px;
-                transition: background 0.2s;
-            }
+            /* ========== REMINDER FORM GIO ========== */
 
-            .btn-icon:hover {
-                background: var(--bg-main, #f8fafc);
-            }
-
-            .text-danger:hover {
-                background: #fee2e2;
-            }
-
-            /* Formulário de Lembrete */
-            .reminder-form-container {
-                border-top: 2px solid var(--border, #e2e8f0);
+            .reminder-form-container-gio {
+                border-top: 2px solid #E5E7EB;
                 padding-top: 16px;
             }
 
-            .form-row {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 12px;
-            }
-
-            .form-group {
-                margin-bottom: 12px;
-            }
-
-            .form-group label,
-            .form-label {
-                display: block;
-                font-size: 12px;
-                font-weight: 600;
-                color: var(--text-secondary, #64748b);
-                margin-bottom: 4px;
-            }
-
-            .form-control {
-                width: 100%;
-                padding: 8px 12px;
-                border: 1px solid var(--border, #e2e8f0);
-                border-radius: 6px;
-                font-size: 13px;
-                font-family: inherit;
-            }
-
-            .form-control:focus {
-                outline: none;
-                border-color: var(--top-teal, #2dd4bf);
-                box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.1);
-            }
-
-            textarea.form-control {
-                resize: vertical;
-                min-height: 80px;
-            }
-
-            .char-count {
+            .char-count-gio {
                 display: block;
                 text-align: right;
                 font-size: 11px;
-                color: var(--text-muted, #94a3b8);
+                color: #9CA3AF;
                 margin-top: 4px;
             }
 
-            .form-actions {
+            .form-actions-gio {
                 display: flex;
-                gap: 8px;
+                gap: 10px;
                 justify-content: flex-end;
                 margin-top: 16px;
             }
 
-            /* Modal de Iniciativa - Estilos Base */
-            .modal-overlay {
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: rgba(0, 0, 0, 0.5);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 9999;
-                padding: 20px;
-            }
+            /* ========== EMPTY STATE GIO ========== */
 
-            .modal-container {
-                background: white;
-                border-radius: 12px;
-                box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
-                max-width: 600px;
-                width: 100%;
-                max-height: 90vh;
-                overflow: hidden;
-                display: flex;
-                flex-direction: column;
-            }
-
-            .modal-large {
-                max-width: 700px;
-            }
-
-            .modal-header {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                padding: 20px 24px;
-                border-bottom: 1px solid var(--border, #e2e8f0);
-            }
-
-            .modal-title-group {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                flex: 1;
-            }
-
-            .modal-title {
-                margin: 0;
-                font-size: 18px;
-                font-weight: 700;
-                color: var(--text-primary, #1e293b);
-            }
-
-            .modal-close {
-                background: none;
-                border: none;
-                cursor: pointer;
-                padding: 8px;
-                border-radius: 6px;
-                color: var(--text-muted, #94a3b8);
-                transition: all 0.2s;
-            }
-
-            .modal-close:hover {
-                background: var(--bg-main, #f8fafc);
-                color: var(--text-primary, #1e293b);
-            }
-
-            .modal-body {
-                padding: 24px;
-                overflow-y: auto;
-                flex: 1;
-            }
-
-            .modal-footer {
-                display: flex;
-                justify-content: flex-end;
-                gap: 12px;
-                padding: 16px 24px;
-                border-top: 1px solid var(--border, #e2e8f0);
-                background: var(--bg-main, #f8fafc);
-            }
-
-            .dept-badge {
-                padding: 4px 12px;
-                border-radius: 4px;
-                font-size: 11px;
-                font-weight: 600;
-                text-transform: uppercase;
-                white-space: nowrap;
-            }
-
-            .responsible-badges {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 6px;
-                margin-top: 8px;
-            }
-
-            .progress-section {
-                margin-bottom: 24px;
-                padding: 16px;
-                background: var(--bg-main, #f8fafc);
-                border-radius: 8px;
-            }
-
-            .progress-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 8px;
-            }
-
-            .progress-value-display {
-                font-size: 18px;
-                font-weight: 700;
-                color: var(--top-blue, #1e6076);
-            }
-
-            .progress-bar-container {
-                height: 12px;
-                background: #e2e8f0;
-                border-radius: 6px;
-                overflow: hidden;
-                margin-bottom: 12px;
-            }
-
-            .progress-bar {
-                height: 100%;
-                transition: width 0.3s ease;
-                border-radius: 6px;
-            }
-
-            .progress-slider {
-                width: 100%;
-                cursor: pointer;
-            }
-
-            .details-grid {
-                display: grid;
-                gap: 16px;
-                margin-bottom: 20px;
-            }
-
-            .detail-item {
-                border-left: 3px solid var(--top-teal, #2dd4bf);
-                padding-left: 12px;
-            }
-
-            .detail-item strong {
-                display: block;
-                font-size: 12px;
-                color: var(--text-muted, #94a3b8);
-                text-transform: uppercase;
-                margin-bottom: 4px;
-            }
-
-            .detail-item p {
-                margin: 0;
-                font-size: 14px;
-                color: var(--text-primary, #1e293b);
-            }
-
-            .alert {
-                padding: 12px 16px;
-                border-radius: 6px;
-                margin-bottom: 16px;
-                font-size: 14px;
-            }
-
-            .alert-warning {
-                background: #fef3c7;
-                color: #92400e;
-                border-left: 4px solid #f59e0b;
-            }
-
-            .alert-success {
-                background: #d1fae5;
-                color: #065f46;
-                border-left: 4px solid #10b981;
-            }
-
-            .comment-section,
-            .evidence-section {
-                margin-top: 20px;
-                padding-top: 20px;
-                border-top: 1px solid var(--border, #e2e8f0);
-            }
-
-            .comment-section strong,
-            .evidence-section strong {
-                display: block;
-                font-size: 13px;
-                color: var(--text-primary, #1e293b);
-                margin-bottom: 8px;
-            }
-
-            .comment-section p {
-                margin: 0;
-                font-size: 14px;
-                color: var(--text-secondary, #64748b);
-                line-height: 1.6;
-            }
-
-            .evidence-list {
-                margin: 8px 0;
-                padding-left: 20px;
-                list-style: disc;
-            }
-
-            .evidence-list li {
-                margin-bottom: 8px;
-                font-size: 14px;
-                color: var(--text-secondary, #64748b);
-            }
-
-            .evidence-list a {
-                color: var(--top-blue, #1e6076);
-                text-decoration: none;
-                font-weight: 500;
-            }
-
-            .evidence-list a:hover {
-                text-decoration: underline;
-                color: var(--top-teal, #2dd4bf);
-            }
-
-            /* Botões do Sistema */
-            .btn {
-                padding: 10px 20px;
-                border: none;
-                border-radius: 6px;
-                font-size: 14px;
-                font-weight: 600;
-                cursor: pointer;
-                transition: all 0.2s;
-                display: inline-flex;
-                align-items: center;
-                gap: 8px;
-            }
-
-            .btn-primary {
-                background: var(--top-teal, #2dd4bf);
-                color: white;
-            }
-
-            .btn-primary:hover {
-                background: var(--top-blue, #1e6076);
-            }
-
-            .btn-secondary {
-                background: var(--bg-main, #f8fafc);
-                color: var(--text-secondary, #64748b);
-                border: 1px solid var(--border, #e2e8f0);
-            }
-
-            .btn-secondary:hover {
-                background: white;
-                border-color: var(--text-muted, #94a3b8);
-            }
-
-            .btn-sm {
-                padding: 6px 12px;
-                font-size: 12px;
-            }
-
-            /* Empty State */
-            .empty-state {
+            .empty-state-gio {
                 text-align: center;
                 padding: 40px 20px;
-                color: var(--text-muted, #94a3b8);
+                color: #9CA3AF;
             }
 
-            .empty-state p {
+            .empty-state-gio svg {
+                margin-bottom: 12px;
+                opacity: 0.5;
+            }
+
+            .empty-state-gio p {
                 margin: 0 0 12px 0;
                 font-size: 14px;
+                color: #6B7280;
             }
 
-            .empty-state small {
+            .empty-state-gio small {
                 font-size: 12px;
+                color: #9CA3AF;
             }
 
-            /* Toast */
+            /* ========== BTN SM GIO ========== */
+
+            .btn-sm-gio {
+                padding: 6px 14px !important;
+                font-size: 12px !important;
+            }
+
+            /* ========== TOAST GIO ========== */
+
             .toast {
                 position: fixed;
                 bottom: 24px;
                 right: 24px;
                 background: white;
-                padding: 12px 20px;
-                border-radius: 8px;
-                box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+                padding: 14px 20px;
+                border-radius: 12px;
+                box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
                 display: flex;
                 align-items: center;
                 gap: 12px;
@@ -2092,37 +1869,327 @@ const CalendarPage = {
 
             .toast-message {
                 font-size: 14px;
-                color: var(--text-primary, #1e293b);
+                color: #1F2937;
             }
 
-            /* Responsivo */
+            /* ========== MODAL GIO ========== */
+
+            .modal-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                backdrop-filter: blur(4px);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 9999;
+                padding: 20px;
+            }
+
+            .modal-container {
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+                max-width: 600px;
+                width: 100%;
+                max-height: 90vh;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                animation: modalSlideIn 0.3s ease;
+            }
+
+            @keyframes modalSlideIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(-20px) scale(0.95);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0) scale(1);
+                }
+            }
+
+            .modal-large {
+                max-width: 700px;
+            }
+
+            .modal-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 20px 24px;
+                background: linear-gradient(135deg, #1e6076 0%, #154555 100%);
+                color: white;
+            }
+
+            .modal-title-group {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                flex: 1;
+            }
+
+            .modal-title {
+                margin: 0;
+                font-size: 18px;
+                font-weight: 600;
+                color: white;
+            }
+
+            .modal-close {
+                background: rgba(255, 255, 255, 0.15);
+                border: none;
+                cursor: pointer;
+                padding: 8px;
+                border-radius: 8px;
+                color: white;
+                transition: all 0.2s;
+            }
+
+            .modal-close:hover {
+                background: rgba(255, 255, 255, 0.25);
+            }
+
+            .modal-body {
+                padding: 24px;
+                overflow-y: auto;
+                flex: 1;
+            }
+
+            .modal-footer {
+                display: flex;
+                justify-content: flex-end;
+                gap: 12px;
+                padding: 16px 24px;
+                border-top: 1px solid #E5E7EB;
+                background: #F9FAFB;
+            }
+
+            .modal-footer .btn-primary,
+            .modal-footer .btn {
+                background: linear-gradient(135deg, #12b0a0 0%, #0d9488 100%);
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                transition: all 0.2s;
+            }
+
+            .modal-footer .btn-primary:hover,
+            .modal-footer .btn:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(18, 176, 160, 0.3);
+            }
+
+            .modal-footer .btn-secondary {
+                background: white;
+                color: #374151;
+                border: 1px solid #E5E7EB;
+            }
+
+            .modal-footer .btn-secondary:hover {
+                background: #F9FAFB;
+                transform: none;
+                box-shadow: none;
+            }
+
+            .dept-badge {
+                padding: 4px 12px;
+                border-radius: 20px;
+                font-size: 11px;
+                font-weight: 600;
+                text-transform: uppercase;
+                white-space: nowrap;
+            }
+
+            .progress-section {
+                margin-bottom: 24px;
+                padding: 18px;
+                background: linear-gradient(135deg, rgba(18, 176, 160, 0.08) 0%, rgba(30, 96, 118, 0.05) 100%);
+                border-radius: 12px;
+                border: 1px solid rgba(18, 176, 160, 0.15);
+            }
+
+            .progress-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 10px;
+            }
+
+            .progress-value-display {
+                font-size: 20px;
+                font-weight: 700;
+                color: #12b0a0;
+            }
+
+            .progress-bar-container {
+                height: 10px;
+                background: #E5E7EB;
+                border-radius: 5px;
+                overflow: hidden;
+                margin-bottom: 12px;
+            }
+
+            .progress-bar {
+                height: 100%;
+                background: linear-gradient(90deg, #12b0a0 0%, #0d9488 100%);
+                transition: width 0.3s ease;
+                border-radius: 5px;
+            }
+
+            .progress-slider {
+                width: 100%;
+                cursor: pointer;
+                accent-color: #12b0a0;
+            }
+
+            .details-grid {
+                display: grid;
+                gap: 16px;
+                margin-bottom: 20px;
+            }
+
+            .detail-item {
+                border-left: 3px solid #12b0a0;
+                padding-left: 12px;
+            }
+
+            .detail-item strong {
+                display: block;
+                font-size: 11px;
+                color: #9CA3AF;
+                text-transform: uppercase;
+                margin-bottom: 4px;
+                letter-spacing: 0.3px;
+            }
+
+            .detail-item p {
+                margin: 0;
+                font-size: 14px;
+                color: #1F2937;
+            }
+
+            .alert {
+                padding: 14px 16px;
+                border-radius: 10px;
+                margin-bottom: 16px;
+                font-size: 14px;
+            }
+
+            .alert-warning {
+                background: rgba(245, 158, 11, 0.1);
+                color: #92400e;
+                border-left: 4px solid #f59e0b;
+            }
+
+            .alert-success {
+                background: rgba(16, 185, 129, 0.1);
+                color: #065f46;
+                border-left: 4px solid #10b981;
+            }
+
+            .responsible-badges {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+                margin-top: 8px;
+            }
+
+            .comment-section,
+            .evidence-section {
+                margin-top: 20px;
+                padding-top: 20px;
+                border-top: 1px solid #E5E7EB;
+            }
+
+            .comment-section strong,
+            .evidence-section strong {
+                display: block;
+                font-size: 13px;
+                color: #1F2937;
+                margin-bottom: 8px;
+            }
+
+            .comment-section p {
+                margin: 0;
+                font-size: 14px;
+                color: #4B5563;
+                line-height: 1.6;
+            }
+
+            .evidence-list {
+                margin: 8px 0;
+                padding-left: 20px;
+                list-style: disc;
+            }
+
+            .evidence-list li {
+                margin-bottom: 8px;
+                font-size: 14px;
+                color: #4B5563;
+            }
+
+            .evidence-list a {
+                color: #12b0a0;
+                text-decoration: none;
+                font-weight: 500;
+            }
+
+            .evidence-list a:hover {
+                text-decoration: underline;
+                color: #0d9488;
+            }
+
+            /* ========== RESPONSIVO GIO ========== */
+
             @media (max-width: 1024px) {
-                .calendar-page-container {
+                .calendar-page-gio {
                     grid-template-columns: 1fr;
                 }
 
-                .reminders-panel {
+                .reminders-panel-gio {
                     max-height: 500px;
                 }
             }
 
             @media (max-width: 640px) {
-                .calendar-page-container {
-                    padding: 12px;
+                .calendar-page-gio {
+                    padding: 16px;
                     gap: 16px;
                 }
 
-                .calendar-main,
-                .reminders-panel {
-                    padding: 12px;
+                .calendar-main-gio,
+                .reminders-panel-gio {
+                    padding: 16px;
                 }
 
-                .form-row {
-                    grid-template-columns: 1fr;
+                .form-row-gio {
+                    flex-direction: column;
+                    gap: 0;
                 }
 
                 .modal-large {
                     max-width: 95%;
+                }
+
+                .form-actions-gio {
+                    flex-direction: column;
+                }
+
+                .form-actions-gio button {
+                    width: 100%;
+                    justify-content: center;
                 }
             }
         `;
