@@ -14,106 +14,102 @@ const UsersPage = {
         const departments = await Department.getActive();
 
         content.innerHTML = `
-            <div style="display:flex;justify-content:flex-end;margin-bottom:24px;">
-                <button class="btn btn-primary" onclick="UsersPage.openModal()">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                    </svg>
-                    Novo Usuário
-                </button>
-            </div>
+            <div class="page-gio-users">
+                <!-- Action Button -->
+                <div class="page-actions-gio">
+                    <button class="btn-gio-primary" onclick="UsersPage.openModal()">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        Novo Usuário
+                    </button>
+                </div>
 
-            <div class="card">
-                <div class="card-body">
+                <!-- Content Card -->
+                <div class="card-gio">
                     ${users.length === 0 ? `
-                        <div style="text-align:center;padding:60px 20px;">
-                            <svg style="width:64px;height:64px;color:var(--text-muted);opacity:0.3;margin:0 auto 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-                            </svg>
-                            <p style="color:var(--text-muted);font-size:15px;margin-bottom:16px;">Nenhum usuário cadastrado</p>
-                            <button class="btn btn-primary" onclick="UsersPage.openModal()">
-                                Criar primeiro usuário
+                        <div class="empty-state-gio">
+                            <div class="empty-state-icon">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                                </svg>
+                            </div>
+                            <h3>Nenhum usuário cadastrado</h3>
+                            <p>Comece criando seu primeiro usuário</p>
+                            <button class="btn-gio-primary" onclick="UsersPage.openModal()">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                                Criar Usuário
                             </button>
                         </div>
                     ` : `
-                        <div class="users-table-container">
-                            <table class="users-table">
+                        <div class="table-gio-container">
+                            <table class="table-gio">
                                 <thead>
                                     <tr>
-                                        <th style="min-width:220px;">Usuário</th>
-                                        <th style="min-width:200px;">Email</th>
-                                        <th style="min-width:150px;">Departamento</th>
-                                        <th style="min-width:100px;">Tipo</th>
-                                        <th style="min-width:120px;text-align:right;">Ações</th>
+                                        <th style="min-width:200px;">Usuário</th>
+                                        <th style="min-width:180px;">Email</th>
+                                        <th style="min-width:140px;">Departamento</th>
+                                        <th style="min-width:90px;text-align:center;">Tipo</th>
+                                        <th style="width:100px;text-align:center;">Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     ${users.map(user => {
-                                        // Suporta múltiplos departamentos ou legado
                                         const userDepts = user.departments && user.departments.length > 0
                                             ? user.departments
                                             : (user.departamento_id ? [departments.find(d => d.id === user.departamento_id)].filter(Boolean) : []);
                                         return `
-                                        <tr class="user-row ${!user.ativo ? 'inactive' : ''}">
+                                        <tr class="${!user.ativo ? 'row-inactive' : ''}">
                                             <td>
-                                                <div class="user-info">
-                                                    <div class="user-avatar ${user.ativo ? 'active' : 'inactive'}">
+                                                <div class="table-cell-info">
+                                                    <div class="user-avatar-gio ${user.ativo ? 'active' : 'inactive'}">
                                                         ${user.nome.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
                                                     </div>
-                                                    <div class="user-details">
-                                                        <div class="user-name">${user.nome}</div>
-                                                        <div class="user-status">
-                                                            <span class="status-dot ${user.ativo ? 'active' : 'inactive'}"></span>
+                                                    <div class="user-details-gio">
+                                                        <span class="user-name-gio">${user.nome}</span>
+                                                        <span class="user-status-gio ${user.ativo ? 'active' : 'inactive'}">
                                                             ${user.ativo ? 'Ativo' : 'Inativo'}
-                                                        </div>
+                                                        </span>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td class="user-email">${user.email}</td>
+                                            <td class="email-cell">${user.email}</td>
                                             <td>
-                                                <div class="dept-badges">
+                                                <div class="dept-badges-gio">
                                                     ${userDepts.length > 0
-                                                        ? userDepts.map(d => `<span class="dept-badge">${d.nome}</span>`).join('')
-                                                        : '<span class="dept-badge empty">N/A</span>'
+                                                        ? userDepts.map(d => `<span class="dept-badge-gio">${d.nome}</span>`).join('')
+                                                        : '<span class="dept-badge-gio empty">N/A</span>'
                                                     }
                                                 </div>
                                             </td>
-                                            <td>
-                                                <span class="type-badge ${user.tipo}">
+                                            <td style="text-align:center;">
+                                                <span class="type-badge-gio ${user.tipo}">
                                                     ${user.tipo === 'admin' ? 'Admin' : user.tipo === 'consultor' ? 'Consultor' : 'Colab.'}
                                                 </span>
                                             </td>
-                                            <td class="actions-cell">
-                                                <div class="action-menu">
-                                                    <button class="action-menu-btn" onclick="UsersPage.toggleMenu(event, '${user.id}')" title="Ações">
+                                            <td style="text-align:center;">
+                                                <div class="action-buttons">
+                                                    <button class="action-btn" onclick="UsersPage.edit('${user.id}')" title="Editar">
                                                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                                         </svg>
                                                     </button>
-                                                    <div class="action-menu-dropdown" id="menu-${user.id}">
-                                                        <button class="menu-item" onclick="UsersPage.edit('${user.id}'); UsersPage.closeAllMenus();">
-                                                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                                            </svg>
-                                                            Editar
-                                                        </button>
-                                                        <button class="menu-item ${user.ativo ? 'warning' : 'success'}" onclick="UsersPage.toggleStatus('${user.id}'); UsersPage.closeAllMenus();">
-                                                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                ${user.ativo ? `
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
-                                                                ` : `
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                                                `}
-                                                            </svg>
-                                                            ${user.ativo ? 'Inativar' : 'Ativar'}
-                                                        </button>
-                                                        <button class="menu-item danger" onclick="UsersPage.deleteUser('${user.id}', '${user.nome}'); UsersPage.closeAllMenus();">
-                                                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                                            </svg>
-                                                            Excluir
-                                                        </button>
-                                                    </div>
+                                                    <button class="action-btn ${user.ativo ? 'warning' : 'success'}" onclick="UsersPage.toggleStatus('${user.id}')" title="${user.ativo ? 'Inativar' : 'Ativar'}">
+                                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            ${user.ativo ? `
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                                                            ` : `
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                            `}
+                                                        </svg>
+                                                    </button>
+                                                    <button class="action-btn danger" onclick="UsersPage.deleteUser('${user.id}', '${user.nome}')" title="Excluir">
+                                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                        </svg>
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -128,6 +124,8 @@ const UsersPage = {
             <div id="user-modal" style="display:none;"></div>
             <div id="delete-confirmation-modal" style="display:none;"></div>
         `;
+
+        this.addStyles();
     },
 
     async openModal(id = null) {
@@ -459,6 +457,333 @@ const UsersPage = {
 
     closeAllMenus() {
         window.closeAllDropdownMenus();
+    },
+
+    addStyles() {
+        if (document.getElementById('users-gio-styles')) return;
+
+        const style = document.createElement('style');
+        style.id = 'users-gio-styles';
+        style.textContent = `
+            /* ===== PAGE GIO USERS STYLES ===== */
+            .page-gio-users {
+                background: #f5f9ff;
+                margin: -24px;
+                padding: 24px;
+                min-height: calc(100vh - 140px);
+            }
+
+            .page-actions-gio {
+                display: flex;
+                justify-content: flex-end;
+                margin-bottom: 20px;
+            }
+
+            .btn-gio-primary {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 10px 20px;
+                background: linear-gradient(135deg, #12b0a0 0%, #0d9488 100%);
+                color: white;
+                border: none;
+                border-radius: 10px;
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                box-shadow: 0 2px 8px rgba(18, 176, 160, 0.3);
+            }
+
+            .btn-gio-primary:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 16px rgba(18, 176, 160, 0.4);
+            }
+
+            .btn-gio-primary svg {
+                width: 18px;
+                height: 18px;
+            }
+
+            .card-gio {
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+                overflow: hidden;
+            }
+
+            /* Empty State */
+            .empty-state-gio {
+                text-align: center;
+                padding: 60px 20px;
+            }
+
+            .empty-state-icon {
+                width: 72px;
+                height: 72px;
+                border-radius: 20px;
+                background: rgba(18, 176, 160, 0.1);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin: 0 auto 20px;
+            }
+
+            .empty-state-icon svg {
+                width: 36px;
+                height: 36px;
+                color: #12b0a0;
+            }
+
+            .empty-state-gio h3 {
+                font-size: 18px;
+                font-weight: 700;
+                color: #1f2937;
+                margin: 0 0 8px 0;
+            }
+
+            .empty-state-gio p {
+                font-size: 14px;
+                color: #64748b;
+                margin: 0 0 24px 0;
+            }
+
+            /* Table GIO */
+            .table-gio-container {
+                overflow-x: auto;
+            }
+
+            .table-gio {
+                width: 100%;
+                border-collapse: collapse;
+            }
+
+            .table-gio thead {
+                background: rgba(30, 96, 118, 0.04);
+            }
+
+            .table-gio thead th {
+                padding: 14px 16px;
+                text-align: left;
+                font-size: 11px;
+                font-weight: 700;
+                color: #64748b;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                border-bottom: 1px solid #e2e8f0;
+            }
+
+            .table-gio tbody tr {
+                border-bottom: 1px solid #f1f5f9;
+                transition: all 0.2s ease;
+            }
+
+            .table-gio tbody tr:hover {
+                background: rgba(18, 176, 160, 0.04);
+            }
+
+            .table-gio tbody tr:last-child {
+                border-bottom: none;
+            }
+
+            .table-gio tbody tr.row-inactive {
+                opacity: 0.6;
+            }
+
+            .table-gio tbody td {
+                padding: 12px 16px;
+                vertical-align: middle;
+            }
+
+            .table-cell-info {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+
+            /* User Avatar GIO */
+            .user-avatar-gio {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 13px;
+                font-weight: 700;
+                flex-shrink: 0;
+            }
+
+            .user-avatar-gio.active {
+                background: linear-gradient(135deg, #12b0a0 0%, #0d9488 100%);
+                color: white;
+                box-shadow: 0 2px 8px rgba(18, 176, 160, 0.3);
+            }
+
+            .user-avatar-gio.inactive {
+                background: #f1f5f9;
+                color: #94a3b8;
+            }
+
+            .user-details-gio {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+            }
+
+            .user-name-gio {
+                font-size: 14px;
+                font-weight: 600;
+                color: #1f2937;
+            }
+
+            .user-status-gio {
+                font-size: 11px;
+                font-weight: 500;
+            }
+
+            .user-status-gio.active {
+                color: #059669;
+            }
+
+            .user-status-gio.inactive {
+                color: #94a3b8;
+            }
+
+            .email-cell {
+                font-size: 13px;
+                color: #64748b;
+            }
+
+            /* Dept Badges GIO */
+            .dept-badges-gio {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+
+            .dept-badge-gio {
+                display: inline-block;
+                padding: 4px 10px;
+                background: rgba(30, 96, 118, 0.08);
+                color: #1e6076;
+                border-radius: 6px;
+                font-size: 11px;
+                font-weight: 600;
+            }
+
+            .dept-badge-gio.empty {
+                background: #f1f5f9;
+                color: #94a3b8;
+            }
+
+            /* Type Badge GIO */
+            .type-badge-gio {
+                display: inline-block;
+                padding: 5px 12px;
+                border-radius: 20px;
+                font-size: 11px;
+                font-weight: 700;
+            }
+
+            .type-badge-gio.admin {
+                background: rgba(239, 68, 68, 0.12);
+                color: #dc2626;
+            }
+
+            .type-badge-gio.consultor {
+                background: rgba(245, 158, 11, 0.12);
+                color: #d97706;
+            }
+
+            .type-badge-gio.colaborador {
+                background: rgba(16, 185, 129, 0.12);
+                color: #059669;
+            }
+
+            /* Action Buttons */
+            .action-buttons {
+                display: flex;
+                justify-content: center;
+                gap: 6px;
+            }
+
+            .action-btn {
+                width: 32px;
+                height: 32px;
+                border-radius: 8px;
+                border: none;
+                background: #f1f5f9;
+                color: #64748b;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+
+            .action-btn:hover {
+                background: #e2e8f0;
+                color: #1f2937;
+            }
+
+            .action-btn.warning:hover {
+                background: rgba(245, 158, 11, 0.15);
+                color: #d97706;
+            }
+
+            .action-btn.success:hover {
+                background: rgba(16, 185, 129, 0.15);
+                color: #059669;
+            }
+
+            .action-btn.danger:hover {
+                background: rgba(239, 68, 68, 0.15);
+                color: #dc2626;
+            }
+
+            .action-btn svg {
+                width: 16px;
+                height: 16px;
+            }
+
+            /* Responsive */
+            @media (max-width: 768px) {
+                .page-gio-users {
+                    margin: -16px;
+                    padding: 16px;
+                }
+
+                .page-actions-gio {
+                    justify-content: stretch;
+                }
+
+                .btn-gio-primary {
+                    width: 100%;
+                    justify-content: center;
+                }
+
+                .table-gio thead th,
+                .table-gio tbody td {
+                    padding: 10px 12px;
+                }
+
+                .user-avatar-gio {
+                    width: 36px;
+                    height: 36px;
+                    font-size: 12px;
+                }
+
+                .user-name-gio {
+                    font-size: 13px;
+                }
+
+                .email-cell {
+                    font-size: 12px;
+                }
+            }
+        `;
+        document.head.appendChild(style);
     }
 };
 
