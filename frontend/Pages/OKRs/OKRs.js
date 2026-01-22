@@ -83,6 +83,19 @@ const OKRsPage = {
         return [];
     },
 
+    // Verifica se o usuário atual é responsável pela iniciativa
+    isUserResponsibleForInitiative(initiative) {
+        const currentUser = AuthService.getCurrentUser();
+        if (!currentUser) return false;
+
+        // Admin sempre pode
+        if (currentUser.tipo === 'admin') return true;
+
+        // Verifica se o usuário está na lista de responsáveis
+        const responsibleIds = initiative.getResponsibleUserIds ? initiative.getResponsibleUserIds() : [];
+        return responsibleIds.includes(currentUser.id);
+    },
+
     async render() {
         const content = document.getElementById('content');
         const currentUser = AuthService.getCurrentUser();
@@ -702,17 +715,32 @@ const OKRsPage = {
                                                                                 </div>
                                                                             `;
                                                                         })()}
-                                                                        ${(init.comment && init.comment.trim()) || (init.evidence && Array.isArray(init.evidence) && init.evidence.length > 0) ? `
+                                                                        ${(() => {
+                                                                            const commentData = this.parseInitiativeComment(init.comment);
+                                                                            const hasComment = commentData && commentData.text;
+                                                                            const hasEvidence = init.evidence && Array.isArray(init.evidence) && init.evidence.length > 0;
+
+                                                                            if (!hasComment && !hasEvidence) return '';
+
+                                                                            return `
                                                                             <div class="initiative-extra-info">
-                                                                                ${init.comment && init.comment.trim() ? `
+                                                                                ${hasComment ? `
                                                                                     <div class="init-comment-section">
-                                                                                        <span class="init-info-label">
-                                                                                            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
-                                                                                            </svg>
-                                                                                            Comentário:
-                                                                                        </span>
-                                                                                        <p class="init-comment-text">${init.comment}</p>
+                                                                                        <div class="init-comment-header">
+                                                                                            <span class="init-info-label">
+                                                                                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
+                                                                                                </svg>
+                                                                                                Nota:
+                                                                                            </span>
+                                                                                            ${commentData.author_name ? `
+                                                                                                <span class="init-comment-author">
+                                                                                                    por <strong>${this.getShortName(commentData.author_name)}</strong>
+                                                                                                    ${commentData.updated_at ? `em ${this.formatDateTime(commentData.updated_at)}` : ''}
+                                                                                                </span>
+                                                                                            ` : ''}
+                                                                                        </div>
+                                                                                        <p class="init-comment-text">${commentData.text}</p>
                                                                                     </div>
                                                                                 ` : ''}
                                                                                 ${init.evidence && Array.isArray(init.evidence) && init.evidence.length > 0 ? `
@@ -741,11 +769,11 @@ const OKRsPage = {
                                                                                         </div>
                                                                                     </div>
                                                                                 ` : ''}
-                                                                            </div>
-                                                                        ` : ''}
+                                                                            </div>`;
+                                                                        })()}
                                                                     </div>
-                                                                    ${canEdit ? `
                                                                     <div class="initiative-actions">
+                                                                        ${canEdit ? `
                                                                         <button class="btn-icon-sm" onclick="OKRsPage.openInitiativeModal('${kr.id}', '${init.id}')" title="Editar">
                                                                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
@@ -756,8 +784,16 @@ const OKRsPage = {
                                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                                                             </svg>
                                                                         </button>
+                                                                        ` : `
+                                                                        ${this.isUserResponsibleForInitiative(init) ? `
+                                                                        <button class="btn-icon-sm note-btn" onclick="OKRsPage.openInitiativeNoteModal('${init.id}')" title="Adicionar Nota">
+                                                                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                                            </svg>
+                                                                        </button>
+                                                                        ` : ''}
+                                                                        `}
                                                                     </div>
-                                                                    ` : ''}
                                                                 </div>
                                                             `).join('')}
                                                         </div>
@@ -1777,6 +1813,116 @@ const OKRsPage = {
         }
     },
 
+    // Abre modal para adicionar nota à iniciativa (para responsáveis)
+    async openInitiativeNoteModal(initiativeId) {
+        const initiative = await Initiative.getById(initiativeId);
+        if (!initiative) {
+            DepartmentsPage.showToast('Iniciativa não encontrada', 'error');
+            return;
+        }
+
+        // Verifica se o usuário é responsável
+        if (!this.isUserResponsibleForInitiative(initiative)) {
+            DepartmentsPage.showToast('Você não tem permissão para adicionar nota a esta iniciativa', 'error');
+            return;
+        }
+
+        // Extrai apenas o texto do comentário (suporta formato JSON e string)
+        const commentData = this.parseInitiativeComment(initiative.comment);
+        const existingText = commentData ? commentData.text : '';
+
+        const modal = document.createElement('div');
+        modal.id = 'initiative-note-modal';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:1000;';
+
+        modal.innerHTML = `
+            <div class="modal-overlay" onclick="OKRsPage.closeInitiativeNoteModal()"></div>
+            <div class="modal-content" style="max-width:500px;">
+                <div class="modal-header">
+                    <h3>Adicionar Nota</h3>
+                    <button class="modal-close" onclick="OKRsPage.closeInitiativeNoteModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px;">
+                        <strong>Iniciativa:</strong> ${initiative.nome}
+                    </p>
+                    <input type="hidden" id="note-init-id" value="${initiativeId}">
+                    <div class="form-group">
+                        <label class="form-label">Nota / Comentário</label>
+                        <textarea id="init-note-text" class="form-control" rows="4"
+                            placeholder="Digite sua nota ou comentário sobre o andamento desta iniciativa...">${existingText}</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="OKRsPage.closeInitiativeNoteModal()">Cancelar</button>
+                    <button class="btn btn-primary" onclick="OKRsPage.saveInitiativeNote()">Salvar Nota</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        document.getElementById('init-note-text').focus();
+    },
+
+    closeInitiativeNoteModal() {
+        const modal = document.getElementById('initiative-note-modal');
+        if (modal) modal.remove();
+    },
+
+    async saveInitiativeNote() {
+        const initiativeId = document.getElementById('note-init-id').value;
+        const noteText = document.getElementById('init-note-text').value.trim();
+
+        try {
+            const initiative = await Initiative.getById(initiativeId);
+            if (!initiative) {
+                throw new Error('Iniciativa não encontrada');
+            }
+
+            // Verifica permissão novamente
+            if (!this.isUserResponsibleForInitiative(initiative)) {
+                throw new Error('Você não tem permissão para adicionar nota a esta iniciativa');
+            }
+
+            // Salva o comentário com informações do autor
+            const currentUser = AuthService.getCurrentUser();
+            if (noteText) {
+                initiative.comment = JSON.stringify({
+                    text: noteText,
+                    author_id: currentUser.id,
+                    author_name: currentUser.nome,
+                    updated_at: new Date().toISOString()
+                });
+            } else {
+                initiative.comment = null;
+            }
+            await initiative.save();
+
+            this.closeInitiativeNoteModal();
+            await this.renderList();
+            DepartmentsPage.showToast('Nota salva com sucesso!', 'success');
+        } catch (error) {
+            DepartmentsPage.showToast(error.message || 'Erro ao salvar nota', 'error');
+        }
+    },
+
+    // Extrai dados do comentário (suporta formato legado string e novo formato JSON)
+    parseInitiativeComment(comment) {
+        if (!comment) return null;
+
+        try {
+            const parsed = JSON.parse(comment);
+            if (parsed && typeof parsed === 'object' && parsed.text) {
+                return parsed;
+            }
+        } catch (e) {
+            // Formato legado: apenas string
+        }
+
+        // Retorna formato legado como objeto
+        return { text: comment, author_name: null, updated_at: null };
+    },
+
     async openInitiativeModal(keyResultId, initiativeId = null) {
         this.currentInitiative = initiativeId ? await Initiative.getById(initiativeId) : null;
         this.currentInitiative = this.currentInitiative || { key_result_id: keyResultId };
@@ -2222,6 +2368,18 @@ const OKRsPage = {
         if (!dateString) return '';
         const date = new Date(dateString + 'T00:00:00');
         return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    },
+
+    formatDateTime(dateString) {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
     },
 
     // ==================== EXPORT METHODS ====================
@@ -3614,6 +3772,16 @@ const OKRsPage = {
 
             .btn-icon-sm.delete:hover {
                 background: var(--danger);
+                color: white;
+            }
+
+            .btn-icon-sm.note-btn {
+                background: rgba(59, 130, 246, 0.1);
+                color: #3b82f6;
+            }
+
+            .btn-icon-sm.note-btn:hover {
+                background: #3b82f6;
                 color: white;
             }
 

@@ -5212,3 +5212,118 @@ select.form-control-gio {
         justify-content: center;
     }
 }
+
+/* ==================== Initiative Comment Styles ==================== */
+.initiative-extra-info {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.init-comment-section {
+    margin-bottom: 8px;
+}
+
+.init-comment-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+
+.init-info-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.init-info-label svg {
+    opacity: 0.7;
+}
+
+.init-comment-author {
+    font-size: 11px;
+    color: #94a3b8;
+    font-style: italic;
+}
+
+.init-comment-author strong {
+    color: #64748b;
+    font-weight: 500;
+}
+
+.init-comment-text {
+    font-size: 13px;
+    color: #475569;
+    margin: 0;
+    padding: 6px 10px;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 6px;
+    border-left: 3px solid #3b82f6;
+    line-height: 1.4;
+}
+
+.init-evidence-section {
+    margin-top: 6px;
+}
+
+.init-evidence-list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.init-evidence-item {
+    display: inline-flex;
+    align-items: center;
+}
+
+.init-evidence-text {
+    font-size: 12px;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.init-evidence-file {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: #3b82f6;
+    text-decoration: none;
+    background: rgba(59, 130, 246, 0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.init-evidence-file:hover {
+    background: rgba(59, 130, 246, 0.2);
+}
+
+.init-evidence-separator {
+    color: #cbd5e1;
+    font-size: 10px;
+}
+
+/* Note button for initiatives */
+.btn-icon-sm.note-btn {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+.btn-icon-sm.note-btn:hover {
+    background: #3b82f6;
+    color: white;
+}
