@@ -176,8 +176,8 @@
         }
 
         .nav-item.active {
-            background: rgba(18, 176, 160, 0.15);
-            color: #12b0a0;
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
         }
 
         .nav-item svg {
@@ -187,7 +187,7 @@
         }
 
         .nav-item.active svg {
-            color: #12b0a0;
+            color: #ffffff;
         }
 
         .nav-badge {
@@ -218,6 +218,15 @@
 
         .nav-submenu.open .nav-submenu-toggle .submenu-arrow {
             transform: rotate(180deg);
+        }
+
+        .nav-submenu.open .nav-submenu-toggle {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+
+        .nav-submenu.open .nav-submenu-toggle svg {
+            color: #ffffff;
         }
 
         .nav-submenu-items {
