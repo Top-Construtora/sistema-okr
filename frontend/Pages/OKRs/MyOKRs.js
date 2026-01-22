@@ -17,8 +17,8 @@ const generateId = () => {
         return v.toString(16);
     });
 };
-// Página de OKRs - Gestão Completa
-const OKRsPage = {
+// Página Meus OKRs - OKRs do departamento do usuário
+const MyOKRsPage = {
     currentFilter: 'all',
     currentDepartment: 'all',
     currentMiniCycle: 'all',
@@ -90,23 +90,32 @@ const OKRsPage = {
         const isConsultor = currentUser && currentUser.tipo === 'consultor';
         const canEdit = !isConsultor; // Consultor não pode editar
 
-        // Suporta múltiplos departamentos (para verificação de permissões)
+        // Suporta múltiplos departamentos
         const userDepartmentNames = this.getUserDepartmentNames(currentUser);
+        const userDepartmentDisplay = userDepartmentNames.length > 1
+            ? `${userDepartmentNames.length} departamentos`
+            : userDepartmentNames[0] || null;
 
-        // Página "Todos os OKRs" - mostra todos os OKRs de todos os departamentos
+        // Sempre força o filtro pelo departamento do usuário (página Meus OKRs)
+        this.currentDepartment = 'user-depts';
+
         let okrs = await OKR.getAll();
-        const departments = await Department.getActive();
         const miniCycles = await MiniCycle.getActive();
+
+        // Sempre filtra OKRs dos departamentos do usuário
+        if (userDepartmentNames.length > 0) {
+            okrs = okrs.filter(o => userDepartmentNames.includes(o.department));
+        }
 
         content.innerHTML = `
             <div class="page-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
                 <div>
-                    <h2 style="font-size:20px;font-weight:700;color:var(--top-blue);margin-bottom:4px;">Todos os OKRs</h2>
-                    <p style="color:var(--text-muted);font-size:13px;">${okrs.length} ${okrs.length === 1 ? 'OKR cadastrado' : "OKR's cadastrados"}</p>
+                    <h2 style="font-size:20px;font-weight:700;color:var(--top-blue);margin-bottom:4px;">Meus OKRs</h2>
+                    <p style="color:var(--text-muted);font-size:13px;">${okrs.length} ${okrs.length === 1 ? 'OKR cadastrado' : "OKR's cadastrados"}${userDepartmentDisplay ? ` - ${userDepartmentDisplay}` : ''}</p>
                 </div>
                 <div style="display:flex;gap:12px;">
-                    ${isAdmin ? `
-                    <button class="btn btn-primary" onclick="OKRsPage.openModal()">
+                    ${canEdit ? `
+                    <button class="btn btn-primary" onclick="MyOKRsPage.openModal()">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                         </svg>
@@ -114,7 +123,7 @@ const OKRsPage = {
                     </button>
                     ` : ''}
 
-                    <button class="btn btn-secondary" onclick="OKRsPage.exportToPDF()" title="Exportar para PDF">
+                    <button class="btn btn-secondary" onclick="MyOKRsPage.exportToPDF()" title="Exportar para PDF">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:20px;height:20px;">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                         </svg>
@@ -125,34 +134,26 @@ const OKRsPage = {
 
             <div style="display:flex;gap:16px;margin-bottom:24px;align-items:center;flex-wrap:wrap;">
                 <div class="okr-filters">
-                    <button class="filter-btn ${this.currentFilter === 'all' ? 'active' : ''}" onclick="OKRsPage.filter('all', this)">
+                    <button class="filter-btn ${this.currentFilter === 'all' ? 'active' : ''}" onclick="MyOKRsPage.filter('all', this)">
                         Todos (${okrs.length})
                     </button>
-                    <button class="filter-btn ${this.currentFilter === 'pending' ? 'active' : ''}" onclick="OKRsPage.filter('pending', this)">
+                    <button class="filter-btn ${this.currentFilter === 'pending' ? 'active' : ''}" onclick="MyOKRsPage.filter('pending', this)">
                         Pendentes (${okrs.filter(o => o.status === 'pending').length})
                     </button>
-                    <button class="filter-btn ${this.currentFilter === 'approved' ? 'active' : ''}" onclick="OKRsPage.filter('approved', this)">
+                    <button class="filter-btn ${this.currentFilter === 'approved' ? 'active' : ''}" onclick="MyOKRsPage.filter('approved', this)">
                         Em Andamento (${okrs.filter(o => o.status === 'approved').length})
                     </button>
-                    <button class="filter-btn ${this.currentFilter === 'completed' ? 'active' : ''}" onclick="OKRsPage.filter('completed', this)">
+                    <button class="filter-btn ${this.currentFilter === 'completed' ? 'active' : ''}" onclick="MyOKRsPage.filter('completed', this)">
                         Concluídos (${okrs.filter(o => o.status === 'completed' || o.status === 'homologated').length})
                     </button>
                 </div>
 
                 <div style="margin-left:auto;display:flex;gap:12px;">
-                    <select id="minicycle-filter" class="form-control" onchange="OKRsPage.filterByMiniCycle(this.value)" style="min-width:180px;">
+                    <select id="minicycle-filter" class="form-control" onchange="MyOKRsPage.filterByMiniCycle(this.value)" style="min-width:180px;">
                         <option value="all" ${this.currentMiniCycle === 'all' ? 'selected' : ''}>Todos os Miniciclos</option>
                         ${miniCycles.map(mc => `
                             <option value="${mc.id}" ${this.currentMiniCycle === mc.id ? 'selected' : ''}>
                                 ${mc.nome}
-                            </option>
-                        `).join('')}
-                    </select>
-                    <select id="dept-filter" class="form-control" onchange="OKRsPage.filterByDepartment(this.value)" style="min-width:200px;">
-                        <option value="all" ${this.currentDepartment === 'all' ? 'selected' : ''}>Todos os Departamentos</option>
-                        ${departments.map(dept => `
-                            <option value="${dept.nome}" ${this.currentDepartment === dept.nome ? 'selected' : ''}>
-                                ${dept.nome}
                             </option>
                         `).join('')}
                     </select>
@@ -182,14 +183,16 @@ const OKRsPage = {
         }
 
         const currentUser = AuthService.getCurrentUser();
-        const isAdmin = currentUser && currentUser.tipo === 'admin';
         const isConsultor = currentUser && currentUser.tipo === 'consultor';
+        const canEdit = !isConsultor; // Consultor não pode editar
         const userDepartmentNames = this.getUserDepartmentNames(currentUser);
-        // Na página "Todos os OKRs", somente admin pode editar OKRs e KRs
-        const canEdit = isAdmin;
 
-        // Página "Todos os OKRs" - mostra todos os OKRs de todos os departamentos
         let okrs = await OKR.getAll();
+
+        // Sempre filtra OKRs dos departamentos do usuário (página Meus OKRs)
+        if (userDepartmentNames.length > 0) {
+            okrs = okrs.filter(o => userDepartmentNames.includes(o.department));
+        }
 
         // Filtro por status
         if (this.currentFilter === 'pending') {
@@ -198,11 +201,6 @@ const OKRsPage = {
             okrs = okrs.filter(o => o.status === 'approved');
         } else if (this.currentFilter === 'completed') {
             okrs = okrs.filter(o => o.status === 'completed' || o.status === 'homologated');
-        }
-
-        // Filtro por departamento (disponível para todos)
-        if (this.currentDepartment !== 'all') {
-            okrs = okrs.filter(o => o.department === this.currentDepartment);
         }
 
         // Filtro por miniciclo
@@ -218,8 +216,8 @@ const OKRsPage = {
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                         </svg>
                         <p style="color:var(--text-muted);font-size:15px;margin-bottom:16px;">Nenhum OKR encontrado</p>
-                        ${isAdmin ? `
-                        <button class="btn btn-primary" onclick="OKRsPage.openModal()">
+                        ${canEdit ? `
+                        <button class="btn btn-primary" onclick="MyOKRsPage.openModal()">
                             Criar primeiro OKR
                         </button>
                         ` : ''}
@@ -308,7 +306,7 @@ const OKRsPage = {
                         </div>
                     </div>
                 ` : ''}
-                <div class="okr-accordion-header" onclick="OKRsPage.toggleOKRExpand('${okr.id}')">
+                <div class="okr-accordion-header" onclick="MyOKRsPage.toggleOKRExpand('${okr.id}')">
                     <div class="okr-header-left">
                         <button class="expand-arrow ${isOKRExpanded ? 'expanded' : ''}">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -357,19 +355,19 @@ const OKRsPage = {
                     ${canEditOKRData ? `
                     <div class="okr-header-right" onclick="event.stopPropagation();">
                         <div class="action-menu">
-                            <button class="action-menu-btn-header" onclick="OKRsPage.toggleOKRMenu(event, '${okr.id}')" title="Ações">
+                            <button class="action-menu-btn-header" onclick="MyOKRsPage.toggleOKRMenu(event, '${okr.id}')" title="Ações">
                                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
                                 </svg>
                             </button>
                             <div class="action-menu-dropdown" id="okr-menu-${okr.id}">
-                                <button class="menu-item" onclick="OKRsPage.edit('${okr.id}'); OKRsPage.closeAllMenus();">
+                                <button class="menu-item" onclick="MyOKRsPage.edit('${okr.id}'); MyOKRsPage.closeAllMenus();">
                                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                     </svg>
                                     Editar
                                 </button>
-                                <button class="menu-item danger" onclick="OKRsPage.delete('${okr.id}'); OKRsPage.closeAllMenus();">
+                                <button class="menu-item danger" onclick="MyOKRsPage.delete('${okr.id}'); MyOKRsPage.closeAllMenus();">
                                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                     </svg>
@@ -421,7 +419,7 @@ const OKRsPage = {
                                 KR's
                             </div>
                             ${canEditKRData ? `
-                            <button class="btn btn-sm btn-secondary" onclick="OKRsPage.addKR('${okr.id}')">
+                            <button class="btn btn-sm btn-secondary" onclick="MyOKRsPage.addKR('${okr.id}')">
                                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                                 </svg>
@@ -435,7 +433,7 @@ const OKRsPage = {
                                 <div class="empty-krs">
                                     <p style="color:var(--text-muted);font-size:14px;margin:0;">Nenhum Key Result cadastrado ainda</p>
                                     ${canEditKRData ? `
-                                    <button class="btn btn-sm btn-primary" onclick="OKRsPage.addKR('${okr.id}')" style="margin-top:12px;">
+                                    <button class="btn btn-sm btn-primary" onclick="MyOKRsPage.addKR('${okr.id}')" style="margin-top:12px;">
                                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                                         </svg>
@@ -456,7 +454,7 @@ const OKRsPage = {
 
                                 return `
                                 <div class="kr-accordion-item">
-                                    <div class="kr-accordion-header" onclick="OKRsPage.toggleKRExpand('${kr.id}')">
+                                    <div class="kr-accordion-header" onclick="MyOKRsPage.toggleKRExpand('${kr.id}')">
                                         <div class="kr-header-left">
                                             <button class="expand-arrow-sm ${isKRExpanded ? 'expanded' : ''}">
                                                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -482,19 +480,19 @@ const OKRsPage = {
                                             </span>
                                             ${canEditKRData ? `
                                             <div class="action-menu">
-                                                <button class="action-menu-btn" onclick="OKRsPage.toggleKRMenu(event, '${kr.id}')" title="Ações">
+                                                <button class="action-menu-btn" onclick="MyOKRsPage.toggleKRMenu(event, '${kr.id}')" title="Ações">
                                                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
                                                     </svg>
                                                 </button>
                                                 <div class="action-menu-dropdown" id="kr-menu-${kr.id}">
-                                                    <button class="menu-item" onclick="OKRsPage.editKR('${okr.id}', '${kr.id}'); OKRsPage.closeAllMenus();">
+                                                    <button class="menu-item" onclick="MyOKRsPage.editKR('${okr.id}', '${kr.id}'); MyOKRsPage.closeAllMenus();">
                                                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                                         </svg>
                                                         Editar
                                                     </button>
-                                                    <button class="menu-item danger" onclick="OKRsPage.deleteKR('${okr.id}', '${kr.id}'); OKRsPage.closeAllMenus();">
+                                                    <button class="menu-item danger" onclick="MyOKRsPage.deleteKR('${okr.id}', '${kr.id}'); MyOKRsPage.closeAllMenus();">
                                                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                                         </svg>
@@ -518,7 +516,7 @@ const OKRsPage = {
                                                         </svg>
                                                         <span>Comentário</span>
                                                         ${!isLocked ? `
-                                                        <button class="btn btn-xs btn-outline" onclick="OKRsPage.openQuickCommentEditor('${okr.id}', '${kr.id}')" style="margin-left:auto;" title="${kr.comment && kr.comment.trim() ? 'Editar' : 'Adicionar'} comentário">
+                                                        <button class="btn btn-xs btn-outline" onclick="MyOKRsPage.openQuickCommentEditor('${okr.id}', '${kr.id}')" style="margin-left:auto;" title="${kr.comment && kr.comment.trim() ? 'Editar' : 'Adicionar'} comentário">
                                                             <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${kr.comment && kr.comment.trim() ? 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z' : 'M12 4v16m8-8H4'}"/>
                                                             </svg>
@@ -546,7 +544,7 @@ const OKRsPage = {
                                                             : ''
                                                         }
                                                         ${canEditEvidence ? `
-                                                        <button class="btn btn-xs btn-outline" onclick="OKRsPage.openQuickEvidenceModal('${okr.id}', '${kr.id}')" style="margin-left:auto;" title="Adicionar evidência">
+                                                        <button class="btn btn-xs btn-outline" onclick="MyOKRsPage.openQuickEvidenceModal('${okr.id}', '${kr.id}')" style="margin-left:auto;" title="Adicionar evidência">
                                                             <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                                                             </svg>
@@ -562,7 +560,7 @@ const OKRsPage = {
                                                                         ${ev.type === 'text'
                                                                             ? `<div class="kr-evidence-text-wrapper">
                                                                                 <p class="kr-evidence-text">${ev.content}</p>
-                                                                                ${canEditEvidence ? `<button class="btn btn-xs btn-danger" onclick="OKRsPage.removeEvidence('${okr.id}', '${kr.id}', ${idx})" title="Remover">
+                                                                                ${canEditEvidence ? `<button class="btn btn-xs btn-danger" onclick="MyOKRsPage.removeEvidence('${okr.id}', '${kr.id}', ${idx})" title="Remover">
                                                                                     <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                                                                     </svg>
@@ -585,7 +583,7 @@ const OKRsPage = {
                                                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                                                                                     </svg>
                                                                                 </a>
-                                                                                ${canEditEvidence ? `<button class="btn btn-xs btn-danger" onclick="OKRsPage.removeEvidence('${okr.id}', '${kr.id}', ${idx})" title="Remover">
+                                                                                ${canEditEvidence ? `<button class="btn btn-xs btn-danger" onclick="MyOKRsPage.removeEvidence('${okr.id}', '${kr.id}', ${idx})" title="Remover">
                                                                                     <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                                                                     </svg>
@@ -615,7 +613,7 @@ const OKRsPage = {
                                                         : ''
                                                     }
                                                     ${canEdit ? `
-                                                    <button class="btn btn-xs btn-primary" onclick="OKRsPage.openInitiativeModal('${kr.id}')" style="margin-left:auto;">
+                                                    <button class="btn btn-xs btn-primary" onclick="MyOKRsPage.openInitiativeModal('${kr.id}')" style="margin-left:auto;">
                                                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                                                         </svg>
@@ -633,7 +631,7 @@ const OKRsPage = {
                                                                     ${canEdit ? `
                                                                     <label class="initiative-checkbox">
                                                                         <input type="checkbox" ${init.concluida ? 'checked' : ''}
-                                                                            onchange="OKRsPage.toggleInitiative('${init.id}')">
+                                                                            onchange="MyOKRsPage.toggleInitiative('${init.id}')">
                                                                         <span class="checkmark"></span>
                                                                     </label>
                                                                     ` : `
@@ -657,8 +655,8 @@ const OKRsPage = {
                                                                                     class="initiative-progress-slider-inline"
                                                                                     id="slider-${init.id}"
                                                                                     style="background: linear-gradient(to right, var(--top-teal) ${init.progress || 0}%, var(--bg-main) ${init.progress || 0}%);"
-                                                                                    oninput="OKRsPage.updateInitiativeProgressPreview('${init.id}', this.value)"
-                                                                                    onchange="OKRsPage.updateInitiativeProgress('${init.id}', this.value)"
+                                                                                    oninput="MyOKRsPage.updateInitiativeProgressPreview('${init.id}', this.value)"
+                                                                                    onchange="MyOKRsPage.updateInitiativeProgress('${init.id}', this.value)"
                                                                                 >
                                                                                 ` : `
                                                                                 <div class="initiative-progress-bar-readonly" style="width:80px;height:6px;background:#e2e8f0;border-radius:3px;">
@@ -746,12 +744,12 @@ const OKRsPage = {
                                                                     </div>
                                                                     ${canEdit ? `
                                                                     <div class="initiative-actions">
-                                                                        <button class="btn-icon-sm" onclick="OKRsPage.openInitiativeModal('${kr.id}', '${init.id}')" title="Editar">
+                                                                        <button class="btn-icon-sm" onclick="MyOKRsPage.openInitiativeModal('${kr.id}', '${init.id}')" title="Editar">
                                                                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                                                             </svg>
                                                                         </button>
-                                                                        <button class="btn-icon-sm delete" onclick="OKRsPage.deleteInitiative('${init.id}', '${init.nome}')" title="Excluir">
+                                                                        <button class="btn-icon-sm delete" onclick="MyOKRsPage.deleteInitiative('${init.id}', '${init.nome}')" title="Excluir">
                                                                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                                                             </svg>
@@ -814,7 +812,7 @@ const OKRsPage = {
         });
 
         modal.innerHTML = `
-            <div class="modal-overlay" onclick="OKRsPage.closeModal()"></div>
+            <div class="modal-overlay" onclick="MyOKRsPage.closeModal()"></div>
             <div class="modal-content" style="max-width:600px;">
                 <div class="modal-header">
                     <div>
@@ -823,7 +821,7 @@ const OKRsPage = {
                             ${this.currentOKR ? 'Atualize as informações do OKR' : 'Defina um novo OKR. Você poderá adicionar Key Results depois.'}
                         </p>
                     </div>
-                    <button class="modal-close" onclick="OKRsPage.closeModal()">
+                    <button class="modal-close" onclick="MyOKRsPage.closeModal()">
                         <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
@@ -908,8 +906,8 @@ const OKRsPage = {
                     <div id="okr-error" class="error-message" style="display:none;margin-top:16px;"></div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-secondary" onclick="OKRsPage.closeModal()">Cancelar</button>
-                    <button class="btn btn-primary" onclick="OKRsPage.save()">
+                    <button class="btn btn-secondary" onclick="MyOKRsPage.closeModal()">Cancelar</button>
+                    <button class="btn btn-primary" onclick="MyOKRsPage.save()">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                         </svg>
@@ -1081,11 +1079,11 @@ const OKRsPage = {
         modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:1000;';
 
         modal.innerHTML = `
-            <div class="modal-overlay" onclick="OKRsPage.closeKRModal()"></div>
+            <div class="modal-overlay" onclick="MyOKRsPage.closeKRModal()"></div>
             <div class="modal-content" style="max-width:700px;">
                 <div class="modal-header">
                     <h3>Novo Key Result</h3>
-                    <button class="modal-close" onclick="OKRsPage.closeKRModal()">&times;</button>
+                    <button class="modal-close" onclick="MyOKRsPage.closeKRModal()">&times;</button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="kr-okr-id" value="${okrId}">
@@ -1119,7 +1117,7 @@ const OKRsPage = {
                                 <option value="text">Texto</option>
                                 <option value="file">Arquivo</option>
                             </select>
-                            <button type="button" class="btn btn-sm btn-secondary" onclick="OKRsPage.addEvidenceField()">
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="MyOKRsPage.addEvidenceField()">
                                 + Adicionar Evidência
                             </button>
                         </div>
@@ -1131,8 +1129,8 @@ const OKRsPage = {
                     <div id="kr-error" class="error-message" style="display:none;margin-top:16px;"></div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-secondary" onclick="OKRsPage.closeKRModal()">Cancelar</button>
-                    <button class="btn btn-primary" onclick="OKRsPage.saveNewKR()">Criar Key Result</button>
+                    <button class="btn btn-secondary" onclick="MyOKRsPage.closeKRModal()">Cancelar</button>
+                    <button class="btn btn-primary" onclick="MyOKRsPage.saveNewKR()">Criar Key Result</button>
                 </div>
             </div>
         `;
@@ -1154,11 +1152,11 @@ const OKRsPage = {
         const existingEvidence = (kr.evidence && Array.isArray(kr.evidence)) ? kr.evidence : [];
 
         modal.innerHTML = `
-            <div class="modal-overlay" onclick="OKRsPage.closeKRModal()"></div>
+            <div class="modal-overlay" onclick="MyOKRsPage.closeKRModal()"></div>
             <div class="modal-content" style="max-width:700px;">
                 <div class="modal-header">
                     <h3>Editar Key Result</h3>
-                    <button class="modal-close" onclick="OKRsPage.closeKRModal()">&times;</button>
+                    <button class="modal-close" onclick="MyOKRsPage.closeKRModal()">&times;</button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="kr-okr-id" value="${okrId}">
@@ -1192,7 +1190,7 @@ const OKRsPage = {
                                 <div class="evidence-item" data-index="${idx}">
                                     <div class="evidence-item-header">
                                         <span class="evidence-type-badge ${ev.type}">${ev.type === 'text' ? 'Texto' : 'Arquivo'}</span>
-                                        <button type="button" class="btn-icon-sm delete" onclick="OKRsPage.removeEvidenceField(${idx})" title="Remover">
+                                        <button type="button" class="btn-icon-sm delete" onclick="MyOKRsPage.removeEvidenceField(${idx})" title="Remover">
                                             <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                             </svg>
@@ -1219,7 +1217,7 @@ const OKRsPage = {
                                 <option value="text">Texto</option>
                                 <option value="file">Arquivo</option>
                             </select>
-                            <button type="button" class="btn btn-sm btn-secondary" onclick="OKRsPage.addEvidenceField()">
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="MyOKRsPage.addEvidenceField()">
                                 + Adicionar Evidência
                             </button>
                         </div>
@@ -1231,8 +1229,8 @@ const OKRsPage = {
                     <div id="kr-error" class="error-message" style="display:none;margin-top:16px;"></div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-secondary" onclick="OKRsPage.closeKRModal()">Cancelar</button>
-                    <button class="btn btn-primary" onclick="OKRsPage.saveEditKR()">Atualizar Key Result</button>
+                    <button class="btn btn-secondary" onclick="MyOKRsPage.closeKRModal()">Cancelar</button>
+                    <button class="btn btn-primary" onclick="MyOKRsPage.saveEditKR()">Atualizar Key Result</button>
                 </div>
             </div>
         `;
@@ -1259,7 +1257,7 @@ const OKRsPage = {
         item.innerHTML = `
             <div class="evidence-item-header">
                 <span class="evidence-type-badge ${type}">${type === 'text' ? 'Texto' : 'Arquivo'}</span>
-                <button type="button" class="btn-icon-sm delete" onclick="OKRsPage.removeEvidenceField(${index})" title="Remover">
+                <button type="button" class="btn-icon-sm delete" onclick="MyOKRsPage.removeEvidenceField(${index})" title="Remover">
                     <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
@@ -1270,7 +1268,7 @@ const OKRsPage = {
                 : `<div class="file-upload-wrapper">
                     <input type="file" class="evidence-file-input" id="evidence-file-${index}"
                         accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.txt"
-                        onchange="OKRsPage.handleFileSelect(${index}, this)">
+                        onchange="MyOKRsPage.handleFileSelect(${index}, this)">
                     <label for="evidence-file-${index}" class="file-upload-label">
                         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
@@ -1424,15 +1422,15 @@ const OKRsPage = {
             <div class="quick-modal-content">
                 <div class="quick-modal-header">
                     <h4>${kr.comment && kr.comment.trim() ? 'Editar' : 'Adicionar'} Comentário</h4>
-                    <button class="modal-close" onclick="OKRsPage.closeQuickModal('quick-comment-modal')">&times;</button>
+                    <button class="modal-close" onclick="MyOKRsPage.closeQuickModal('quick-comment-modal')">&times;</button>
                 </div>
                 <div class="quick-modal-body">
                     <textarea id="quick-comment-text" class="form-control" rows="4"
                         placeholder="Digite seu comentário sobre este Key Result...">${kr.comment || ''}</textarea>
                 </div>
                 <div class="quick-modal-footer">
-                    <button class="btn btn-secondary" onclick="OKRsPage.closeQuickModal('quick-comment-modal')">Cancelar</button>
-                    <button class="btn btn-primary" onclick="OKRsPage.saveQuickComment('${okrId}', '${krId}')">Salvar</button>
+                    <button class="btn btn-secondary" onclick="MyOKRsPage.closeQuickModal('quick-comment-modal')">Cancelar</button>
+                    <button class="btn btn-primary" onclick="MyOKRsPage.saveQuickComment('${okrId}', '${krId}')">Salvar</button>
                 </div>
             </div>
         `;
@@ -1470,7 +1468,7 @@ const OKRsPage = {
             <div class="quick-modal-content">
                 <div class="quick-modal-header">
                     <h4>Adicionar Evidência</h4>
-                    <button class="modal-close" onclick="OKRsPage.closeQuickModal('quick-evidence-modal')">&times;</button>
+                    <button class="modal-close" onclick="MyOKRsPage.closeQuickModal('quick-evidence-modal')">&times;</button>
                 </div>
                 <div class="quick-modal-body">
                     <input type="hidden" id="quick-evidence-okr-id" value="${okrId}">
@@ -1507,7 +1505,7 @@ const OKRsPage = {
                         <div class="file-upload-wrapper">
                             <input type="file" id="quick-evidence-file" class="evidence-file-input"
                                 accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif"
-                                onchange="OKRsPage.handleQuickFileSelect(this)">
+                                onchange="MyOKRsPage.handleQuickFileSelect(this)">
                             <label for="quick-evidence-file" class="file-upload-label">
                                 <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
@@ -1525,8 +1523,8 @@ const OKRsPage = {
                     </div>
                 </div>
                 <div class="quick-modal-footer">
-                    <button class="btn btn-secondary" onclick="OKRsPage.closeQuickModal('quick-evidence-modal')">Cancelar</button>
-                    <button class="btn btn-primary" onclick="OKRsPage.saveQuickEvidence()">Adicionar</button>
+                    <button class="btn btn-secondary" onclick="MyOKRsPage.closeQuickModal('quick-evidence-modal')">Cancelar</button>
+                    <button class="btn btn-primary" onclick="MyOKRsPage.saveQuickEvidence()">Adicionar</button>
                 </div>
             </div>
         `;
@@ -1792,11 +1790,11 @@ const OKRsPage = {
         modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:1000;';
 
         modal.innerHTML = `
-            <div class="modal-overlay" onclick="OKRsPage.closeInitiativeModal()"></div>
+            <div class="modal-overlay" onclick="MyOKRsPage.closeInitiativeModal()"></div>
             <div class="modal-content" style="max-width:600px;">
                 <div class="modal-header">
                     <h3>${initiativeId ? 'Editar' : 'Nova'} Iniciativa</h3>
-                    <button class="modal-close" onclick="OKRsPage.closeInitiativeModal()">&times;</button>
+                    <button class="modal-close" onclick="MyOKRsPage.closeInitiativeModal()">&times;</button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="init-kr-id" value="${keyResultId}">
@@ -1898,7 +1896,7 @@ const OKRsPage = {
                                 <div class="evidence-item" data-index="${idx}">
                                     <div class="evidence-item-header">
                                         <span class="evidence-type-badge ${ev.type}">${ev.type === 'text' ? 'Texto' : 'Arquivo'}</span>
-                                        <button type="button" class="btn-icon-sm delete" onclick="OKRsPage.removeInitEvidenceField(${idx})" title="Remover">
+                                        <button type="button" class="btn-icon-sm delete" onclick="MyOKRsPage.removeInitEvidenceField(${idx})" title="Remover">
                                             <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                             </svg>
@@ -1925,7 +1923,7 @@ const OKRsPage = {
                                 <option value="text">Texto</option>
                                 <option value="file">Arquivo</option>
                             </select>
-                            <button type="button" class="btn btn-sm btn-secondary" onclick="OKRsPage.addInitEvidenceField()">
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="MyOKRsPage.addInitEvidenceField()">
                                 + Adicionar Evidência
                             </button>
                         </div>
@@ -1937,8 +1935,8 @@ const OKRsPage = {
                     <div id="init-error" class="error-message" style="display:none;margin-top:16px;"></div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-secondary" onclick="OKRsPage.closeInitiativeModal()">Cancelar</button>
-                    <button class="btn btn-primary" onclick="OKRsPage.saveInitiative()">
+                    <button class="btn btn-secondary" onclick="MyOKRsPage.closeInitiativeModal()">Cancelar</button>
+                    <button class="btn btn-primary" onclick="MyOKRsPage.saveInitiative()">
                         ${initiativeId ? 'Atualizar' : 'Criar'} Iniciativa
                     </button>
                 </div>
@@ -1968,7 +1966,7 @@ const OKRsPage = {
         item.innerHTML = `
             <div class="evidence-item-header">
                 <span class="evidence-type-badge ${type}">${type === 'text' ? 'Texto' : 'Arquivo'}</span>
-                <button type="button" class="btn-icon-sm delete" onclick="OKRsPage.removeInitEvidenceField(${index})" title="Remover">
+                <button type="button" class="btn-icon-sm delete" onclick="MyOKRsPage.removeInitEvidenceField(${index})" title="Remover">
                     <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
@@ -1977,7 +1975,7 @@ const OKRsPage = {
             ${type === 'text'
                 ? `<textarea class="form-control evidence-content" rows="2" placeholder="Descrição da evidência..."></textarea>`
                 : `<div class="file-upload-wrapper">
-                    <input type="file" id="init-file-input-${index}" class="evidence-file-input" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif" onchange="OKRsPage.handleInitFileSelect(${index}, this)">
+                    <input type="file" id="init-file-input-${index}" class="evidence-file-input" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif" onchange="MyOKRsPage.handleInitFileSelect(${index}, this)">
                     <label class="file-upload-label" for="init-file-input-${index}">
                         <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
@@ -4841,5 +4839,5 @@ const OKRsPage = {
 };
 
 // Expõe globalmente
-window.OKRsPage = OKRsPage;
-export { OKRsPage };
+window.MyOKRsPage = MyOKRsPage;
+export { MyOKRsPage };

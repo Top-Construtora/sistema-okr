@@ -33,6 +33,7 @@ import { CalendarPage } from './Pages/Calendar/Calendar.js'
 import { CyclesPage } from './Pages/Cycles/Cycles.js'
 import { DepartmentsPage } from './Pages/Departments/Departments.js'
 import { UsersPage } from './Pages/Users/Users.js'
+import { MyOKRsPage } from './Pages/OKRs/MyOKRs.js'
 import { OKRsPage } from './Pages/OKRs/OKRs.js'
 import { ApprovalPage } from './Pages/ApprovalCommittee/ApprovalCommittee.js'
 import { SettingsPage } from './Pages/Settings/Settings.js'
@@ -63,6 +64,7 @@ window.CalendarPage = CalendarPage;
 window.CyclesPage = CyclesPage;
 window.DepartmentsPage = DepartmentsPage;
 window.UsersPage = UsersPage;
+window.MyOKRsPage = MyOKRsPage;
 window.OKRsPage = OKRsPage;
 window.ApprovalPage = ApprovalPage;
 window.SettingsPage = SettingsPage;

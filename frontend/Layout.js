@@ -6,6 +6,7 @@ import { MiniCycle } from './Entities/MiniCycle.js';
 const Layout = {
     currentPage: 'dashboard',
     sidebarCollapsed: localStorage.getItem('sidebarCollapsed') === 'true',
+    isOkrMenuOpen: localStorage.getItem('okrMenuOpen') !== 'false', // Aberto por padrão
 
     // Renderiza o layout completo
     async render() {
@@ -58,7 +59,10 @@ const Layout = {
         const routes = {
             '/': 'dashboard',
             '/dashboard': 'dashboard',
+            '/meus-okrs': 'my-okrs',
+            '/my-okrs': 'my-okrs',
             '/okrs': 'okrs',
+            '/todos-okrs': 'okrs',
             '/calendario': 'calendar',
             '/calendar': 'calendar',
             '/ciclos': 'cycles',
@@ -82,6 +86,7 @@ const Layout = {
     getPathFromPage(page) {
         const paths = {
             'dashboard': '/dashboard',
+            'my-okrs': '/meus-okrs',
             'okrs': '/okrs',
             'calendar': '/calendario',
             'cycles': '/ciclos',
@@ -125,12 +130,31 @@ const Layout = {
                             </svg>
                             <span>Dashboard</span>
                         </a>
-                        <a class="nav-item" data-page="okrs" title="OKRs">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                            </svg>
-                            <span>OKRs</span>
-                        </a>
+                        <div class="nav-submenu ${this.isOkrMenuOpen ? 'open' : ''}">
+                            <a class="nav-item nav-submenu-toggle" onclick="Layout.toggleOkrMenu(event)" title="OKRs">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                </svg>
+                                <span>OKRs</span>
+                                <svg class="submenu-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </a>
+                            <div class="nav-submenu-items">
+                                <a class="nav-item nav-subitem" data-page="my-okrs" title="Meus OKRs">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                    </svg>
+                                    <span>Meus OKRs</span>
+                                </a>
+                                <a class="nav-item nav-subitem" data-page="okrs" title="Todos os OKRs">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                    </svg>
+                                    <span>Todos os OKRs</span>
+                                </a>
+                            </div>
+                        </div>
                         <a class="nav-item" data-page="calendar" title="Calendário">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -299,7 +323,8 @@ const Layout = {
     getPageTitle(page) {
         const titles = {
             dashboard: 'Dashboard',
-            okrs: "Gestão de OKRs",
+            'my-okrs': 'Meus OKRs',
+            okrs: 'Todos os OKRs',
             calendar: 'Calendário de Iniciativas',
             cycles: 'Gestão de Ciclos',
             objectives: 'Objetivos Estratégicos',
@@ -315,7 +340,8 @@ const Layout = {
     getPageSubtitle(page) {
         const subtitles = {
             dashboard: 'Visão geral do progresso dos objetivos',
-            okrs: "Gerencie os OKR's da empresa",
+            'my-okrs': 'OKRs do seu departamento',
+            okrs: 'Visão geral de todos os OKRs da empresa',
             calendar: 'Visualize iniciativas e gerencie seus lembretes',
             cycles: "Configure ciclos e miniciclos para organizar os OKR's",
             objectives: 'Gerencie os objetivos estratégicos da empresa',
@@ -366,6 +392,14 @@ const Layout = {
 
         this.currentPage = page;
 
+        // Se navegar para página de OKR, abre o submenu
+        if (page === 'my-okrs' || page === 'okrs') {
+            this.isOkrMenuOpen = true;
+            localStorage.setItem('okrMenuOpen', 'true');
+            const submenu = document.querySelector('.nav-submenu');
+            if (submenu) submenu.classList.add('open');
+        }
+
         // Atualiza URL se necessário
         if (updateURL) {
             const path = this.getPathFromPage(page);
@@ -392,6 +426,9 @@ const Layout = {
             switch (page) {
                 case 'dashboard':
                     DashboardPage.render();
+                    break;
+                case 'my-okrs':
+                    MyOKRsPage.render();
                     break;
                 case 'okrs':
                     OKRsPage.render();
@@ -452,6 +489,24 @@ const Layout = {
                     <span class="toggle-text">${this.sidebarCollapsed ? 'Expandir' : 'Recolher'}</span>
                 </button>
             `;
+        }
+    },
+
+    // Toggle do submenu OKRs
+    toggleOkrMenu(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        this.isOkrMenuOpen = !this.isOkrMenuOpen;
+        localStorage.setItem('okrMenuOpen', this.isOkrMenuOpen);
+
+        const submenu = document.querySelector('.nav-submenu');
+        if (submenu) {
+            if (this.isOkrMenuOpen) {
+                submenu.classList.add('open');
+            } else {
+                submenu.classList.remove('open');
+            }
         }
     },
 
