@@ -5336,3 +5336,65 @@ select.form-control-gio {
     background: #3b82f6;
     color: white;
 }
+
+/* ==================== Calendar Filters ==================== */
+.calendar-filters-gio {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 16px;
+    background: #f8fafc;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    border: 1px solid #e2e8f0;
+}
+
+.filters-label-gio {
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    margin-right: 8px;
+}
+
+.filter-checkbox-gio {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #475569;
+    user-select: none;
+    padding: 6px 12px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.filter-checkbox-gio:hover {
+    background: #f1f5f9;
+}
+
+.filter-checkbox-gio input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #12b0a0;
+    cursor: pointer;
+}
+
+.filter-checkbox-gio input[type="checkbox"]:checked + .checkmark-gio + span {
+    color: #0d9488;
+    font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .calendar-filters-gio {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .filters-label-gio {
+        margin-bottom: 4px;
+    }
+}

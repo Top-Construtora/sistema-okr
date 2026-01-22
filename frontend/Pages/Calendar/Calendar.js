@@ -18,6 +18,13 @@ const CalendarPage = {
     selectedDate: null,
     currentReminderEdit: null,
 
+    // Filtros de iniciativas
+    filters: {
+        myDepartment: true,    // Iniciativas do meu departamento
+        myInitiatives: true,   // Iniciativas que estou associado
+        allInitiatives: false  // Todas as iniciativas
+    },
+
     /**
      * Renderiza a página do calendário
      */
@@ -38,6 +45,31 @@ const CalendarPage = {
             <div class="page-gio calendar-page-gio">
                 <!-- Calendário Principal -->
                 <div class="calendar-main-gio">
+                    <!-- Filtros de Iniciativas -->
+                    <div class="calendar-filters-gio">
+                        <span class="filters-label-gio">Exibir iniciativas:</span>
+                        <label class="filter-checkbox-gio">
+                            <input type="checkbox" id="filter-my-department"
+                                ${this.filters.myDepartment ? 'checked' : ''}
+                                onchange="CalendarPage.toggleFilter('myDepartment')">
+                            <span class="checkmark-gio"></span>
+                            <span>Meu departamento</span>
+                        </label>
+                        <label class="filter-checkbox-gio">
+                            <input type="checkbox" id="filter-my-initiatives"
+                                ${this.filters.myInitiatives ? 'checked' : ''}
+                                onchange="CalendarPage.toggleFilter('myInitiatives')">
+                            <span class="checkmark-gio"></span>
+                            <span>Minhas iniciativas</span>
+                        </label>
+                        <label class="filter-checkbox-gio">
+                            <input type="checkbox" id="filter-all-initiatives"
+                                ${this.filters.allInitiatives ? 'checked' : ''}
+                                onchange="CalendarPage.toggleFilter('allInitiatives')">
+                            <span class="checkmark-gio"></span>
+                            <span>Todas as iniciativas</span>
+                        </label>
+                    </div>
                     <div id="fullcalendar"></div>
                 </div>
 
@@ -315,6 +347,56 @@ const CalendarPage = {
     },
 
     /**
+     * Verifica se o usuário é responsável pela iniciativa
+     */
+    isUserResponsibleForInitiative(initiative) {
+        if (!this.currentUser) return false;
+        const responsibleIds = initiative.getResponsibleUserIds ? initiative.getResponsibleUserIds() : [];
+        return responsibleIds.includes(this.currentUser.id);
+    },
+
+    /**
+     * Alterna um filtro e atualiza o calendário
+     */
+    toggleFilter(filterName) {
+        this.filters[filterName] = !this.filters[filterName];
+
+        // Se marcar "todas as iniciativas", desmarcar as outras
+        if (filterName === 'allInitiatives' && this.filters.allInitiatives) {
+            this.filters.myDepartment = false;
+            this.filters.myInitiatives = false;
+            document.getElementById('filter-my-department').checked = false;
+            document.getElementById('filter-my-initiatives').checked = false;
+        }
+
+        // Se marcar uma das outras, desmarcar "todas"
+        if ((filterName === 'myDepartment' || filterName === 'myInitiatives') &&
+            (this.filters.myDepartment || this.filters.myInitiatives)) {
+            this.filters.allInitiatives = false;
+            document.getElementById('filter-all-initiatives').checked = false;
+        }
+
+        // Se nenhum filtro estiver marcado, marcar "meu departamento" por padrão
+        if (!this.filters.myDepartment && !this.filters.myInitiatives && !this.filters.allInitiatives) {
+            this.filters.myDepartment = true;
+            document.getElementById('filter-my-department').checked = true;
+        }
+
+        // Atualizar calendário
+        this.refreshCalendar();
+    },
+
+    /**
+     * Atualiza os eventos do calendário
+     */
+    refreshCalendar() {
+        if (this.calendar) {
+            this.calendar.removeAllEvents();
+            this.calendar.addEventSource(this.transformToEvents());
+        }
+    },
+
+    /**
      * Transforma initiatives e reminders em eventos do FullCalendar
      */
     transformToEvents() {
@@ -325,12 +407,28 @@ const CalendarPage = {
         this.initiatives.forEach(initiative => {
             // Usar campo department diretamente da initiative
             const deptName = initiative.department || 'Sem Departamento';
-            const isUserDept = isAdmin || this.userDepartments.includes(deptName);
+            const isUserDept = this.userDepartments.includes(deptName);
+            const isUserResponsible = this.isUserResponsibleForInitiative(initiative);
 
-            // Não exibir se não for do departamento do usuário (exceto admin)
-            if (!isAdmin && !isUserDept) return;
+            // Aplicar filtros
+            let shouldShow = false;
 
-            const colors = this.getDepartmentColor(deptName, isUserDept);
+            if (this.filters.allInitiatives) {
+                // Mostrar todas
+                shouldShow = true;
+            } else {
+                // Verificar filtros individuais
+                if (this.filters.myDepartment && isUserDept) {
+                    shouldShow = true;
+                }
+                if (this.filters.myInitiatives && isUserResponsible) {
+                    shouldShow = true;
+                }
+            }
+
+            if (!shouldShow) return;
+
+            const colors = this.getDepartmentColor(deptName, isUserDept || isUserResponsible);
 
             const statusOverlay = this.getStatusOverlay(initiative);
 
