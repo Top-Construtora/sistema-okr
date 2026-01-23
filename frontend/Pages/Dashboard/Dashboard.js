@@ -442,10 +442,16 @@ const DashboardPage = {
                 display: grid;
                 grid-template-columns: 1fr 2fr;
                 gap: 20px;
-                align-items: start;
+                align-items: stretch;
             }
 
             #ranking-section {
+                display: flex;
+                flex-direction: column;
+            }
+
+            #ranking-section .widget {
+                flex: 1;
                 display: flex;
                 flex-direction: column;
             }
@@ -454,6 +460,7 @@ const DashboardPage = {
                 display: flex;
                 flex-direction: column;
                 gap: 20px;
+                height: 100%;
             }
 
             #objectives-section {

@@ -63,6 +63,11 @@ const MyOKRsPage = {
     getShortName(fullName) {
         if (!fullName) return '';
         const parts = fullName.trim().split(/\s+/);
+        if (parts.length < 2) return parts[0];
+        const preposicoes = ['de', 'da', 'do', 'dos', 'das', 'e'];
+        if (preposicoes.includes(parts[1].toLowerCase())) {
+            return parts[0];
+        }
         return parts.slice(0, 2).join(' ');
     },
 
