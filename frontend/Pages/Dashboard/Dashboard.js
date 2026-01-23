@@ -38,26 +38,77 @@ const DashboardPage = {
 
     async renderRanking() {
         const container = document.getElementById('ranking-section');
-        const okrs = await OKR.getAll();
-        const deptStats = {};
 
-        // Calcula estatísticas por departamento
-        okrs.forEach(okr => {
-            if (!deptStats[okr.department]) {
-                deptStats[okr.department] = { count: 0, totalProgress: 0 };
+        // Tenta buscar ranking do banco de dados (com histórico de posições)
+        let ranking = [];
+        let useDbRanking = false;
+
+        try {
+            const { data, error } = await supabaseClient.rpc('get_ranking_with_changes');
+            if (!error && data && data.length > 0) {
+                ranking = data.map(r => ({
+                    name: r.department_name,
+                    avg: Math.round(r.avg_progress),
+                    count: r.okr_count,
+                    position: r.current_position,
+                    previousPosition: r.previous_position,
+                    change: r.position_change
+                }));
+                useDbRanking = true;
             }
-            deptStats[okr.department].count++;
-            deptStats[okr.department].totalProgress += okr.progress;
-        });
+        } catch (err) {
+            console.warn('Função get_ranking_with_changes não disponível, usando fallback:', err);
+        }
 
-        // Cria ranking
-        const ranking = Object.entries(deptStats)
-            .map(([name, stats]) => ({
-                name,
-                avg: Math.round(stats.totalProgress / stats.count),
-                count: stats.count
-            }))
-            .sort((a, b) => b.avg - a.avg);
+        // Fallback: calcula ranking localmente se a função do banco não existir
+        if (!useDbRanking) {
+            const okrs = await OKR.getAll();
+            const deptStats = {};
+
+            okrs.forEach(okr => {
+                if (!deptStats[okr.department]) {
+                    deptStats[okr.department] = { count: 0, totalProgress: 0 };
+                }
+                deptStats[okr.department].count++;
+                deptStats[okr.department].totalProgress += okr.progress;
+            });
+
+            ranking = Object.entries(deptStats)
+                .map(([name, stats]) => ({
+                    name,
+                    avg: Math.round(stats.totalProgress / stats.count),
+                    count: stats.count,
+                    change: 'same' // Sem histórico no fallback
+                }))
+                .sort((a, b) => b.avg - a.avg);
+        }
+
+        // Gera HTML da seta de posição
+        const getPositionArrow = (change, prevPos, currentPos) => {
+            const diff = Math.abs((prevPos || 0) - currentPos);
+            if (change === 'up') {
+                return `<div class="ranking-change up" title="Subiu ${diff} posição(ões)">
+                    <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 15l7-7 7 7"/>
+                    </svg>
+                </div>`;
+            }
+            if (change === 'down') {
+                return `<div class="ranking-change down" title="Desceu ${diff} posição(ões)">
+                    <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </div>`;
+            }
+            if (change === 'new') {
+                return `<div class="ranking-change new" title="Novo no ranking">
+                    <span>•</span>
+                </div>`;
+            }
+            return `<div class="ranking-change same" title="Mesma posição">
+                <span>–</span>
+            </div>`;
+        };
 
         let html = `
             <div class="widget">
@@ -72,10 +123,14 @@ const DashboardPage = {
 
         if (ranking.length > 0) {
             ranking.forEach((dept, idx) => {
+                const currentPos = dept.position || (idx + 1);
                 const posClass = idx === 0 ? 'gold' : idx === 1 ? 'silver' : idx === 2 ? 'bronze' : '';
+                const arrow = getPositionArrow(dept.change, dept.previousPosition, currentPos);
+
                 html += `
                     <div class="ranking-item">
-                        <div class="ranking-pos ${posClass}">${idx + 1}</div>
+                        <div class="ranking-pos ${posClass}">${currentPos}</div>
+                        ${arrow}
                         <div class="ranking-info">
                             <div class="ranking-name">${dept.name}</div>
                             <div class="ranking-bar">
@@ -636,6 +691,48 @@ const DashboardPage = {
                 text-align: right;
             }
 
+            /* Indicadores de mudança de posição */
+            .ranking-change {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 20px;
+                height: 20px;
+                border-radius: 4px;
+                flex-shrink: 0;
+                font-size: 11px;
+                font-weight: 700;
+            }
+
+            .ranking-change.up {
+                background: rgba(16, 185, 129, 0.15);
+                color: #059669;
+            }
+
+            .ranking-change.up svg {
+                stroke: #059669;
+            }
+
+            .ranking-change.down {
+                background: rgba(239, 68, 68, 0.15);
+                color: #dc2626;
+            }
+
+            .ranking-change.down svg {
+                stroke: #dc2626;
+            }
+
+            .ranking-change.same {
+                background: rgba(148, 163, 184, 0.15);
+                color: #94a3b8;
+            }
+
+            .ranking-change.new {
+                background: rgba(59, 130, 246, 0.15);
+                color: #3b82f6;
+                font-size: 16px;
+            }
+
             /* ===== OBJECTIVES TABLE GIO ===== */
             .dashboard-objectives-table {
                 width: 100%;
@@ -760,38 +857,46 @@ const DashboardPage = {
                 position: relative;
                 display: flex;
                 flex-direction: column;
+                gap: 10px;
+                padding: 4px 0;
             }
 
             .activity-item {
                 display: flex;
                 justify-content: space-between;
-                align-items: flex-start;
-                padding: 12px 16px;
-                border-left: 3px solid transparent;
-                transition: all 0.3s ease;
-                border-bottom: 1px solid #f1f5f9;
+                align-items: center;
+                padding: 14px 16px;
+                background: #f8fafc;
+                border-radius: 12px;
+                border-left: 4px solid #12b0a0;
+                transition: all 0.25s ease;
                 flex-shrink: 0;
-                gap: 12px;
-            }
-
-            .activity-item:last-child {
-                border-bottom: none;
+                gap: 16px;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
             }
 
             .activity-item:hover {
-                background: rgba(18, 176, 160, 0.04);
-                border-left-color: #12b0a0;
-                transform: translateX(2px);
+                background: #f1f5f9;
+                transform: translateX(4px);
+                box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
             }
 
             .activity-item.urgent {
                 border-left-color: #ef4444;
-                background: linear-gradient(to right, rgba(254, 242, 242, 0.8), white);
+                background: linear-gradient(135deg, #fef2f2 0%, #fff5f5 100%);
+            }
+
+            .activity-item.urgent:hover {
+                background: linear-gradient(135deg, #fee2e2 0%, #fef2f2 100%);
             }
 
             .activity-item.near {
                 border-left-color: #f59e0b;
-                background: linear-gradient(to right, rgba(255, 251, 235, 0.8), white);
+                background: linear-gradient(135deg, #fffbeb 0%, #fef9f3 100%);
+            }
+
+            .activity-item.near:hover {
+                background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%);
             }
 
             .activity-info {
@@ -802,17 +907,27 @@ const DashboardPage = {
             .activity-name {
                 font-size: 13px;
                 font-weight: 600;
-                color: #1f2937;
-                margin-bottom: 4px;
+                color: #1e293b;
+                margin-bottom: 6px;
                 line-height: 1.4;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
             }
 
             .activity-dept {
-                font-size: 10px;
-                color: #94a3b8;
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                font-size: 9px;
+                color: #1e6076;
                 text-transform: uppercase;
-                font-weight: 600;
+                font-weight: 700;
                 letter-spacing: 0.5px;
+                background: rgba(30, 96, 118, 0.08);
+                padding: 3px 8px;
+                border-radius: 4px;
             }
 
             .activity-deadline {
@@ -820,32 +935,36 @@ const DashboardPage = {
                 display: flex;
                 flex-direction: column;
                 align-items: flex-end;
-                gap: 4px;
+                gap: 6px;
+                flex-shrink: 0;
             }
 
             .deadline-date {
-                font-size: 13px;
+                font-size: 14px;
                 font-weight: 700;
                 color: #1e6076;
+                white-space: nowrap;
             }
 
             .deadline-days {
                 font-size: 10px;
-                padding: 3px 8px;
-                border-radius: 6px;
+                padding: 4px 10px;
+                border-radius: 20px;
                 font-weight: 700;
-                background: #f1f5f9;
-                color: #64748b;
+                background: linear-gradient(135deg, #12b0a0 0%, #0d9488 100%);
+                color: white;
+                white-space: nowrap;
+                box-shadow: 0 2px 4px rgba(18, 176, 160, 0.25);
             }
 
             .deadline-days.urgent {
-                background: rgba(239, 68, 68, 0.12);
-                color: #dc2626;
+                background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+                box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
             }
 
             .deadline-days.near {
-                background: rgba(245, 158, 11, 0.12);
-                color: #d97706;
+                background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+                box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
             }
 
             /* ===== CAROUSEL INDICATOR ===== */
@@ -911,20 +1030,25 @@ const DashboardPage = {
                 }
 
                 .activity-item {
-                    padding: 14px 16px;
+                    padding: 12px 14px;
                     flex-direction: column;
                     align-items: flex-start;
-                    gap: 12px;
+                    gap: 10px;
+                    border-radius: 10px;
                 }
 
                 .activity-deadline {
                     align-items: flex-start;
                     flex-direction: row;
                     gap: 10px;
+                    width: 100%;
+                    justify-content: space-between;
+                    padding-top: 8px;
+                    border-top: 1px solid rgba(0, 0, 0, 0.05);
                 }
 
                 .activity-name {
-                    font-size: 14px;
+                    font-size: 13px;
                 }
 
                 .ranking-item {
