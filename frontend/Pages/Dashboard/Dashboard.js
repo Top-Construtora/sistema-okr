@@ -39,49 +39,86 @@ const DashboardPage = {
     async renderRanking() {
         const container = document.getElementById('ranking-section');
 
-        // Tenta buscar ranking do banco de dados (com histórico de posições)
-        let ranking = [];
-        let useDbRanking = false;
+        // Busca departamentos para mapear nome -> id
+        const { data: departments } = await supabaseClient
+            .from('departments')
+            .select('id, nome');
 
-        try {
-            const { data, error } = await supabaseClient.rpc('get_ranking_with_changes');
-            if (!error && data && data.length > 0) {
-                ranking = data.map(r => ({
-                    name: r.department_name,
-                    avg: Math.round(r.avg_progress),
-                    count: r.okr_count,
-                    position: r.current_position,
-                    previousPosition: r.previous_position,
-                    change: r.position_change
-                }));
-                useDbRanking = true;
-            }
-        } catch (err) {
-            console.warn('Função get_ranking_with_changes não disponível, usando fallback:', err);
-        }
-
-        // Fallback: calcula ranking localmente se a função do banco não existir
-        if (!useDbRanking) {
-            const okrs = await OKR.getAll();
-            const deptStats = {};
-
-            okrs.forEach(okr => {
-                if (!deptStats[okr.department]) {
-                    deptStats[okr.department] = { count: 0, totalProgress: 0 };
-                }
-                deptStats[okr.department].count++;
-                deptStats[okr.department].totalProgress += okr.progress;
+        const deptNameToId = {};
+        if (departments) {
+            departments.forEach(d => {
+                deptNameToId[d.nome] = d.id;
             });
-
-            ranking = Object.entries(deptStats)
-                .map(([name, stats]) => ({
-                    name,
-                    avg: Math.round(stats.totalProgress / stats.count),
-                    count: stats.count,
-                    change: 'same' // Sem histórico no fallback
-                }))
-                .sort((a, b) => b.avg - a.avg);
         }
+
+        // Calcula ranking em tempo real com base nos OKRs atuais
+        const okrs = await OKR.getAll();
+        const deptStats = {};
+
+        okrs.forEach(okr => {
+            if (!deptStats[okr.department]) {
+                deptStats[okr.department] = {
+                    count: 0,
+                    totalProgress: 0,
+                    department_id: deptNameToId[okr.department]
+                };
+            }
+            deptStats[okr.department].count++;
+            deptStats[okr.department].totalProgress += okr.progress;
+        });
+
+        // Calcula ranking atual ordenado
+        // Ordena por avg (maior primeiro), e por nome (alfabético) em caso de empate
+        const currentRanking = Object.entries(deptStats)
+            .map(([name, stats]) => ({
+                name,
+                avg: Math.round(stats.totalProgress / stats.count),
+                count: stats.count,
+                department_id: stats.department_id
+            }))
+            .sort((a, b) => {
+                if (b.avg !== a.avg) return b.avg - a.avg; // Maior avg primeiro
+                return a.name.localeCompare(b.name); // Empate: ordem alfabética
+            })
+            .map((dept, idx) => ({ ...dept, position: idx + 1 }));
+
+        // Busca posição do dia ANTERIOR (não de hoje) para comparação
+        const today = new Date().toISOString().split('T')[0];
+        const { data: historyData } = await supabaseClient
+            .from('ranking_history')
+            .select('department_id, department_name, position, recorded_at')
+            .lt('recorded_at', today) // Apenas registros anteriores a hoje
+            .order('recorded_at', { ascending: false });
+
+        // Pega a posição mais recente (anterior a hoje) de cada departamento
+        const previousPositions = {};
+        if (historyData) {
+            historyData.forEach(h => {
+                if (!previousPositions[h.department_id]) {
+                    previousPositions[h.department_id] = h.position;
+                }
+            });
+        }
+
+        // Combina ranking atual com histórico para determinar mudança
+        const ranking = currentRanking.map(dept => {
+            const prevPos = previousPositions[dept.department_id];
+            let change = 'same';
+
+            if (prevPos === undefined) {
+                change = 'new';
+            } else if (dept.position < prevPos) {
+                change = 'up';
+            } else if (dept.position > prevPos) {
+                change = 'down';
+            }
+
+            return {
+                ...dept,
+                previousPosition: prevPos || dept.position,
+                change
+            };
+        });
 
         // Gera HTML da seta de posição
         const getPositionArrow = (change, prevPos, currentPos) => {
