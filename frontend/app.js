@@ -6,8 +6,47 @@ import { supabaseClient } from './services/supabase.js';
 
 const App = {
     async init() {
-        // Mostra loading
-        document.getElementById('app').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:sans-serif;color:#1e6076;"><div style="text-align:center;"><div style="font-size:48px;margin-bottom:16px;">TOP</div><div>Carregando sistema...</div></div></div>';
+        // Mostra loading com splash screen GIO
+        document.getElementById('app').innerHTML = `
+            <style>
+                @keyframes breathe {
+                    0% {
+                        transform: scale(0.95);
+                        opacity: 0.85;
+                    }
+                    50% {
+                        transform: scale(1.05);
+                        opacity: 1;
+                    }
+                    100% {
+                        transform: scale(0.95);
+                        opacity: 0.85;
+                    }
+                }
+                .splash-screen {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100vw;
+                    height: 100vh;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    background: linear-gradient(45deg, #1e6076 30%, #12b0a0 90%);
+                    z-index: 9999;
+                }
+                .splash-logo {
+                    max-height: 150px;
+                    width: auto;
+                    object-fit: contain;
+                    animation: breathe 2s infinite ease-in-out;
+                    filter: drop-shadow(0 4px 15px rgba(0,0,0,0.3));
+                }
+            </style>
+            <div class="splash-screen">
+                <img src="/logoGioWhite.png" alt="GIO" class="splash-logo" />
+            </div>
+        `;
 
         try {
             // Inicializa o storage (testa conexão Supabase)
@@ -15,6 +54,73 @@ const App = {
 
             // Cria admin padrão se necessário
             await AuthService.initializeDefaultAdmin();
+
+            // ===== VERIFICAÇÃO SSO - PRIMEIRA PRIORIDADE =====
+            // Verifica se há token SSO na URL (vindo do GIO)
+            const urlParams = new URLSearchParams(window.location.search);
+            const ssoToken = urlParams.get('sso_token');
+
+            if (ssoToken) {
+                console.log('🔐 Token SSO detectado na URL. Autenticando...');
+
+                // Mostra loading específico para SSO com animação GIO
+                document.getElementById('app').innerHTML = `
+                    <style>
+                        @keyframes breathe {
+                            0% {
+                                transform: scale(0.95);
+                                opacity: 0.85;
+                            }
+                            50% {
+                                transform: scale(1.05);
+                                opacity: 1;
+                            }
+                            100% {
+                                transform: scale(0.95);
+                                opacity: 0.85;
+                            }
+                        }
+                        .sso-splash-screen {
+                            position: fixed;
+                            top: 0;
+                            left: 0;
+                            width: 100vw;
+                            height: 100vh;
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            background: linear-gradient(45deg, #1e6076 30%, #12b0a0 90%);
+                            z-index: 9999;
+                        }
+                        .sso-splash-logo {
+                            max-height: 150px;
+                            width: auto;
+                            object-fit: contain;
+                            animation: breathe 2s infinite ease-in-out;
+                            filter: drop-shadow(0 4px 15px rgba(0,0,0,0.3));
+                        }
+                    </style>
+                    <div class="sso-splash-screen">
+                        <img src="/logoGioWhite.png" alt="GIO" class="sso-splash-logo" />
+                    </div>
+                `;
+
+                const result = await AuthService.loginWithSSO(ssoToken);
+
+                if (result.success) {
+                    // Remove o token da URL (segurança)
+                    window.history.replaceState({}, document.title, '/');
+
+                    // Redireciona para o dashboard
+                    this.renderApp();
+                    return;
+                } else {
+                    // Falha na autenticação SSO
+                    this.showSSOError(result.error);
+                    return;
+                }
+            }
+            // ===== FIM VERIFICAÇÃO SSO =====
 
             // Verifica se é uma página pública (não requer autenticação)
             const path = window.location.pathname;
@@ -94,6 +200,29 @@ const App = {
                     <p style="color:#64748b;margin-bottom:24px;line-height:1.6;">
                         Seu email Microsoft não está cadastrado no sistema OKR.<br>
                         Entre em contato com o administrador para solicitar acesso.
+                    </p>
+                    <button onclick="window.location.href='/'" style="padding:14px 28px;background:linear-gradient(135deg, #12b0a0 0%, #0d9488 100%);color:white;border:none;border-radius:12px;cursor:pointer;font-weight:600;font-size:15px;box-shadow:0 4px 14px rgba(18, 176, 160, 0.35);">
+                        Voltar ao Login
+                    </button>
+                </div>
+            </div>
+        `;
+    },
+
+    showSSOError(errorMessage) {
+        const app = document.getElementById('app');
+        app.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:sans-serif;background:linear-gradient(135deg, #1e2938 0%, #1e6076 50%, #12b0a0 100%);">
+                <div style="text-align:center;max-width:500px;padding:40px;background:white;border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+                    <div style="width:80px;height:80px;background:#fef2f2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;">
+                        <svg width="40" height="40" fill="none" stroke="#ef4444" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                    </div>
+                    <h2 style="color:#1e6076;margin-bottom:12px;font-size:24px;">Erro na Autenticação SSO</h2>
+                    <p style="color:#64748b;margin-bottom:24px;line-height:1.6;">
+                        ${errorMessage || 'Não foi possível autenticar via GIO. Tente fazer login manualmente.'}<br><br>
+                        Se o problema persistir, entre em contato com o administrador.
                     </p>
                     <button onclick="window.location.href='/'" style="padding:14px 28px;background:linear-gradient(135deg, #12b0a0 0%, #0d9488 100%);color:white;border:none;border-radius:12px;cursor:pointer;font-weight:600;font-size:15px;box-shadow:0 4px 14px rgba(18, 176, 160, 0.35);">
                         Voltar ao Login

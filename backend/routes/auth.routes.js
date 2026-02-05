@@ -1,4 +1,5 @@
 import express from 'express';
+import jwt from 'jsonwebtoken';
 import supabase, { supabaseAdmin } from '../config/supabase.js';
 
 const router = express.Router();
@@ -130,6 +131,91 @@ router.post('/confirm-reset', async (req, res) => {
         return res.status(500).json({
             success: false,
             error: 'Erro ao processar redefinição de senha'
+        });
+    }
+});
+
+// POST /api/auth/sso-login
+// Autenticação via SSO (Single Sign-On) do GIO
+router.post('/sso-login', async (req, res) => {
+    try {
+        const { token } = req.body;
+
+        // Validação
+        if (!token) {
+            return res.status(400).json({
+                success: false,
+                error: 'Token SSO é obrigatório'
+            });
+        }
+
+        // Verificar se SSO_SECRET está configurado
+        if (!process.env.SSO_SECRET) {
+            console.error('SSO_SECRET não configurado no .env');
+            return res.status(500).json({
+                success: false,
+                error: 'SSO não configurado corretamente'
+            });
+        }
+
+        // Decodificar e validar o token JWT
+        let decoded;
+        try {
+            decoded = jwt.verify(token, process.env.SSO_SECRET);
+        } catch (jwtError) {
+            console.error('Erro ao validar token SSO:', jwtError.message);
+            return res.status(401).json({
+                success: false,
+                error: 'Token SSO inválido ou expirado'
+            });
+        }
+
+        // Validar campos obrigatórios no token
+        if (!decoded.email) {
+            return res.status(400).json({
+                success: false,
+                error: 'Token SSO inválido: email não encontrado'
+            });
+        }
+
+        // Buscar usuário no banco de dados
+        const { data: user, error: userError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('email', decoded.email)
+            .eq('ativo', true)
+            .single();
+
+        if (userError || !user) {
+            console.error('Usuário não encontrado ou inativo:', decoded.email);
+            return res.status(404).json({
+                success: false,
+                error: 'Usuário não encontrado ou inativo no sistema OKR'
+            });
+        }
+
+        // Retornar dados de autenticação validados
+        // O frontend vai criar a sessão localmente com esses dados
+        return res.json({
+            success: true,
+            message: 'Autenticação SSO realizada com sucesso',
+            user: {
+                id: user.id,
+                nome: user.nome,
+                email: user.email,
+                tipo: user.tipo,
+                departamento_id: user.departamento_id,
+                primeiro_acesso: user.primeiro_acesso,
+                auth_id: user.auth_id,
+                ativo: user.ativo
+            }
+        });
+
+    } catch (error) {
+        console.error('Erro no SSO login:', error);
+        return res.status(500).json({
+            success: false,
+            error: 'Erro ao processar autenticação SSO'
         });
     }
 });

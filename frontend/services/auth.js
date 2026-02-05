@@ -331,6 +331,90 @@ const AuthService = {
                 error: 'Erro ao processar alteração de senha'
             };
         }
+    },
+
+    // Login via SSO (Single Sign-On) do GIO
+    async loginWithSSO(ssoToken) {
+        try {
+            console.log('🔐 Iniciando autenticação SSO...');
+
+            // Remove flag de logout explícito (usuário está tentando logar via SSO)
+            localStorage.removeItem('explicit_logout');
+
+            // Chama o backend para validar o token SSO
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+            const response = await fetch(`${API_URL}/api/auth/sso-login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ token: ssoToken })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                console.error('❌ Erro na autenticação SSO:', data.error);
+                return {
+                    success: false,
+                    error: data.error || 'Erro ao autenticar via SSO'
+                };
+            }
+
+            console.log('✅ Token SSO validado. Carregando dados completos do usuário...');
+
+            // Busca dados completos do usuário e departamento
+            const { data: userData, error: userError } = await supabaseClient
+                .from('users')
+                .select('*, departamento:departments(id, nome)')
+                .eq('email', data.user.email)
+                .eq('ativo', true)
+                .single();
+
+            if (userError || !userData) {
+                console.error('❌ Erro ao buscar dados do usuário:', userError);
+                // Fallback: usa dados retornados pelo backend
+                userData = data.user;
+            }
+
+            // Busca departamentos vinculados (múltiplos departamentos)
+            const { data: userDepts } = await supabaseClient
+                .from('user_departments')
+                .select('department_id, is_primary, departments(id, nome)')
+                .eq('user_id', userData.id);
+
+            if (userDepts && userDepts.length > 0) {
+                userData.departments = userDepts.map(ud => ({
+                    id: ud.departments.id,
+                    nome: ud.departments.nome,
+                    is_primary: ud.is_primary
+                }));
+            } else if (userData.departamento) {
+                // Fallback para departamento único legado
+                userData.departments = [{
+                    id: userData.departamento.id,
+                    nome: userData.departamento.nome,
+                    is_primary: true
+                }];
+            }
+
+            // Salva na sessão local
+            // NOTA: SSO não cria sessão Supabase Auth, apenas sessão local
+            StorageService.setCurrentUser(userData);
+
+            console.log('✅ Autenticação SSO realizada com sucesso!');
+
+            return {
+                success: true,
+                user: userData
+            };
+        } catch (error) {
+            console.error('❌ Erro ao processar SSO:', error);
+            return {
+                success: false,
+                error: 'Erro ao processar autenticação SSO'
+            };
+        }
     }
 };
 
