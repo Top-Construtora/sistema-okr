@@ -190,6 +190,13 @@ const OKRsPage = {
 
         await this.renderList();
         this.addStyles();
+
+        // Verificar se há um parâmetro de iniciativa na URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const initiativeId = urlParams.get('initiative');
+        if (initiativeId) {
+            await this.expandToInitiative(initiativeId);
+        }
     },
 
     async renderList() {
@@ -198,6 +205,9 @@ const OKRsPage = {
             console.warn('Container okrs-list não encontrado');
             return;
         }
+
+        // Mostrar skeleton loader sutil
+        container.innerHTML = this.renderSkeletonLoader();
 
         const currentUser = AuthService.getCurrentUser();
         const isAdmin = currentUser && currentUser.tipo === 'admin';
@@ -287,6 +297,29 @@ const OKRsPage = {
             const cardsHTML = await Promise.all(okrs.map((okr, idx) => this.renderOKRCard(okr, idx, canEdit)));
             container.innerHTML = cardsHTML.join('');
         }
+    },
+
+    renderSkeletonLoader() {
+        return `
+            <div class="okr-skeleton-loader">
+                ${[1, 2, 3].map(() => `
+                    <div class="okr-skeleton-card">
+                        <div class="skeleton-header">
+                            <div class="skeleton-line skeleton-title"></div>
+                            <div class="skeleton-circle"></div>
+                        </div>
+                        <div class="skeleton-body">
+                            <div class="skeleton-line skeleton-text"></div>
+                            <div class="skeleton-line skeleton-text" style="width: 80%;"></div>
+                        </div>
+                        <div class="skeleton-footer">
+                            <div class="skeleton-line skeleton-badge"></div>
+                            <div class="skeleton-line skeleton-badge"></div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
     },
 
     async renderOKRCard(okr, index, canEdit = true) {
@@ -647,7 +680,7 @@ const OKRsPage = {
                                                     ` : `
                                                         <div class="initiatives-list">
                                                             ${initiatives.map(init => `
-                                                                <div class="initiative-item ${init.concluida ? 'completed' : ''} ${init.isOverdue() ? 'overdue' : ''}">
+                                                                <div class="initiative-item ${init.concluida ? 'completed' : ''} ${init.isOverdue() ? 'overdue' : ''}" data-initiative-id="${init.id}">
                                                                     ${canEdit ? `
                                                                     <label class="initiative-checkbox">
                                                                         <input type="checkbox" ${init.concluida ? 'checked' : ''}
@@ -1083,6 +1116,78 @@ const OKRsPage = {
         } else {
             this.expandedKRs.add(krId);
             container.classList.add('expanded');
+        }
+    },
+
+    async expandToInitiative(initiativeId) {
+        try {
+            // Buscar a iniciativa
+            const initiative = await Initiative.getById(initiativeId);
+            if (!initiative) {
+                console.warn('Iniciativa não encontrada:', initiativeId);
+                return;
+            }
+
+            // Buscar todos os OKRs
+            const allOKRs = await OKR.getAll();
+
+            // Encontrar o OKR que contém o KR desta iniciativa
+            let targetOKR = null;
+            let targetKR = null;
+
+            for (const okr of allOKRs) {
+                const kr = okr.keyResults.find(kr => kr.id === initiative.key_result_id);
+                if (kr) {
+                    targetOKR = okr;
+                    targetKR = kr;
+                    break;
+                }
+            }
+
+            if (!targetOKR || !targetKR) {
+                console.warn('OKR ou KR não encontrado para a iniciativa');
+                return;
+            }
+
+            // Expandir o OKR
+            this.expandedOKRs.add(targetOKR.id);
+            const okrContainer = document.querySelector(`.okr-accordion-body[data-okr-id="${targetOKR.id}"]`);
+            if (okrContainer) {
+                okrContainer.classList.add('expanded');
+            }
+
+            // Aguardar um pouco para o DOM ser atualizado
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // Expandir o KR
+            this.expandedKRs.add(targetKR.id);
+            const krContainer = document.querySelector(`.kr-accordion-body[data-kr-id="${targetKR.id}"]`);
+            if (krContainer) {
+                krContainer.classList.add('expanded');
+            }
+
+            // Aguardar mais um pouco para garantir que tudo foi renderizado
+            await new Promise(resolve => setTimeout(resolve, 200));
+
+            // Encontrar e destacar a iniciativa
+            const initiativeElement = document.querySelector(`.initiative-item[data-initiative-id="${initiativeId}"]`);
+            if (initiativeElement) {
+                // Adicionar classe de destaque
+                initiativeElement.classList.add('highlighted');
+
+                // Scroll suave até a iniciativa
+                initiativeElement.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+
+                // Remover destaque após 3 segundos
+                setTimeout(() => {
+                    initiativeElement.classList.remove('highlighted');
+                }, 3000);
+            }
+        } catch (error) {
+            console.error('Erro ao expandir iniciativa:', error);
         }
     },
 
@@ -2593,6 +2698,77 @@ const OKRsPage = {
                 width: 20px;
                 height: 20px;
             }
+
+            /* Skeleton Loader Styles */
+            .okr-skeleton-loader {
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+            }
+            .okr-skeleton-card {
+                background: white;
+                border: 1px solid var(--border);
+                border-radius: var(--radius);
+                padding: 20px;
+                animation: skeletonPulse 1.5s ease-in-out infinite;
+            }
+            .skeleton-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 16px;
+            }
+            .skeleton-body {
+                margin-bottom: 16px;
+            }
+            .skeleton-footer {
+                display: flex;
+                gap: 8px;
+            }
+            .skeleton-line {
+                height: 12px;
+                background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+                background-size: 200% 100%;
+                animation: shimmer 1.5s infinite;
+                border-radius: 4px;
+            }
+            .skeleton-title {
+                width: 60%;
+                height: 16px;
+            }
+            .skeleton-circle {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+                background-size: 200% 100%;
+                animation: shimmer 1.5s infinite;
+            }
+            .skeleton-text {
+                width: 100%;
+                margin-bottom: 8px;
+            }
+            .skeleton-badge {
+                width: 80px;
+                height: 24px;
+            }
+            @keyframes shimmer {
+                0% {
+                    background-position: -200% 0;
+                }
+                100% {
+                    background-position: 200% 0;
+                }
+            }
+            @keyframes skeletonPulse {
+                0%, 100% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.7;
+                }
+            }
+
             .department-separator {
                 display: flex;
                 align-items: center;
@@ -5007,6 +5183,22 @@ const OKRsPage = {
 
             .kr-detail-body .initiative-item:last-child {
                 margin-bottom: 0;
+            }
+
+            /* Destaque para iniciativa selecionada */
+            .initiative-item.highlighted {
+                animation: highlight-pulse 3s ease-in-out;
+                border: 2px solid var(--top-teal) !important;
+                box-shadow: 0 0 0 4px rgba(18, 176, 160, 0.2), 0 4px 12px rgba(18, 176, 160, 0.3) !important;
+            }
+
+            @keyframes highlight-pulse {
+                0%, 100% {
+                    box-shadow: 0 0 0 4px rgba(18, 176, 160, 0.2), 0 4px 12px rgba(18, 176, 160, 0.3);
+                }
+                50% {
+                    box-shadow: 0 0 0 8px rgba(18, 176, 160, 0.3), 0 6px 16px rgba(18, 176, 160, 0.4);
+                }
             }
         `;
         document.head.appendChild(style);

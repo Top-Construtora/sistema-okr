@@ -379,27 +379,38 @@ const Layout = {
         // Fecha sidebar mobile se estiver aberta
         this.closeMobileSidebar();
 
+        // Extrai página base e query string
+        let basePage = page;
+        let queryString = '';
+        if (page.includes('?')) {
+            const parts = page.split('?');
+            basePage = parts[0];
+            queryString = '?' + parts[1];
+        }
+
         // Bloqueia acesso a páginas administrativas para não-admins
         const isAdmin = AuthService.isAdmin();
         const canAccessApproval = AuthService.canAccessApproval();
         const adminOnlyPages = ['users', 'departments'];
 
         // Páginas só de admin
-        if (!isAdmin && adminOnlyPages.includes(page)) {
-            page = 'dashboard';
+        if (!isAdmin && adminOnlyPages.includes(basePage)) {
+            basePage = 'dashboard';
+            queryString = '';
             updateURL = true;
         }
 
         // Comitê de Aprovação: admin e consultor podem acessar
-        if (!canAccessApproval && page === 'approval') {
-            page = 'dashboard';
+        if (!canAccessApproval && basePage === 'approval') {
+            basePage = 'dashboard';
+            queryString = '';
             updateURL = true;
         }
 
-        this.currentPage = page;
+        this.currentPage = basePage;
 
         // Se navegar para página de OKR, abre o submenu
-        if (page === 'my-okrs' || page === 'okrs') {
+        if (basePage === 'my-okrs' || basePage === 'okrs') {
             this.isOkrMenuOpen = true;
             localStorage.setItem('okrMenuOpen', 'true');
             const submenu = document.querySelector('.nav-submenu');
@@ -408,17 +419,17 @@ const Layout = {
 
         // Atualiza URL se necessário
         if (updateURL) {
-            const path = this.getPathFromPage(page);
-            window.history.pushState({ page }, '', path);
+            const path = this.getPathFromPage(basePage) + queryString;
+            window.history.pushState({ page: basePage }, '', path);
         }
 
         // Atualiza título da página
-        document.title = `${this.getPageTitle(page)} - TOP Construtora OKR`;
+        document.title = `${this.getPageTitle(basePage)} - TOP Construtora OKR`;
 
         // Atualiza nav items ativos
         document.querySelectorAll('.nav-item').forEach(item => {
             item.classList.remove('active');
-            if (item.getAttribute('data-page') === page) {
+            if (item.getAttribute('data-page') === basePage) {
                 item.classList.add('active');
             }
         });
@@ -429,7 +440,7 @@ const Layout = {
         // Renderiza conteúdo da página
         const content = document.getElementById('content');
         if (content) {
-            switch (page) {
+            switch (basePage) {
                 case 'dashboard':
                     DashboardPage.render();
                     break;

@@ -187,6 +187,9 @@ const MyOKRsPage = {
             return;
         }
 
+        // Mostrar skeleton loader sutil
+        container.innerHTML = this.renderSkeletonLoader();
+
         const currentUser = AuthService.getCurrentUser();
         const isConsultor = currentUser && currentUser.tipo === 'consultor';
         const canEdit = !isConsultor; // Consultor não pode editar
@@ -381,30 +384,11 @@ const MyOKRsPage = {
                             </div>
                         </div>
                     </div>
-                    ` : isLocked ? `
-                    <div class="okr-header-right">
-                        <span class="locked-badge">
-                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                            </svg>
-                            Bloqueado
-                        </span>
-                    </div>
                     ` : ''}
                 </div>
 
                 <div class="okr-accordion-body ${isOKRExpanded ? 'expanded' : ''}" data-okr-id="${okr.id}">
-                    ${isLocked ? `
-                    <div class="okr-locked-notice">
-                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                        </svg>
-                        <div>
-                            <strong>OKR Bloqueado</strong>
-                            <p>Este OKR foi ${okr.status === 'homologated' ? 'homologado' : 'concluído'} e não pode mais ser editado.</p>
-                        </div>
-                    </div>
-                    ` : okr.status === 'approved' ? `
+                    ${okr.status === 'approved' ? `
                     <div class="okr-approved-notice">
                         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -2374,6 +2358,29 @@ const MyOKRsPage = {
         }
     },
 
+    renderSkeletonLoader() {
+        return `
+            <div class="okr-skeleton-loader">
+                ${[1, 2, 3].map(() => `
+                    <div class="okr-skeleton-card">
+                        <div class="skeleton-header">
+                            <div class="skeleton-line skeleton-title"></div>
+                            <div class="skeleton-circle"></div>
+                        </div>
+                        <div class="skeleton-body">
+                            <div class="skeleton-line skeleton-text"></div>
+                            <div class="skeleton-line skeleton-text" style="width: 80%;"></div>
+                        </div>
+                        <div class="skeleton-footer">
+                            <div class="skeleton-line skeleton-badge"></div>
+                            <div class="skeleton-line skeleton-badge"></div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    },
+
     addStyles() {
         if (document.getElementById('okr-styles')) return;
 
@@ -2627,32 +2634,28 @@ const MyOKRsPage = {
             }
 
             .okr-status-badge {
-                padding: 4px 10px;
-                border-radius: 6px;
-                font-size: 10px;
-                font-weight: 700;
-                text-transform: uppercase;
-                letter-spacing: 0.3px;
-                white-space: nowrap;
-                transform: translateY(-2px);
-            }
-
-            .locked-badge {
                 display: inline-flex;
                 align-items: center;
-                gap: 6px;
-                padding: 6px 12px;
-                border-radius: 6px;
-                font-size: 12px;
+                justify-content: center;
+                padding: 0 14px;
+                border-radius: 20px;
+                font-size: 11px;
                 font-weight: 600;
-                background: #fee2e2;
-                color: #991b1b;
-                border: 1px solid #fecaca;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                white-space: nowrap;
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+                border: 1.5px solid rgba(255, 255, 255, 0.2);
+                backdrop-filter: blur(8px);
+                transition: all 0.2s ease;
+                line-height: 1;
+                height: 32px;
+                flex-shrink: 0;
             }
 
-            .locked-badge svg {
-                width: 16px;
-                height: 16px;
+            .okr-status-badge:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
             }
 
             .okr-locked-notice,
@@ -2699,14 +2702,27 @@ const MyOKRsPage = {
 
             .okr-accordion-header {
                 background: linear-gradient(135deg, var(--top-blue) 0%, #1a5570 100%);
-                padding: 16px 20px;
+                padding: 20px 24px;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
                 cursor: pointer;
-                transition: all 0.2s ease;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                 position: relative;
-                border-radius: 12px 12px 0 0;
+                border-radius: 16px 16px 0 0;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            }
+
+            .okr-accordion-header::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 100%);
+                border-radius: 16px 16px 0 0;
+                pointer-events: none;
             }
 
             .okr-accordion-header::after {
@@ -2715,10 +2731,11 @@ const MyOKRsPage = {
                 bottom: 0;
                 left: 0;
                 width: 100%;
-                height: 2px;
-                background: var(--top-teal);
+                height: 3px;
+                background: linear-gradient(90deg, var(--top-teal) 0%, #06b6d4 100%);
                 transform: scaleX(0);
-                transition: transform 0.3s ease;
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                border-radius: 0 0 2px 2px;
             }
 
             .okr-accordion-header:hover::after {
@@ -2727,6 +2744,8 @@ const MyOKRsPage = {
 
             .okr-accordion-header:hover {
                 background: linear-gradient(135deg, #1a5570 0%, var(--top-blue) 100%);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                transform: translateY(-1px);
             }
 
             .okr-header-left {
@@ -2747,6 +2766,7 @@ const MyOKRsPage = {
                 display: flex;
                 align-items: center;
                 gap: 12px;
+                line-height: 1;
             }
 
             .okr-meta-line {
@@ -2852,12 +2872,19 @@ const MyOKRsPage = {
             }
 
             .okr-identifier {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
                 background: white;
                 color: var(--top-blue);
-                padding: 4px 10px;
-                border-radius: 6px;
-                font-size: 13px;
+                padding: 0 12px;
+                border-radius: 20px;
+                font-size: 12px;
                 font-weight: 700;
+                line-height: 1;
+                height: 32px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                flex-shrink: 0;
             }
 
             .okr-title-header {
@@ -2865,11 +2892,34 @@ const MyOKRsPage = {
                 font-size: 16px;
                 font-weight: 600;
                 margin: 0;
+                line-height: 1.3;
+                display: flex;
+                align-items: center;
             }
 
             .kr-count {
-                color: rgba(255,255,255,0.8);
-                font-size: 13px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0 14px;
+                background: rgba(255, 255, 255, 0.15);
+                color: rgba(255, 255, 255, 0.95);
+                font-size: 12px;
+                font-weight: 600;
+                border-radius: 20px;
+                border: 1.5px solid rgba(255, 255, 255, 0.25);
+                backdrop-filter: blur(8px);
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+                transition: all 0.2s ease;
+                line-height: 1;
+                height: 32px;
+                flex-shrink: 0;
+            }
+
+            .kr-count:hover {
+                background: rgba(255, 255, 255, 0.2);
+                transform: translateY(-1px);
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
             }
 
             .okr-header-right {
@@ -3932,9 +3982,9 @@ const MyOKRsPage = {
                 }
 
                 .okr-identifier {
-                    padding: 5px 12px;
-                    font-size: 12px;
-                    border-radius: 8px;
+                    padding: 0 10px;
+                    font-size: 11px;
+                    height: 28px;
                 }
 
                 .okr-title-header {
@@ -3943,7 +3993,9 @@ const MyOKRsPage = {
                 }
 
                 .kr-count {
-                    font-size: 12px;
+                    font-size: 11px;
+                    padding: 0 10px;
+                    height: 28px;
                 }
 
                 .okr-meta-line {
@@ -3986,9 +4038,9 @@ const MyOKRsPage = {
                 }
 
                 .okr-status-badge {
-                    padding: 6px 12px;
-                    font-size: 11px;
-                    border-radius: 8px;
+                    padding: 0 10px;
+                    font-size: 10px;
+                    height: 28px;
                 }
 
                 .action-menu-btn-header {
@@ -4837,6 +4889,76 @@ const MyOKRsPage = {
 
             .kr-detail-body .initiative-item:last-child {
                 margin-bottom: 0;
+            }
+
+            /* Skeleton Loader Styles */
+            .okr-skeleton-loader {
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+            }
+            .okr-skeleton-card {
+                background: white;
+                border: 1px solid var(--border);
+                border-radius: var(--radius);
+                padding: 20px;
+                animation: skeletonPulse 1.5s ease-in-out infinite;
+            }
+            .skeleton-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 16px;
+            }
+            .skeleton-body {
+                margin-bottom: 16px;
+            }
+            .skeleton-footer {
+                display: flex;
+                gap: 8px;
+            }
+            .skeleton-line {
+                height: 12px;
+                background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+                background-size: 200% 100%;
+                animation: shimmer 1.5s infinite;
+                border-radius: 4px;
+            }
+            .skeleton-title {
+                width: 60%;
+                height: 16px;
+            }
+            .skeleton-circle {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+                background-size: 200% 100%;
+                animation: shimmer 1.5s infinite;
+            }
+            .skeleton-text {
+                width: 100%;
+                margin-bottom: 8px;
+            }
+            .skeleton-badge {
+                width: 80px;
+                height: 24px;
+            }
+            @keyframes shimmer {
+                0% {
+                    background-position: -200% 0;
+                }
+                100% {
+                    background-position: 200% 0;
+                }
+            }
+            @keyframes skeletonPulse {
+                0%, 100% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.7;
+                }
             }
         `;
         document.head.appendChild(style);

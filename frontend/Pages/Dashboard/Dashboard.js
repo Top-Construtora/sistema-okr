@@ -346,7 +346,10 @@ const DashboardPage = {
                     const isNear = daysUntil > 7 && daysUntil <= 15;
 
                     html += `
-                        <div class="activity-item ${isUrgent ? 'urgent' : isNear ? 'near' : ''}" data-activity-id="${init.id}">
+                        <div class="activity-item ${isUrgent ? 'urgent' : isNear ? 'near' : ''}"
+                             data-activity-id="${init.id}"
+                             onclick="Layout.navigate('okrs?initiative=${init.id}')"
+                             style="cursor: pointer;">
                             <div class="activity-info">
                                 <div class="activity-name">${init.nome}</div>
                                 ${init.department ? `
@@ -437,7 +440,10 @@ const DashboardPage = {
                     const isNear = daysUntil > 7 && daysUntil <= 15;
 
                     return `
-                        <div class="activity-item ${isUrgent ? 'urgent' : isNear ? 'near' : ''}" data-activity-id="${init.id}">
+                        <div class="activity-item ${isUrgent ? 'urgent' : isNear ? 'near' : ''}"
+                             data-activity-id="${init.id}"
+                             onclick="Layout.navigate('okrs?initiative=${init.id}')"
+                             style="cursor: pointer;">
                             <div class="activity-info">
                                 <div class="activity-name">${init.nome}</div>
                                 ${init.department ? `
