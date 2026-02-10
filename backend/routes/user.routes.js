@@ -114,7 +114,7 @@ router.post('/', async (req, res) => {
                 is_primary: idx === 0 || dept.is_primary === true
             }));
 
-            const { error: deptError } = await supabase
+            const { error: deptError } = await supabaseAdmin
                 .from('user_departments')
                 .insert(records);
 
@@ -156,7 +156,7 @@ router.put('/:id', async (req, res) => {
         // Atualizar departamentos se fornecidos
         if (departments && departments.length > 0) {
             // Remover vínculos antigos
-            await supabase
+            await supabaseAdmin
                 .from('user_departments')
                 .delete()
                 .eq('user_id', id);
@@ -168,7 +168,7 @@ router.put('/:id', async (req, res) => {
                 is_primary: idx === 0 || dept.is_primary === true
             }));
 
-            await supabase
+            await supabaseAdmin
                 .from('user_departments')
                 .insert(records);
         }
