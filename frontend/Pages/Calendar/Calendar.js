@@ -435,7 +435,7 @@ const CalendarPage = {
 
             if (!shouldShow) return;
 
-            const colors = this.getDepartmentColor(deptName, isUserDept || isUserResponsible);
+            const colors = this.getDepartmentColor(deptName, isUserDept, isUserResponsible);
 
             const statusOverlay = this.getStatusOverlay(initiative);
 
@@ -570,8 +570,15 @@ const CalendarPage = {
     /**
      * Gera cor para iniciativa: cor primária para meu departamento, cinza para outros
      */
-    getDepartmentColor(deptName, isUserDept = false) {
-        if (isUserDept) {
+    getDepartmentColor(deptName, isUserDept = false, isUserResponsible = false) {
+        if (isUserResponsible) {
+            // Minhas iniciativas: cor azul destacada
+            return {
+                background: '#DBEAFE',  // Azul claro
+                border: '#3B82F6',       // Azul vibrante
+                text: '#1E40AF'          // Azul escuro
+            };
+        } else if (isUserDept) {
             // Meu departamento: cor primária do sistema (Teal)
             return {
                 background: '#D1FAE5',  // Verde menta claro
@@ -698,7 +705,9 @@ const CalendarPage = {
     async openInitiativeModal(initiative) {
         // Usar campo department direto
         const deptName = initiative.department || 'Sem Departamento';
-        const deptColors = this.getDepartmentColor(deptName, this.userDepartments.includes(deptName));
+        const isUserDept = this.userDepartments.includes(deptName);
+        const isUserResponsible = this.isUserResponsibleForInitiative(initiative);
+        const deptColors = this.getDepartmentColor(deptName, isUserDept, isUserResponsible);
         const responsibleUsers = initiative.getResponsibleUsers ? initiative.getResponsibleUsers() : [];
 
         // Buscar dados do KR e OKR se não existirem (lazy load)
