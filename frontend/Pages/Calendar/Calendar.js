@@ -586,11 +586,11 @@ const CalendarPage = {
                 text: '#0F766E'          // Teal escuro
             };
         } else {
-            // Outros departamentos: cinza neutro
+            // Outros departamentos: cor laranja destacada
             return {
-                background: '#F3F4F6',  // Cinza muito claro
-                border: '#9CA3AF',       // Cinza médio
-                text: '#6B7280'          // Cinza escuro
+                background: '#FED7AA',  // Laranja claro
+                border: '#F97316',       // Laranja vibrante
+                text: '#C2410C'          // Laranja escuro
             };
         }
     },
