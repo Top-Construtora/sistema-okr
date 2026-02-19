@@ -335,54 +335,66 @@ const App = {
                                 <p>Faça login para acessar o sistema OKR</p>
                             </div>
 
-                            <form id="loginForm" class="login-form">
-                                <div class="form-group">
-                                    <label for="email">Email</label>
-                                    <input type="email" id="email" class="form-control" placeholder="seu@email.com" required autocomplete="username">
-                                </div>
-                                <div class="form-group">
-                                    <label for="senha">Senha</label>
-                                    <div class="password-input-wrapper">
-                                        <input type="password" id="senha" class="form-control" placeholder="••••••••" required autocomplete="current-password">
-                                        <button type="button" class="password-toggle" onclick="App.togglePassword()">
-                                            <svg id="eyeIcon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                            </svg>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="forgot-password-link">
-                                    <a href="/esqueci-senha" onclick="App.navigateToForgotPassword(event)">Esqueci minha senha</a>
-                                </div>
-                                <div id="loginError" class="error-message" style="display:none;"></div>
-                                <button type="submit" class="btn btn-primary btn-block btn-login">
-                                    <span class="btn-text">Entrar no Sistema</span>
-                                    <span class="btn-loading" style="display:none;">
-                                        <svg class="spinner" width="20" height="20" viewBox="0 0 24 24">
-                                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" opacity="0.3"/>
-                                            <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"/>
-                                        </svg>
-                                        Entrando...
-                                    </span>
-                                </button>
-                            </form>
-
-                            <!-- Divisor -->
-                            <div class="login-divider">
-                                <span>ou</span>
-                            </div>
-
-                            <!-- Botão Login Microsoft -->
-                            <button type="button" class="btn-microsoft" onclick="App.handleMicrosoftLogin()">
+                            <!-- Botão Login Microsoft (Principal) -->
+                            <button type="button" class="btn-microsoft-primary" onclick="App.handleMicrosoftLogin()">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 21 21">
-                                    <path fill="#f25022" d="M1 1h9v9H1z"/>
-                                    <path fill="#00a4ef" d="M1 11h9v9H1z"/>
-                                    <path fill="#7fba00" d="M11 1h9v9H11z"/>
-                                    <path fill="#ffb900" d="M11 11h9v9H11z"/>
+                                    <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
+                                    <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
+                                    <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
+                                    <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
                                 </svg>
                                 <span>Entrar com Microsoft</span>
                             </button>
+
+                            <!-- Toggle para login com email -->
+                            <div class="login-toggle-email">
+                                <a href="#" onclick="App.toggleEmailLogin(event)">
+                                    <span id="toggleEmailText">Entrar com email e senha</span>
+                                    <svg id="toggleEmailArrow" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="transition: transform 0.3s ease;">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </a>
+                            </div>
+
+                            <!-- Form email/senha (colapsável) -->
+                            <div id="emailLoginSection" class="email-login-section" style="display: none;">
+                                <div class="login-divider">
+                                    <span>email e senha</span>
+                                </div>
+
+                                <form id="loginForm" class="login-form">
+                                    <div class="form-group">
+                                        <label for="email">Email</label>
+                                        <input type="email" id="email" class="form-control" placeholder="seu@email.com" required autocomplete="username">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="senha">Senha</label>
+                                        <div class="password-input-wrapper">
+                                            <input type="password" id="senha" class="form-control" placeholder="••••••••" required autocomplete="current-password">
+                                            <button type="button" class="password-toggle" onclick="App.togglePassword()">
+                                                <svg id="eyeIcon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="forgot-password-link">
+                                        <a href="/esqueci-senha" onclick="App.navigateToForgotPassword(event)">Esqueci minha senha</a>
+                                    </div>
+                                    <div id="loginError" class="error-message" style="display:none;"></div>
+                                    <button type="submit" class="btn btn-primary btn-block btn-login">
+                                        <span class="btn-text">Entrar</span>
+                                        <span class="btn-loading" style="display:none;">
+                                            <svg class="spinner" width="20" height="20" viewBox="0 0 24 24">
+                                                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" opacity="0.3"/>
+                                                <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"/>
+                                            </svg>
+                                            Entrando...
+                                        </span>
+                                    </button>
+                                </form>
+                            </div>
 
                             <div class="login-card-footer">
                                 <p>Sistema protegido por autenticação segura</p>
@@ -395,12 +407,32 @@ const App = {
 
         // Adiciona estilos de login
         this.addLoginStyles();
+    },
 
-        // Event listener do form
-        document.getElementById('loginForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            this.handleLogin();
-        });
+    toggleEmailLogin(event) {
+        if (event) event.preventDefault();
+        const section = document.getElementById('emailLoginSection');
+        const arrow = document.getElementById('toggleEmailArrow');
+        const text = document.getElementById('toggleEmailText');
+
+        if (section.style.display === 'none') {
+            section.style.display = 'block';
+            arrow.style.transform = 'rotate(180deg)';
+            text.textContent = 'Ocultar login com email';
+            // Attach form listener when section becomes visible
+            const form = document.getElementById('loginForm');
+            if (form && !form.dataset.listenerAttached) {
+                form.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    App.handleLogin();
+                });
+                form.dataset.listenerAttached = 'true';
+            }
+        } else {
+            section.style.display = 'none';
+            arrow.style.transform = 'rotate(0deg)';
+            text.textContent = 'Entrar com email e senha';
+        }
     },
 
     togglePassword() {
@@ -428,7 +460,7 @@ const App = {
 
     async handleMicrosoftLogin() {
         const errorDiv = document.getElementById('loginError');
-        const microsoftBtn = document.querySelector('.btn-microsoft');
+        const microsoftBtn = document.querySelector('.btn-microsoft-primary');
 
         // Remove flag de logout explícito - usuário está tentando logar
         localStorage.removeItem('explicit_logout');
@@ -459,10 +491,10 @@ const App = {
                 microsoftBtn.disabled = false;
                 microsoftBtn.innerHTML = `
                     <svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 21 21">
-                        <path fill="#f25022" d="M1 1h9v9H1z"/>
-                        <path fill="#00a4ef" d="M1 11h9v9H1z"/>
-                        <path fill="#7fba00" d="M11 1h9v9H11z"/>
-                        <path fill="#ffb900" d="M11 11h9v9H11z"/>
+                        <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
+                        <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
+                        <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
+                        <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
                     </svg>
                     <span>Entrar com Microsoft</span>
                 `;
@@ -971,7 +1003,7 @@ const App = {
             }
 
             .login-form {
-                margin-bottom: 20px;
+                margin-bottom: 0;
             }
 
             .form-group {
@@ -1047,32 +1079,30 @@ const App = {
 
             .btn-login {
                 width: 100%;
-                margin-top: 28px;
-                height: 52px;
-                background: linear-gradient(135deg, #12b0a0 0%, #0d9488 100%);
+                margin-top: 24px;
+                height: 48px;
+                background: #1e2938;
                 border: none;
                 border-radius: 12px;
                 color: white;
                 font-weight: 600;
-                font-size: 15px;
+                font-size: 14px;
                 cursor: pointer;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 gap: 8px;
                 transition: all 0.2s ease;
-                box-shadow: 0 4px 14px rgba(18, 176, 160, 0.35);
             }
 
             .btn-login:hover:not(:disabled) {
-                background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
-                transform: translateY(-2px);
-                box-shadow: 0 6px 20px rgba(18, 176, 160, 0.45);
+                background: #2d3a4a;
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(30, 41, 56, 0.3);
             }
 
             .btn-login:active:not(:disabled) {
                 transform: translateY(0);
-                box-shadow: 0 2px 8px rgba(18, 176, 160, 0.3);
             }
 
             .btn-login:disabled {
@@ -1112,6 +1142,7 @@ const App = {
             .login-card-footer {
                 text-align: center;
                 padding-top: 24px;
+                margin-top: 24px;
                 border-top: 1px solid #edf2f7;
             }
 
@@ -1164,42 +1195,71 @@ const App = {
                 text-transform: uppercase;
             }
 
-            /* Microsoft Button */
-            .btn-microsoft {
+            /* Microsoft Button - Primary */
+            .btn-microsoft-primary {
                 width: 100%;
                 height: 52px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 gap: 12px;
-                background: #ffffff;
-                border: 2px solid #e2e8f0;
+                background: linear-gradient(135deg, #12b0a0 0%, #1e6076 100%);
+                border: none;
                 border-radius: 12px;
                 cursor: pointer;
-                font-family: 'Segoe UI', 'Roboto', 'Helvetica', sans-serif;
+                font-family: inherit;
                 font-size: 15px;
                 font-weight: 600;
-                color: #3c3c3c;
+                color: white;
                 transition: all 0.2s ease;
+                box-shadow: 0 4px 14px rgba(18, 176, 160, 0.35);
             }
 
-            .btn-microsoft:hover:not(:disabled) {
-                background: #f8fafc;
-                border-color: #cbd5e1;
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            .btn-microsoft-primary:hover:not(:disabled) {
+                background: linear-gradient(135deg, #0d9488 0%, #1a5568 100%);
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(18, 176, 160, 0.45);
             }
 
-            .btn-microsoft:active:not(:disabled) {
-                background: #f1f5f9;
+            .btn-microsoft-primary:active:not(:disabled) {
+                transform: translateY(0) scale(0.98);
+                box-shadow: 0 2px 8px rgba(18, 176, 160, 0.3);
             }
 
-            .btn-microsoft:disabled {
+            .btn-microsoft-primary:disabled {
                 opacity: 0.7;
                 cursor: not-allowed;
+                transform: none;
             }
 
-            .btn-microsoft svg.spinner {
+            .btn-microsoft-primary svg.spinner {
                 animation: spin 1s linear infinite;
+            }
+
+            /* Toggle email login link */
+            .login-toggle-email {
+                text-align: center;
+                margin-top: 20px;
+            }
+
+            .login-toggle-email a {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                color: #718096;
+                text-decoration: none;
+                font-size: 14px;
+                font-weight: 500;
+                transition: color 0.2s;
+            }
+
+            .login-toggle-email a:hover {
+                color: #12b0a0;
+            }
+
+            /* Collapsible email login section */
+            .email-login-section {
+                overflow: hidden;
             }
 
             /* Responsive */
