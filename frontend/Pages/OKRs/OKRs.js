@@ -178,7 +178,6 @@ const OKRsPage = {
             </div>
 
             <div id="okrs-list"></div>
-            <div id="okr-modal" style="display:none;"></div>
         `;
 
         // Fecha menus ao clicar fora
@@ -868,138 +867,150 @@ const OKRsPage = {
     },
 
     async openModal(id = null) {
-        this.currentOKR = id ? await OKR.getById(id) : null;
+        try {
+            this.currentOKR = id ? await OKR.getById(id) : null;
 
-        const modal = document.getElementById('okr-modal');
-        const objectives = await StorageService.getObjectives();
-        const departments = await Department.getActive();
-        const miniCycles = await MiniCycle.getActive();
-        const currentUser = AuthService.getCurrentUser();
-        const isAdmin = currentUser && currentUser.tipo === 'admin';
-        const userDepartmentNames = this.getUserDepartmentNames(currentUser);
-        const hasMultipleDepts = userDepartmentNames.length > 1;
+            // Remove modal anterior se existir
+            const existing = document.getElementById('okr-modal');
+            if (existing) existing.remove();
 
-        // Encontra o miniciclo atualmente ativo (baseado na data)
-        const today = new Date();
-        const activeMiniCycle = miniCycles.find(mc => {
-            const inicio = new Date(mc.data_inicio);
-            const fim = new Date(mc.data_fim);
-            return today >= inicio && today <= fim;
-        });
+            const objectives = await StorageService.getObjectives();
+            const departments = await Department.getActive();
+            const miniCycles = await MiniCycle.getActive();
+            const currentUser = AuthService.getCurrentUser();
+            const isAdmin = currentUser && currentUser.tipo === 'admin';
+            const userDepartmentNames = this.getUserDepartmentNames(currentUser);
+            const hasMultipleDepts = userDepartmentNames.length > 1;
 
-        modal.innerHTML = `
-            <div class="modal-overlay" onclick="OKRsPage.closeModal()"></div>
-            <div class="modal-content" style="max-width:600px;">
-                <div class="modal-header">
-                    <div>
-                        <h3 style="margin:0;color:var(--top-blue);font-size:20px;">${this.currentOKR ? 'Editar' : 'Novo'} OKR</h3>
-                        <p style="margin:4px 0 0;color:var(--text-muted);font-size:13px;">
-                            ${this.currentOKR ? 'Atualize as informações do OKR' : 'Defina um novo OKR. Você poderá adicionar Key Results depois.'}
-                        </p>
-                    </div>
-                    <button class="modal-close" onclick="OKRsPage.closeModal()">
-                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label class="form-label">Título do OKR *</label>
-                        <input type="text" id="okr-title" class="form-control"
-                            placeholder="Ex: Reduzir tempo de aprovação de projetos em 50%"
-                            value="${this.currentOKR ? this.currentOKR.title : ''}">
-                    </div>
+            // Encontra o miniciclo atualmente ativo (baseado na data)
+            const today = new Date();
+            const activeMiniCycle = miniCycles.find(mc => {
+                const inicio = new Date(mc.data_inicio);
+                const fim = new Date(mc.data_fim);
+                return today >= inicio && today <= fim;
+            });
 
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
-                        <div class="form-group">
-                            <label class="form-label">Objetivo Estratégico *</label>
-                            <select id="okr-objective" class="form-control">
-                                <option value="">Selecione...</option>
-                                ${objectives.map(obj => `
-                                    <option value="${obj.id}" ${this.currentOKR && this.currentOKR.objectiveId === obj.id ? 'selected' : ''}>
-                                        ${obj.text}
-                                    </option>
-                                `).join('')}
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Departamento *</label>
-                            ${isAdmin ? `
-                                <select id="okr-department" class="form-control">
-                                    <option value="">Selecione...</option>
-                                    ${departments.map(dept => `
-                                        <option value="${dept.nome}" ${this.currentOKR && this.currentOKR.department === dept.nome ? 'selected' : ''}>
-                                            ${dept.nome}
-                                        </option>
-                                    `).join('')}
-                                </select>
-                            ` : hasMultipleDepts ? `
-                                <select id="okr-department" class="form-control">
-                                    ${userDepartmentNames.map((deptName, idx) => `
-                                        <option value="${deptName}" ${this.currentOKR && this.currentOKR.department === deptName ? 'selected' : (idx === 0 && !this.currentOKR ? 'selected' : '')}>
-                                            ${deptName}
-                                        </option>
-                                    `).join('')}
-                                </select>
-                                <small style="color:var(--text-muted);font-size:11px;display:block;margin-top:4px;">Selecione o departamento para este O</small>
-                            ` : `
-                                <input type="text" id="okr-department-display" class="form-control" value="${userDepartmentNames[0] || ''}" disabled style="background:var(--bg-main);cursor:not-allowed;">
-                                <input type="hidden" id="okr-department" value="${userDepartmentNames[0] || ''}">
-                                <small style="color:var(--text-muted);font-size:11px;display:block;margin-top:4px;">O será criado para seu departamento</small>
-                            `}
-                        </div>
-                    </div>
+            const modal = document.createElement('div');
+            modal.id = 'okr-modal';
+            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:1000;';
 
-                    <div class="form-group" style="margin-top:16px;">
-                        <label class="form-label">Miniciclo *</label>
-                        <select id="okr-minicycle" class="form-control">
-                            <option value="">Selecione...</option>
-                            ${miniCycles.map(mc => {
-                                const isCurrentlyActive = activeMiniCycle && activeMiniCycle.id === mc.id;
-                                const isSelected = this.currentOKR && this.currentOKR.mini_cycle_id === mc.id;
-                                const shouldSelect = isSelected || (!this.currentOKR && isCurrentlyActive);
-                                return `
-                                    <option value="${mc.id}" ${shouldSelect ? 'selected' : ''}>
-                                        ${mc.nome}${isCurrentlyActive ? ' [ATUAL]' : ''}
-                                    </option>
-                                `;
-                            }).join('')}
-                        </select>
-                        <small style="color:var(--text-muted);font-size:11px;display:block;margin-top:4px;">
-                            Selecione o miniciclo ao qual este OKR pertence
-                        </small>
-                    </div>
-
-                    ${!this.currentOKR ? `
-                        <div class="info-box" style="margin-top:16px;padding:12px 16px;background:var(--info-bg);border-left:3px solid var(--info);border-radius:6px;">
-                            <p style="margin:0;font-size:13px;color:var(--text-secondary);">
-                                Dica: Após criar o O, você poderá adicionar Key Results clicando no botão "Novo KR".
+            modal.innerHTML = `
+                <div class="modal-overlay" onclick="OKRsPage.closeModal()"></div>
+                <div class="modal-content" style="max-width:600px;">
+                    <div class="modal-header">
+                        <div>
+                            <h3 style="margin:0;color:var(--top-blue);font-size:20px;">${this.currentOKR ? 'Editar' : 'Novo'} OKR</h3>
+                            <p style="margin:4px 0 0;color:var(--text-muted);font-size:13px;">
+                                ${this.currentOKR ? 'Atualize as informações do OKR' : 'Defina um novo OKR. Você poderá adicionar Key Results depois.'}
                             </p>
                         </div>
-                    ` : ''}
+                        <button class="modal-close" onclick="OKRsPage.closeModal()">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="form-label">Título do OKR *</label>
+                            <input type="text" id="okr-title" class="form-control"
+                                placeholder="Ex: Reduzir tempo de aprovação de projetos em 50%"
+                                value="${this.currentOKR ? this.currentOKR.title : ''}">
+                        </div>
 
-                    <div id="okr-error" class="error-message" style="display:none;margin-top:16px;"></div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" onclick="OKRsPage.closeModal()">Cancelar</button>
-                    <button class="btn btn-primary" onclick="OKRsPage.save()">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                        </svg>
-                        ${this.currentOKR ? 'Atualizar' : 'Criar'} O
-                    </button>
-                </div>
-            </div>
-        `;
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
+                            <div class="form-group">
+                                <label class="form-label">Objetivo Estratégico *</label>
+                                <select id="okr-objective" class="form-control">
+                                    <option value="">Selecione...</option>
+                                    ${objectives.map(obj => `
+                                        <option value="${obj.id}" ${this.currentOKR && this.currentOKR.objectiveId === obj.id ? 'selected' : ''}>
+                                            ${obj.text}
+                                        </option>
+                                    `).join('')}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Departamento *</label>
+                                ${isAdmin ? `
+                                    <select id="okr-department" class="form-control">
+                                        <option value="">Selecione...</option>
+                                        ${departments.map(dept => `
+                                            <option value="${dept.nome}" ${this.currentOKR && this.currentOKR.department === dept.nome ? 'selected' : ''}>
+                                                ${dept.nome}
+                                            </option>
+                                        `).join('')}
+                                    </select>
+                                ` : hasMultipleDepts ? `
+                                    <select id="okr-department" class="form-control">
+                                        ${userDepartmentNames.map((deptName, idx) => `
+                                            <option value="${deptName}" ${this.currentOKR && this.currentOKR.department === deptName ? 'selected' : (idx === 0 && !this.currentOKR ? 'selected' : '')}>
+                                                ${deptName}
+                                            </option>
+                                        `).join('')}
+                                    </select>
+                                    <small style="color:var(--text-muted);font-size:11px;display:block;margin-top:4px;">Selecione o departamento para este O</small>
+                                ` : `
+                                    <input type="text" id="okr-department-display" class="form-control" value="${userDepartmentNames[0] || ''}" disabled style="background:var(--bg-main);cursor:not-allowed;">
+                                    <input type="hidden" id="okr-department" value="${userDepartmentNames[0] || ''}">
+                                    <small style="color:var(--text-muted);font-size:11px;display:block;margin-top:4px;">O será criado para seu departamento</small>
+                                `}
+                            </div>
+                        </div>
 
-        modal.style.display = 'flex';
+                        <div class="form-group" style="margin-top:16px;">
+                            <label class="form-label">Miniciclo *</label>
+                            <select id="okr-minicycle" class="form-control">
+                                <option value="">Selecione...</option>
+                                ${miniCycles.map(mc => {
+                                    const isCurrentlyActive = activeMiniCycle && activeMiniCycle.id === mc.id;
+                                    const isSelected = this.currentOKR && this.currentOKR.mini_cycle_id === mc.id;
+                                    const shouldSelect = isSelected || (!this.currentOKR && isCurrentlyActive);
+                                    return `
+                                        <option value="${mc.id}" ${shouldSelect ? 'selected' : ''}>
+                                            ${mc.nome}${isCurrentlyActive ? ' [ATUAL]' : ''}
+                                        </option>
+                                    `;
+                                }).join('')}
+                            </select>
+                            <small style="color:var(--text-muted);font-size:11px;display:block;margin-top:4px;">
+                                Selecione o miniciclo ao qual este OKR pertence
+                            </small>
+                        </div>
+
+                        ${!this.currentOKR ? `
+                            <div class="info-box" style="margin-top:16px;padding:12px 16px;background:var(--info-bg);border-left:3px solid var(--info);border-radius:6px;">
+                                <p style="margin:0;font-size:13px;color:var(--text-secondary);">
+                                    Dica: Após criar o O, você poderá adicionar Key Results clicando no botão "Novo KR".
+                                </p>
+                            </div>
+                        ` : ''}
+
+                        <div id="okr-error" class="error-message" style="display:none;margin-top:16px;"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" onclick="OKRsPage.closeModal()">Cancelar</button>
+                        <button class="btn btn-primary" onclick="OKRsPage.save()">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            ${this.currentOKR ? 'Atualizar' : 'Criar'} O
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+        } catch (error) {
+            console.error('Erro ao abrir modal de OKR:', error);
+            DepartmentsPage.showToast('Erro ao abrir formulário de OKR', 'error');
+        }
     },
 
     closeModal() {
-        document.getElementById('okr-modal').style.display = 'none';
+        const modal = document.getElementById('okr-modal');
+        if (modal) modal.remove();
         this.currentOKR = null;
-        // Garante que o scroll seja liberado
         document.body.style.overflow = '';
     },
 
@@ -1215,75 +1226,78 @@ const OKRsPage = {
         window.closeAllDropdownMenus();
     },
 
-    async addKR(okrId) {
-        const okr = await OKR.getById(okrId);
-        if (!okr) {
-            DepartmentsPage.showToast('OKR não encontrado', 'error');
-            return;
-        }
+    addKR(okrId) {
+        try {
+            // Remove modal anterior se existir
+            const existing = document.getElementById('kr-modal');
+            if (existing) existing.remove();
 
-        const modal = document.createElement('div');
-        modal.id = 'kr-modal';
-        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:1000;';
+            const modal = document.createElement('div');
+            modal.id = 'kr-modal';
+            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:1000;';
 
-        modal.innerHTML = `
-            <div class="modal-overlay" onclick="OKRsPage.closeKRModal()"></div>
-            <div class="modal-content" style="max-width:700px;">
-                <div class="modal-header">
-                    <h3>Novo Key Result</h3>
-                    <button class="modal-close" onclick="OKRsPage.closeKRModal()">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <input type="hidden" id="kr-okr-id" value="${okrId}">
-
-                    <div class="form-group">
-                        <label class="form-label">Título do Key Result *</label>
-                        <input type="text" id="kr-title" class="form-control"
-                            placeholder="Ex: Aumentar NPS para 85 pontos">
+            modal.innerHTML = `
+                <div class="modal-overlay" onclick="OKRsPage.closeKRModal()"></div>
+                <div class="modal-content" style="max-width:700px;">
+                    <div class="modal-header">
+                        <h3>Novo Key Result</h3>
+                        <button class="modal-close" onclick="OKRsPage.closeKRModal()">&times;</button>
                     </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="kr-okr-id" value="${okrId}">
 
-                    <div class="form-group" style="margin-top:16px;">
-                        <label class="form-label">Status *</label>
-                        <select id="kr-status" class="form-control">
-                            <option value="pending">Pendente</option>
-                            <option value="in_progress">Em Progresso</option>
-                            <option value="completed">Concluído</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group" style="margin-top:16px;">
-                        <label class="form-label">Comentário</label>
-                        <textarea id="kr-comment" class="form-control" rows="3"
-                            placeholder="Adicione observações ou comentários sobre este KR..."></textarea>
-                    </div>
-
-                    <div class="form-group" style="margin-top:16px;">
-                        <label class="form-label">Medições e Evidências</label>
-                        <div id="kr-evidence-list" class="evidence-list"></div>
-                        <div class="evidence-add-section" style="margin-top:8px;">
-                            <select id="kr-evidence-type" class="form-control" style="width:auto;display:inline-block;margin-right:8px;">
-                                <option value="text">Texto</option>
-                                <option value="file">Arquivo</option>
-                            </select>
-                            <button type="button" class="btn btn-sm btn-secondary" onclick="OKRsPage.addEvidenceField()">
-                                + Adicionar Evidência
-                            </button>
+                        <div class="form-group">
+                            <label class="form-label">Título do Key Result *</label>
+                            <input type="text" id="kr-title" class="form-control"
+                                placeholder="Ex: Aumentar NPS para 85 pontos">
                         </div>
-                        <small style="color:var(--text-muted);font-size:11px;display:block;margin-top:4px;">
-                            Adicione textos descritivos ou faça upload de arquivos (PDF, imagens, documentos)
-                        </small>
+
+                        <div class="form-group" style="margin-top:16px;">
+                            <label class="form-label">Status *</label>
+                            <select id="kr-status" class="form-control">
+                                <option value="pending">Pendente</option>
+                                <option value="in_progress">Em Progresso</option>
+                                <option value="completed">Concluído</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" style="margin-top:16px;">
+                            <label class="form-label">Comentário</label>
+                            <textarea id="kr-comment" class="form-control" rows="3"
+                                placeholder="Adicione observações ou comentários sobre este KR..."></textarea>
+                        </div>
+
+                        <div class="form-group" style="margin-top:16px;">
+                            <label class="form-label">Medições e Evidências</label>
+                            <div id="kr-evidence-list" class="evidence-list"></div>
+                            <div class="evidence-add-section" style="margin-top:8px;">
+                                <select id="kr-evidence-type" class="form-control" style="width:auto;display:inline-block;margin-right:8px;">
+                                    <option value="text">Texto</option>
+                                    <option value="file">Arquivo</option>
+                                </select>
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="OKRsPage.addEvidenceField()">
+                                    + Adicionar Evidência
+                                </button>
+                            </div>
+                            <small style="color:var(--text-muted);font-size:11px;display:block;margin-top:4px;">
+                                Adicione textos descritivos ou faça upload de arquivos (PDF, imagens, documentos)
+                            </small>
+                        </div>
+
+                        <div id="kr-error" class="error-message" style="display:none;margin-top:16px;"></div>
                     </div>
-
-                    <div id="kr-error" class="error-message" style="display:none;margin-top:16px;"></div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" onclick="OKRsPage.closeKRModal()">Cancelar</button>
+                        <button class="btn btn-primary" onclick="OKRsPage.saveNewKR()">Criar Key Result</button>
+                    </div>
                 </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" onclick="OKRsPage.closeKRModal()">Cancelar</button>
-                    <button class="btn btn-primary" onclick="OKRsPage.saveNewKR()">Criar Key Result</button>
-                </div>
-            </div>
-        `;
+            `;
 
-        document.body.appendChild(modal);
+            document.body.appendChild(modal);
+        } catch (error) {
+            console.error('Erro ao abrir modal de novo KR:', error);
+            DepartmentsPage.showToast('Erro ao abrir formulário de KR', 'error');
+        }
     },
 
     async editKR(okrId, krId) {
@@ -3241,15 +3255,17 @@ const OKRsPage = {
 
             .okr-accordion-body {
                 max-height: 0;
-                overflow: visible;
+                overflow: hidden;
                 opacity: 0;
-                transition: max-height 0.4s ease, opacity 0.3s ease;
+                transition: max-height 0.4s ease, opacity 0.3s ease, overflow 0s 0.4s;
                 background: white;
             }
 
             .okr-accordion-body.expanded {
                 max-height: 5000px;
                 opacity: 1;
+                overflow: visible;
+                transition: max-height 0.4s ease, opacity 0.3s ease, overflow 0s;
             }
 
             /* KRs Section */
