@@ -2088,11 +2088,15 @@ const MyOKRsPage = {
 
         const { data, error } = await supabaseClient.storage
             .from('evidencias')
-            .upload(filePath, file);
+            .upload(filePath, file, {
+                contentType: file.type || 'application/octet-stream',
+                upsert: false
+            });
 
         if (error) {
-            console.error('Erro no upload:', error);
-            throw error;
+            console.error('Erro no upload do arquivo:', error);
+            console.error('Detalhes:', { statusCode: error.statusCode, message: error.message, filePath, fileType: file.type, fileSize: file.size });
+            throw new Error(`Erro ao enviar arquivo: ${error.message || 'falha no upload'}`);
         }
 
         // Usar URL de proxy em vez da URL pública do Supabase

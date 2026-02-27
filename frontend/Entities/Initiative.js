@@ -134,16 +134,16 @@ class Initiative {
         };
 
         if (this.id) {
-            // Update
-            const { data, error } = await supabaseClient
+            // Update - não usa .select().single() para evitar erro 406 com RLS
+            const { error } = await supabaseClient
                 .from('initiatives')
                 .update(initiativeData)
-                .eq('id', this.id)
-                .select()
-                .single();
+                .eq('id', this.id);
 
             if (error) throw error;
-            Object.assign(this, data);
+
+            // Atualizar dados locais
+            Object.assign(this, initiativeData);
 
             // Update responsible users junction table
             await this.updateResponsibleUsers();
