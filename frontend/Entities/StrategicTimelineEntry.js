@@ -11,8 +11,11 @@ class StrategicTimelineEntry {
         this.file_path = data.file_path || null;
         this.created_by = data.created_by || null;
         this.created_at = data.created_at || null;
+        this.sub_metric_id = data.sub_metric_id || null;
+        this.progress_value = data.progress_value != null ? Number(data.progress_value) : null;
         // Join data
         this.users = data.users || null;
+        this.strategic_sub_metrics = data.strategic_sub_metrics || null;
     }
 
     get createdByName() {
@@ -29,7 +32,7 @@ class StrategicTimelineEntry {
         try {
             const { data, error } = await supabaseClient
                 .from('strategic_objective_entries')
-                .select('*, users(id, nome)')
+                .select('*, users(id, nome), strategic_sub_metrics(id, name, unit)')
                 .eq('objective_id', objectiveId)
                 .order('created_at', { ascending: false });
 
@@ -52,9 +55,11 @@ class StrategicTimelineEntry {
                     url: data.url || null,
                     file_name: data.file_name || null,
                     file_path: data.file_path || null,
-                    created_by: data.created_by || null
+                    created_by: data.created_by || null,
+                    sub_metric_id: data.sub_metric_id || null,
+                    progress_value: data.progress_value || null
                 }])
-                .select('*, users(id, nome)')
+                .select('*, users(id, nome), strategic_sub_metrics(id, name, unit)')
                 .single();
 
             if (error) throw error;
@@ -65,12 +70,38 @@ class StrategicTimelineEntry {
         }
     }
 
+    static async update(id, data) {
+        try {
+            const updateData = {};
+            if (data.description !== undefined) updateData.description = data.description;
+            if (data.entry_type !== undefined) updateData.entry_type = data.entry_type;
+            if (data.url !== undefined) updateData.url = data.url;
+            if (data.file_name !== undefined) updateData.file_name = data.file_name;
+            if (data.file_path !== undefined) updateData.file_path = data.file_path;
+            if (data.sub_metric_id !== undefined) updateData.sub_metric_id = data.sub_metric_id;
+            if (data.progress_value !== undefined) updateData.progress_value = data.progress_value;
+
+            const { data: updated, error } = await supabaseClient
+                .from('strategic_objective_entries')
+                .update(updateData)
+                .eq('id', id)
+                .select('*, users(id, nome), strategic_sub_metrics(id, name, unit)')
+                .single();
+
+            if (error) throw error;
+            return new StrategicTimelineEntry(updated);
+        } catch (error) {
+            console.error('Erro ao atualizar entrada da timeline:', error);
+            throw error;
+        }
+    }
+
     static async delete(id) {
         try {
-            // First get the entry to check if there's a file to delete
+            // First get the entry to check if there's a file to delete and sub_metric to revert
             const { data: entry } = await supabaseClient
                 .from('strategic_objective_entries')
-                .select('file_path')
+                .select('file_path, sub_metric_id, progress_value')
                 .eq('id', id)
                 .single();
 

@@ -198,7 +198,7 @@ const App = {
                     </div>
                     <h2 style="color:#1e6076;margin-bottom:12px;font-size:24px;">Acesso não autorizado</h2>
                     <p style="color:#64748b;margin-bottom:24px;line-height:1.6;">
-                        Seu email Microsoft não está cadastrado no sistema OKR.<br>
+                        Seu email Microsoft não está cadastrado no Gestão de Resultados.<br>
                         Entre em contato com o administrador para solicitar acesso.
                     </p>
                     <button onclick="window.location.href='/'" style="padding:14px 28px;background:linear-gradient(135deg, #12b0a0 0%, #0d9488 100%);color:white;border:none;border-radius:12px;cursor:pointer;font-weight:600;font-size:15px;box-shadow:0 4px 14px rgba(18, 176, 160, 0.35);">
@@ -274,8 +274,8 @@ const App = {
                             <img src="/gio.png" alt="Logo GIO" class="login-logo">
                             <div class="login-title-block">
                                 <h1 class="login-main-title">
-                                    Sistema de<br>
-                                    <span class="highlight">Gestão OKR</span>
+                                    Gestão de<br>
+                                    <span class="highlight">Resultados</span>
                                 </h1>
                                 <p class="login-subtitle">
                                     Gerencie objetivos e resultados-chave, acompanhe o progresso
@@ -332,7 +332,7 @@ const App = {
                                     <img src="/gio.png" alt="Logo GIO">
                                 </div>
                                 <h2>Bem-vindo(a)!</h2>
-                                <p>Faça login para acessar o sistema OKR</p>
+                                <p>Faça login para acessar o Gestão de Resultados</p>
                             </div>
 
                             <!-- Botão Login Microsoft (Principal) -->

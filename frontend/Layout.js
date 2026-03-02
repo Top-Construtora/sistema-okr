@@ -132,7 +132,7 @@ const Layout = {
                         </div>
                         <div class="brand-text">
                             <h1>TOP Construtora</h1>
-                            <span>Sistema OKR</span>
+                            <span>Gestão de Resultados</span>
                         </div>
                     </div>
                     ${!this.sidebarCollapsed ? `
@@ -367,7 +367,7 @@ const Layout = {
             departments: 'Gestão de Departamentos',
             settings: 'Configurações'
         };
-        return titles[page] || 'Sistema OKR';
+        return titles[page] || 'Gestão de Resultados';
     },
 
     // Pega subtítulo da página

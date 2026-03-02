@@ -1,6 +1,7 @@
 import { supabaseClient } from '../../services/supabase.js';
 import { AuthService } from '../../services/auth.js';
 import { Cycle } from '../../Entities/Cycle.js';
+import { StrategicSubMetric, CATEGORY_METRIC_CONFIG } from '../../Entities/StrategicSubMetric.js';
 
 // Página de Gestão de Objetivos Estratégicos (Alto Nível)
 const StrategicObjectivesPage = {
@@ -132,9 +133,90 @@ const StrategicObjectivesPage = {
             'Empreendimento Econômico': { bg: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '#ef4444' }
         };
 
+        // Fetch sub-metrics for all objectives in parallel
+        const metricsMap = {};
+        await Promise.all(objectives.map(async (obj) => {
+            const categoryConfig = CATEGORY_METRIC_CONFIG[obj.category] || {};
+            if (categoryConfig.metric_mode === 'auto_okr' && obj.cycle_id) {
+                metricsMap[obj.id] = await StrategicSubMetric.getAutoOkrMetrics(obj.id, obj.cycle_id);
+            } else {
+                metricsMap[obj.id] = await StrategicSubMetric.getByObjectiveId(obj.id);
+            }
+        }));
+
         const cardsHTML = objectives.map(obj => {
             const colors = categoryColors[obj.category] || { bg: '#f3f4f6', color: '#6b7280', border: '#6b7280' };
-            const cycleName = obj.cycles ? obj.cycles.nome : null;
+            const categoryConfig = CATEGORY_METRIC_CONFIG[obj.category] || {};
+            const metricMode = categoryConfig.metric_mode || 'normal';
+            const metrics = metricsMap[obj.id] || [];
+
+            let metricsHTML = '';
+            if (metrics.length > 0) {
+                if (metricMode === 'auto_okr') {
+                    // Melhoria Contínua: só mostra a média geral
+                    const metricsWithOkrs = metrics.filter(m => m._okr_count > 0);
+                    const avgProgress = metricsWithOkrs.length > 0
+                        ? Math.round(metricsWithOkrs.reduce((sum, m) => sum + m.current_value, 0) / metricsWithOkrs.length)
+                        : 0;
+                    const barColor = avgProgress >= 70 ? '#10b981' : (avgProgress >= 40 ? '#f59e0b' : '#ef4444');
+
+                    metricsHTML = `
+                        <div class="so-card-metrics">
+                            <div class="so-card-metric-item">
+                                <div class="so-card-metric-header">
+                                    <span class="so-card-metric-name">Média Geral</span>
+                                    <span class="so-card-metric-pct" style="color:${barColor};">${avgProgress}%</span>
+                                </div>
+                                <div class="so-card-metric-bar">
+                                    <div class="so-card-metric-fill" style="width:${avgProgress}%;background:${barColor};"></div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    metricsHTML = `
+                        <div class="so-card-metrics">
+                            ${metrics.map(m => {
+                                if (m.unit === 'texto') {
+                                    return `
+                                        <div class="so-card-metric-item">
+                                            <div class="so-card-metric-header">
+                                                <span class="so-card-metric-name">${m.name}</span>
+                                                <span class="so-card-metric-status ${m.current_value ? 'so-card-metric-done' : ''}">${m.current_value ? 'Registrado' : 'Pendente'}</span>
+                                            </div>
+                                        </div>
+                                    `;
+                                }
+
+                                const progress = m.progress;
+                                let barColor;
+                                if (metricMode === 'inverse') {
+                                    const current = m.current_value;
+                                    const target = m.target_value;
+                                    barColor = current <= target * 0.7 ? '#10b981' : (current <= target ? '#f59e0b' : '#ef4444');
+                                } else {
+                                    barColor = progress >= 70 ? '#10b981' : (progress >= 40 ? '#f59e0b' : '#ef4444');
+                                }
+
+                                const valueLabel = `${StrategicSubMetric.formatValue(m.current_value, m.unit)} / ${StrategicSubMetric.formatValue(m.target_value, m.unit)}`;
+
+                                return `
+                                    <div class="so-card-metric-item">
+                                        <div class="so-card-metric-header">
+                                            <span class="so-card-metric-name">${m.name}</span>
+                                            <span class="so-card-metric-pct" style="color:${barColor};">${progress.toFixed(0)}%</span>
+                                        </div>
+                                        <div class="so-card-metric-bar">
+                                            <div class="so-card-metric-fill" style="width:${progress}%;background:${barColor};"></div>
+                                        </div>
+                                        <span class="so-card-metric-values">${valueLabel}</span>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `;
+                }
+            }
 
             return `
                 <div class="so-obj-card so-obj-card-clickable" onclick="StrategicObjectivesPage.navigateToDetail(${obj.id})">
@@ -144,6 +226,7 @@ const StrategicObjectivesPage = {
                     <div class="so-obj-card-body">
                         <h3 class="so-obj-card-title">${obj.text}</h3>
                         ${obj.meta ? `<p class="so-obj-card-meta">${obj.meta}</p>` : ''}
+                        ${metricsHTML}
                         ${isAdmin ? `
                             <div class="so-obj-card-actions" onclick="event.stopPropagation();">
                                 <button class="so-obj-action-btn" onclick="StrategicObjectivesPage.openModal(${obj.id})" title="Editar">
@@ -462,6 +545,71 @@ const StrategicObjectivesPage = {
             }
             .so-obj-action-btn:hover { background: #E5E7EB; color: #1e6076; }
             .so-obj-action-del:hover { background: #fef2f2; color: #ef4444; }
+
+            /* Card Metrics (sub-metrics progress bars) */
+            .so-card-metrics {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                padding-top: 12px;
+                border-top: 1px solid #F3F4F6;
+            }
+            .so-card-metric-item {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+            .so-card-metric-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+            }
+            .so-card-metric-name {
+                font-size: 11px;
+                font-weight: 600;
+                color: #4b5563;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                flex: 1;
+                min-width: 0;
+            }
+            .so-card-metric-pct {
+                font-size: 11px;
+                font-weight: 700;
+                flex-shrink: 0;
+            }
+            .so-card-metric-bar {
+                width: 100%;
+                height: 6px;
+                background: #f1f5f9;
+                border-radius: 3px;
+                overflow: hidden;
+            }
+            .so-card-metric-fill {
+                height: 100%;
+                border-radius: 3px;
+                transition: width 0.4s ease;
+            }
+            .so-card-metric-values {
+                font-size: 10px;
+                color: #9ca3af;
+                font-weight: 500;
+            }
+            .so-card-metric-status {
+                font-size: 10px;
+                font-weight: 600;
+                color: #9ca3af;
+                padding: 2px 8px;
+                background: #f3f4f6;
+                border-radius: 6px;
+                flex-shrink: 0;
+            }
+            .so-card-metric-done {
+                color: #10b981;
+                background: rgba(16, 185, 129, 0.1);
+            }
 
             /* Mobile */
             @media (max-width: 768px) {

@@ -405,6 +405,20 @@ const StrategicObjectiveDetailPage = {
             `;
         }
 
+        // Badge de sub-métrica vinculada
+        let metricBadgeHTML = '';
+        if (entry.sub_metric_id && entry.strategic_sub_metrics) {
+            const metricName = entry.strategic_sub_metrics.name;
+            const unit = entry.strategic_sub_metrics.unit || '';
+            const formattedValue = '+' + StrategicSubMetric.formatValue(entry.progress_value, unit);
+            metricBadgeHTML = `
+                <span class="sod-timeline-metric-badge">
+                    ${metricName}
+                    <span class="sod-timeline-metric-value">${formattedValue}</span>
+                </span>
+            `;
+        }
+
         return `
             <div class="sod-timeline-entry">
                 <div class="sod-timeline-entry-header">
@@ -412,11 +426,17 @@ const StrategicObjectiveDetailPage = {
                         ${typeIcon}
                         <span>${entry.formattedDate}</span>
                         ${entry.createdByName !== 'Sistema' ? `<span class="sod-timeline-author">por ${entry.createdByName}</span>` : ''}
+                        ${metricBadgeHTML}
                     </div>
                     ${isAdmin ? `
-                        <button class="so-obj-action-btn so-obj-action-del" onclick="StrategicObjectiveDetailPage.deleteTimelineEntry(${entry.id})" title="Excluir">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                        </button>
+                        <div class="sod-timeline-actions">
+                            <button class="so-obj-action-btn" onclick="StrategicObjectiveDetailPage.openEditTimelineModal(${entry.id})" title="Editar">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                            </button>
+                            <button class="so-obj-action-btn so-obj-action-del" onclick="StrategicObjectiveDetailPage.deleteTimelineEntry(${entry.id})" title="Excluir">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            </button>
+                        </div>
                     ` : ''}
                 </div>
                 <p class="sod-timeline-description">${entry.description}</p>
@@ -429,8 +449,40 @@ const StrategicObjectiveDetailPage = {
     // TIMELINE MODAL
     // =====================================================
 
+    getEligibleSubMetrics() {
+        const categoryConfig = CATEGORY_METRIC_CONFIG[this.objective.category] || {};
+        const metricMode = categoryConfig.metric_mode || 'normal';
+        // Não mostra dropdown para auto_okr (Melhoria Contínua) nem qualitative (Empreendimento Econômico)
+        if (metricMode === 'auto_okr' || metricMode === 'qualitative') return [];
+        return (this.objective.sub_metrics || []).filter(m => !m._is_auto && m.unit !== 'texto');
+    },
+
     openTimelineModal() {
         const modal = document.getElementById('sod-timeline-modal');
+        const eligibleMetrics = this.getEligibleSubMetrics();
+
+        const metricDropdownHTML = eligibleMetrics.length > 0 ? `
+            <div class="form-group-gio">
+                <label class="form-label-gio">Vincular a Sub-Métrica (opcional)</label>
+                <select id="sod-timeline-metric" class="form-control-gio" onchange="StrategicObjectiveDetailPage.onTimelineMetricChange()">
+                    <option value="">Nenhuma</option>
+                    ${eligibleMetrics.map(m => `<option value="${m.id}" data-unit="${m.unit}">${m.name}</option>`).join('')}
+                </select>
+            </div>
+            <div id="sod-timeline-progress-field" style="display:none;">
+                <div class="form-group-gio">
+                    <label class="form-label-gio">Valor de Progresso *</label>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <input type="number" id="sod-timeline-progress" class="form-control-gio"
+                            placeholder="0" min="0" step="any" style="flex:1;">
+                        <span id="sod-timeline-progress-unit" style="font-size:13px;font-weight:600;color:#374151;min-width:30px;"></span>
+                    </div>
+                    <small style="color:#6b7280;font-size:11px;margin-top:4px;display:block;">
+                        Este valor será somado ao progresso atual da sub-métrica
+                    </small>
+                </div>
+            </div>
+        ` : '';
 
         modal.innerHTML = `
             <div class="modal-overlay-gio" onclick="StrategicObjectiveDetailPage.closeTimelineModal()"></div>
@@ -447,6 +499,7 @@ const StrategicObjectiveDetailPage = {
                     </button>
                 </div>
                 <div class="modal-body-gio">
+                    ${metricDropdownHTML}
                     <div class="form-group-gio">
                         <label class="form-label-gio">Tipo de Registro *</label>
                         <select id="sod-timeline-type" class="form-control-gio" onchange="StrategicObjectiveDetailPage.onTimelineTypeChange()">
@@ -479,6 +532,25 @@ const StrategicObjectiveDetailPage = {
         modal.style.display = 'flex';
         this._selectedFile = null;
         this.onTimelineTypeChange();
+    },
+
+    onTimelineMetricChange() {
+        const metricSelect = document.getElementById('sod-timeline-metric');
+        const progressField = document.getElementById('sod-timeline-progress-field');
+        const unitLabel = document.getElementById('sod-timeline-progress-unit');
+
+        if (!metricSelect || !progressField) return;
+
+        const selectedOption = metricSelect.options[metricSelect.selectedIndex];
+        if (metricSelect.value) {
+            const unit = selectedOption.getAttribute('data-unit') || '';
+            progressField.style.display = 'block';
+            if (unitLabel) unitLabel.textContent = unit;
+        } else {
+            progressField.style.display = 'none';
+            const progressInput = document.getElementById('sod-timeline-progress');
+            if (progressInput) progressInput.value = '';
+        }
     },
 
     onTimelineTypeChange() {
@@ -559,6 +631,18 @@ const StrategicObjectiveDetailPage = {
             return;
         }
 
+        // Lê campos de sub-métrica (se existirem)
+        const metricSelect = document.getElementById('sod-timeline-metric');
+        const progressInput = document.getElementById('sod-timeline-progress');
+        const selectedMetricId = metricSelect ? metricSelect.value : '';
+        const progressValue = progressInput ? parseFloat(progressInput.value) : 0;
+
+        if (selectedMetricId && (!progressValue || progressValue <= 0)) {
+            errorDiv.textContent = 'Informe um valor de progresso maior que 0';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
         const currentUser = AuthService.getCurrentUser();
         const entryData = {
             objective_id: this.objective.id,
@@ -566,6 +650,11 @@ const StrategicObjectiveDetailPage = {
             entry_type: type,
             created_by: currentUser ? currentUser.id : null
         };
+
+        if (selectedMetricId) {
+            entryData.sub_metric_id = parseInt(selectedMetricId);
+            entryData.progress_value = progressValue;
+        }
 
         try {
             saveBtn.disabled = true;
@@ -598,6 +687,16 @@ const StrategicObjectiveDetailPage = {
             }
 
             await StrategicTimelineEntry.create(entryData);
+
+            // Se vinculou a uma sub-métrica, incrementa o current_value
+            if (entryData.sub_metric_id && entryData.progress_value) {
+                const metric = (this.objective.sub_metrics || []).find(m => m.id === entryData.sub_metric_id);
+                if (metric) {
+                    const newValue = (metric.current_value || 0) + entryData.progress_value;
+                    await StrategicSubMetric.update(metric.id, { current_value: newValue });
+                }
+            }
+
             DepartmentsPage.showToast('Registro adicionado!', 'success');
             this.closeTimelineModal();
             await this.refreshData();
@@ -610,11 +709,169 @@ const StrategicObjectiveDetailPage = {
         }
     },
 
+    openEditTimelineModal(entryId) {
+        const entry = this.timelineEntries.find(e => e.id === entryId);
+        if (!entry) return;
+
+        this._editingEntryId = entryId;
+        const modal = document.getElementById('sod-timeline-modal');
+        const eligibleMetrics = this.getEligibleSubMetrics();
+
+        const metricDropdownHTML = eligibleMetrics.length > 0 ? `
+            <div class="form-group-gio">
+                <label class="form-label-gio">Vincular a Sub-Métrica (opcional)</label>
+                <select id="sod-timeline-metric" class="form-control-gio" onchange="StrategicObjectiveDetailPage.onTimelineMetricChange()">
+                    <option value="">Nenhuma</option>
+                    ${eligibleMetrics.map(m => `<option value="${m.id}" data-unit="${m.unit}" ${entry.sub_metric_id == m.id ? 'selected' : ''}>${m.name}</option>`).join('')}
+                </select>
+            </div>
+            <div id="sod-timeline-progress-field" style="display:${entry.sub_metric_id ? 'block' : 'none'};">
+                <div class="form-group-gio">
+                    <label class="form-label-gio">Valor de Progresso *</label>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <input type="number" id="sod-timeline-progress" class="form-control-gio"
+                            placeholder="0" min="0" step="any" style="flex:1;"
+                            value="${entry.progress_value || ''}">
+                        <span id="sod-timeline-progress-unit" style="font-size:13px;font-weight:600;color:#374151;min-width:30px;">${entry.strategic_sub_metrics ? entry.strategic_sub_metrics.unit || '' : ''}</span>
+                    </div>
+                    <small style="color:#6b7280;font-size:11px;margin-top:4px;display:block;">
+                        Este valor será somado ao progresso atual da sub-métrica
+                    </small>
+                </div>
+            </div>
+        ` : '';
+
+        modal.innerHTML = `
+            <div class="modal-overlay-gio" onclick="StrategicObjectiveDetailPage.closeTimelineModal()"></div>
+            <div class="modal-content-gio" style="max-width:520px;">
+                <div class="modal-header-gio">
+                    <div>
+                        <h3>Editar Registro</h3>
+                        <p>Objetivo: ${this.objective.text.substring(0, 60)}${this.objective.text.length > 60 ? '...' : ''}</p>
+                    </div>
+                    <button class="modal-close-gio" onclick="StrategicObjectiveDetailPage.closeTimelineModal()">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body-gio">
+                    ${metricDropdownHTML}
+                    <div class="form-group-gio">
+                        <label class="form-label-gio">Descrição *</label>
+                        <textarea id="sod-timeline-description" class="form-control-gio" rows="3"
+                            placeholder="Descreva o registro...">${entry.description}</textarea>
+                    </div>
+                    <div id="sod-timeline-error" class="error-message-gio" style="display:none;"></div>
+                </div>
+                <div class="modal-footer-gio">
+                    <button class="btn-gio-secondary" onclick="StrategicObjectiveDetailPage.closeTimelineModal()">Cancelar</button>
+                    <button class="btn-gio-primary" id="sod-timeline-save-btn" onclick="StrategicObjectiveDetailPage.updateTimelineEntry()">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Atualizar
+                    </button>
+                </div>
+            </div>
+        `;
+        modal.style.display = 'flex';
+    },
+
+    async updateTimelineEntry() {
+        const description = document.getElementById('sod-timeline-description').value.trim();
+        const errorDiv = document.getElementById('sod-timeline-error');
+        const saveBtn = document.getElementById('sod-timeline-save-btn');
+
+        if (!description) {
+            errorDiv.textContent = 'Descrição é obrigatória';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        const entryId = this._editingEntryId;
+        const oldEntry = this.timelineEntries.find(e => e.id === entryId);
+        if (!oldEntry) return;
+
+        // Lê campos de sub-métrica (se existirem)
+        const metricSelect = document.getElementById('sod-timeline-metric');
+        const progressInput = document.getElementById('sod-timeline-progress');
+        const selectedMetricId = metricSelect ? metricSelect.value : '';
+        const progressValue = progressInput ? parseFloat(progressInput.value) : 0;
+
+        if (selectedMetricId && (!progressValue || progressValue <= 0)) {
+            errorDiv.textContent = 'Informe um valor de progresso maior que 0';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        const updateData = { description };
+
+        const newMetricId = selectedMetricId ? parseInt(selectedMetricId) : null;
+        const newProgressValue = selectedMetricId ? progressValue : null;
+        updateData.sub_metric_id = newMetricId;
+        updateData.progress_value = newProgressValue;
+
+        try {
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="spinner-gio"></span> Salvando...';
+
+            await StrategicTimelineEntry.update(entryId, updateData);
+
+            // Reverte progresso da métrica antiga (se tinha)
+            const oldMetricId = oldEntry.sub_metric_id;
+            const oldProgressValue = oldEntry.progress_value;
+            if (oldMetricId && oldProgressValue) {
+                const oldMetric = (this.objective.sub_metrics || []).find(m => m.id === oldMetricId);
+                if (oldMetric) {
+                    const revertedValue = Math.max(0, (oldMetric.current_value || 0) - oldProgressValue);
+                    await StrategicSubMetric.update(oldMetric.id, { current_value: revertedValue });
+                }
+            }
+
+            // Aplica progresso da nova métrica (se tem)
+            if (newMetricId && newProgressValue) {
+                // Recarrega a métrica caso tenha sido a mesma (valor já foi revertido acima)
+                const freshMetrics = await StrategicSubMetric.getByObjectiveId(this.objective.id);
+                const targetMetric = freshMetrics.find(m => m.id === newMetricId);
+                if (targetMetric) {
+                    const newValue = (targetMetric.current_value || 0) + newProgressValue;
+                    await StrategicSubMetric.update(targetMetric.id, { current_value: newValue });
+                }
+            }
+
+            DepartmentsPage.showToast('Registro atualizado!', 'success');
+            this.closeTimelineModal();
+            this._editingEntryId = null;
+            await this.refreshData();
+        } catch (error) {
+            console.error('Erro ao atualizar registro da timeline:', error);
+            errorDiv.textContent = error.message || 'Erro ao atualizar registro';
+            errorDiv.style.display = 'block';
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Atualizar';
+        }
+    },
+
     async deleteTimelineEntry(entryId) {
         if (!confirm('Deseja realmente excluir este registro?')) return;
 
         try {
+            // Verifica se a entrada tem sub-métrica vinculada para reverter o progresso
+            const entry = this.timelineEntries.find(e => e.id === entryId);
+            const hasMetricLink = entry && entry.sub_metric_id && entry.progress_value;
+
             await StrategicTimelineEntry.delete(entryId);
+
+            // Decrementa o current_value da sub-métrica se havia vínculo
+            if (hasMetricLink) {
+                const metric = (this.objective.sub_metrics || []).find(m => m.id === entry.sub_metric_id);
+                if (metric) {
+                    const newValue = Math.max(0, (metric.current_value || 0) - entry.progress_value);
+                    await StrategicSubMetric.update(metric.id, { current_value: newValue });
+                }
+            }
+
             DepartmentsPage.showToast('Registro excluído!', 'success');
             await this.refreshData();
         } catch (error) {
@@ -787,6 +1044,42 @@ const StrategicObjectiveDetailPage = {
         const style = document.createElement('style');
         style.id = 'sod-detail-styles';
         style.textContent = `
+            /* Action Button */
+            .so-page-bar-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 9px 20px;
+                background: #12b0a0;
+                color: #fff;
+                border: none;
+                border-radius: 12px;
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                white-space: nowrap;
+                box-shadow: 0 4px 12px rgba(18, 176, 160, 0.3);
+                transition: all 0.2s;
+                font-family: 'Lemon Milk', 'Inter', sans-serif;
+                letter-spacing: 0.5px;
+            }
+            .so-page-bar-btn:hover {
+                background: #0e8f82;
+                box-shadow: 0 6px 16px rgba(18, 176, 160, 0.4);
+                transform: translateY(-1px);
+            }
+
+            /* Object Action Buttons */
+            .so-obj-action-btn {
+                width: 32px; height: 32px;
+                display: flex; align-items: center; justify-content: center;
+                background: #F3F4F6; border: none; border-radius: 10px;
+                cursor: pointer; color: #6b7280;
+                transition: all 0.2s;
+            }
+            .so-obj-action-btn:hover { background: #E5E7EB; color: #1e6076; }
+            .so-obj-action-del:hover { background: #fef2f2; color: #ef4444; }
+
             /* Header */
             .sod-header {
                 background: #fff;
@@ -1078,6 +1371,33 @@ const StrategicObjectiveDetailPage = {
             }
             .sod-timeline-file:hover { background: rgba(139, 92, 246, 0.15); }
 
+            /* Timeline Actions */
+            .sod-timeline-actions {
+                display: flex;
+                gap: 6px;
+                opacity: 0;
+                transition: opacity 0.2s;
+            }
+            .sod-timeline-entry:hover .sod-timeline-actions { opacity: 1; }
+
+            /* Timeline Metric Badge */
+            .sod-timeline-metric-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 2px 10px;
+                background: rgba(16, 185, 129, 0.1);
+                color: #059669;
+                border-radius: 12px;
+                font-size: 11px;
+                font-weight: 600;
+                margin-left: 4px;
+            }
+            .sod-timeline-metric-value {
+                color: #047857;
+                font-weight: 700;
+            }
+
             /* Mobile */
             @media (max-width: 768px) {
                 .sod-header, .sod-metrics-section {
@@ -1094,6 +1414,7 @@ const StrategicObjectiveDetailPage = {
                     min-width: unset;
                 }
                 .sod-metric-actions { opacity: 1; }
+                .sod-timeline-actions { opacity: 1; }
                 .sod-total-row {
                     flex-direction: column;
                     align-items: flex-start;

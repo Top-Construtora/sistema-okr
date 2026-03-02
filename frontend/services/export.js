@@ -273,7 +273,7 @@ export const ExportService = {
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(28);
         doc.setFont('helvetica', 'bold');
-        doc.text('Sistema OKR', pageWidth / 2, 35, { align: 'center' });
+        doc.text('Gestão de Resultados', pageWidth / 2, 35, { align: 'center' });
 
         // Document info section
         doc.setTextColor(0, 0, 0);
