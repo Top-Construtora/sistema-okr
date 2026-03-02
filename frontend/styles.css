@@ -1,3 +1,11 @@
+        @font-face {
+            font-family: 'Lemon Milk';
+            src: url('/assets/fonts/LemonMilk-Regular.otf') format('opentype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+
         :root {
             --top-teal: #12b0a0;
             --top-teal-dark: #0e9488;
@@ -52,6 +60,20 @@
             font-size: 14px;
         }
 
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Lemon Milk', 'Inter', sans-serif;
+        }
+        .so-obj-card-title {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        .btn-gio-primary, .btn-gio-secondary,
+        .widget-header,
+        .so-obj-card-bar,
+        .so-title-bar-header {
+            font-family: 'Lemon Milk', 'Inter', sans-serif;
+            letter-spacing: 0.5px;
+        }
+
         /* ===== LAYOUT ===== */
         .app {
             display: flex;
@@ -75,7 +97,8 @@
         .sidebar-brand {
             padding: 24px;
             display: flex;
-            justify-content: center;
+            align-items: center;
+            justify-content: space-between;
             border-bottom: 1px solid rgba(255,255,255,0.1);
         }
 
@@ -106,10 +129,12 @@
         }
 
         .brand-text h1 {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             font-size: 16px;
             font-weight: 700;
             margin-bottom: 2px;
             color: white;
+            white-space: nowrap;
         }
 
         .brand-text span {
@@ -255,37 +280,59 @@
             opacity: 1;
         }
 
-        /* Sidebar Toggle */
-        .sidebar-toggle-container {
-            padding: 12px;
-            border-top: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .sidebar-toggle {
+        /* Sidebar Toggle - Botão no header (expandido) */
+        .sidebar-toggle-btn {
+            padding: 6px;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            color: rgba(255,255,255,0.8);
+            cursor: pointer;
+            transition: background-color 0.2s ease, color 0.2s ease;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            width: 100%;
-            padding: 10px;
-            background: rgba(255,255,255,0.05);
-            border: none;
-            border-radius: 8px;
-            color: #9CA3AF;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-size: 13px;
-            font-weight: 500;
+            flex-shrink: 0;
         }
 
-        .sidebar-toggle:hover {
+        .sidebar-toggle-btn:hover {
             background: rgba(255,255,255,0.1);
-            color: #E5E7EB;
+            color: #ffffff;
         }
 
-        .sidebar-toggle svg {
-            width: 16px;
-            height: 16px;
+        .sidebar-toggle-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Sidebar Toggle - Container quando colapsado */
+        .sidebar-toggle-collapsed {
+            padding: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .sidebar-toggle-btn-collapsed {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            color: rgba(255,255,255,0.8);
+            cursor: pointer;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .sidebar-toggle-btn-collapsed:hover {
+            background: rgba(255,255,255,0.1);
+            color: #ffffff;
+        }
+
+        .sidebar-toggle-btn-collapsed svg {
+            width: 20px;
+            height: 20px;
         }
 
         .sidebar-footer {
@@ -333,7 +380,6 @@
         .sidebar-collapsed .brand-text,
         .sidebar-collapsed .nav-section-title,
         .sidebar-collapsed .nav-item span,
-        .sidebar-collapsed .toggle-text,
         .sidebar-collapsed .user-info,
         .sidebar-collapsed .nav-badge {
             display: none;
@@ -348,8 +394,9 @@
             padding: 12px;
         }
 
-        .sidebar-collapsed .sidebar-toggle {
-            padding: 12px;
+        .sidebar-collapsed .sidebar-brand {
+            justify-content: center;
+            padding: 16px 8px;
         }
 
         .sidebar-collapsed .user-card {

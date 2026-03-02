@@ -196,8 +196,8 @@ const ObjectivesPage = {
             <div class="modal-content-gio" style="max-width:600px;">
                 <div class="modal-header-gio">
                     <div>
-                        <h3>${this.currentObjective ? 'Editar' : 'Novo'} Objetivo Estratégico</h3>
-                        <p>${this.currentObjective ? 'Atualize as informações do objetivo' : 'Defina um novo objetivo estratégico da empresa'}</p>
+                        <h3>${this.currentObjective ? 'Editar' : 'Novo'} Objetivo de OKR</h3>
+                        <p>${this.currentObjective ? 'Atualize as informações do objetivo' : 'Defina um novo objetivo de OKR da empresa'}</p>
                     </div>
                     <button class="modal-close-gio" onclick="ObjectivesPage.closeModal()">
                         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -214,7 +214,7 @@ const ObjectivesPage = {
                             <option value="Crescimento" ${this.currentObjective?.category === 'Crescimento' ? 'selected' : ''}>Crescimento</option>
                             <option value="Melhoria" ${this.currentObjective?.category === 'Melhoria' ? 'selected' : ''}>Melhoria</option>
                         </select>
-                        <small class="form-hint-gio">Categoria do objetivo estratégico</small>
+                        <small class="form-hint-gio">Categoria do objetivo de OKR</small>
                     </div>
 
                     <div class="form-group-gio">
@@ -332,7 +332,7 @@ const ObjectivesPage = {
             return;
         }
 
-        if (!confirm('Deseja realmente excluir este objetivo estratégico?')) {
+        if (!confirm('Deseja realmente excluir este objetivo de OKR?')) {
             return;
         }
 

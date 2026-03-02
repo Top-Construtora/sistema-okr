@@ -67,6 +67,8 @@ const Layout = {
             '/calendar': 'calendar',
             '/ciclos': 'cycles',
             '/cycles': 'cycles',
+            '/objetivos-estrategicos': 'strategic-objectives',
+            '/strategic-objectives': 'strategic-objectives',
             '/objetivos': 'objectives',
             '/objectives': 'objectives',
             '/approval': 'approval',
@@ -79,7 +81,15 @@ const Layout = {
             '/esqueci-senha': 'forgot-password',
             '/redefinir-senha': 'reset-password'
         };
-        return routes[path] || 'dashboard';
+
+        // Exact match
+        if (routes[path]) return routes[path];
+
+        // Parametrized routes
+        const objDetailMatch = path.match(/^\/objetivos-estrategicos\/(\d+)$/);
+        if (objDetailMatch) return 'strategic-objective-detail';
+
+        return 'dashboard';
     },
 
     // Converte nome da página para caminho
@@ -90,6 +100,7 @@ const Layout = {
             'okrs': '/okrs',
             'calendar': '/calendario',
             'cycles': '/ciclos',
+            'strategic-objectives': '/objetivos-estrategicos',
             'objectives': '/objetivos',
             'approval': '/approval',
             'users': '/usuarios',
@@ -98,6 +109,11 @@ const Layout = {
             'forgot-password': '/esqueci-senha',
             'reset-password': '/redefinir-senha'
         };
+
+        if (page === 'strategic-objective-detail') {
+            return window.location.pathname; // keep current URL with ID
+        }
+
         return paths[page] || '/dashboard';
     },
 
@@ -119,7 +135,23 @@ const Layout = {
                             <span>Sistema OKR</span>
                         </div>
                     </div>
+                    ${!this.sidebarCollapsed ? `
+                    <button class="sidebar-toggle-btn" onclick="Layout.toggleSidebar()" title="Retrair sidebar">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                    </button>
+                    ` : ''}
                 </div>
+                ${this.sidebarCollapsed ? `
+                <div class="sidebar-toggle-collapsed">
+                    <button class="sidebar-toggle-btn-collapsed" onclick="Layout.toggleSidebar()" title="Expandir sidebar">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+                </div>
+                ` : ''}
 
                 <nav class="sidebar-nav">
                     <div class="nav-section">
@@ -130,6 +162,14 @@ const Layout = {
                             </svg>
                             <span>Dashboard</span>
                         </a>
+                        ${isAdmin ? `
+                        <a class="nav-item" data-page="strategic-objectives" title="Objetivos Estratégicos">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+                            </svg>
+                            <span>Objetivos Estratégicos</span>
+                        </a>
+                        ` : ''}
                         <div class="nav-submenu ${this.isOkrMenuOpen ? 'open' : ''}">
                             <a class="nav-item nav-submenu-toggle" onclick="Layout.toggleOkrMenu(event)" title="OKRs">
                                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -153,6 +193,12 @@ const Layout = {
                                     </svg>
                                     <span>Todos os OKRs</span>
                                 </a>
+                                <a class="nav-item nav-subitem" data-page="objectives" title="Objetivos de OKR">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                    </svg>
+                                    <span>Objetivos de OKR</span>
+                                </a>
                             </div>
                         </div>
                         <a class="nav-item" data-page="calendar" title="Calendário">
@@ -166,12 +212,6 @@ const Layout = {
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                             </svg>
                             <span>Ciclos</span>
-                        </a>
-                        <a class="nav-item" data-page="objectives" title="Objetivos Estratégicos">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                            </svg>
-                            <span>Objetivos</span>
                         </a>
                         ${canAccessApproval ? `
                         <a class="nav-item" data-page="approval" title="Comitê de Aprovação">
@@ -202,14 +242,6 @@ const Layout = {
                     ` : ''}
                 </nav>
 
-                <div class="sidebar-toggle-container">
-                    <button class="sidebar-toggle" onclick="Layout.toggleSidebar()" title="${this.sidebarCollapsed ? 'Expandir menu' : 'Recolher menu'}">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${this.sidebarCollapsed ? 'M13 5l7 7-7 7M5 5l7 7-7 7' : 'M11 19l-7-7 7-7m8 14l-7-7 7-7'}"/>
-                        </svg>
-                        <span class="toggle-text">${this.sidebarCollapsed ? 'Expandir' : 'Recolher'}</span>
-                    </button>
-                </div>
             </div>
         `;
     },
@@ -327,7 +359,9 @@ const Layout = {
             okrs: 'Todos os OKRs',
             calendar: 'Calendário de Iniciativas',
             cycles: 'Gestão de Ciclos',
-            objectives: 'Objetivos Estratégicos',
+            'strategic-objectives': 'Objetivos Estratégicos',
+            'strategic-objective-detail': 'Detalhe do Objetivo',
+            objectives: 'Objetivos de OKR',
             approval: 'Comitê de Aprovação',
             users: 'Gestão de Usuários',
             departments: 'Gestão de Departamentos',
@@ -344,7 +378,9 @@ const Layout = {
             okrs: 'Visão geral de todos os OKRs da empresa',
             calendar: 'Visualize iniciativas e gerencie seus lembretes',
             cycles: "Configure ciclos e miniciclos para organizar os OKR's",
-            objectives: 'Gerencie os objetivos estratégicos da empresa',
+            'strategic-objectives': 'Gerencie os objetivos estratégicos da empresa',
+            'strategic-objective-detail': 'Sub-métricas e acompanhamento do objetivo',
+            objectives: 'Gerencie os objetivos de OKR da empresa',
             approval: 'Aprove e acompanhe os OKRs submetidos',
             users: 'Gerencie os usuários do sistema',
             departments: 'Gerencie os departamentos da empresa',
@@ -391,7 +427,7 @@ const Layout = {
         // Bloqueia acesso a páginas administrativas para não-admins
         const isAdmin = AuthService.isAdmin();
         const canAccessApproval = AuthService.canAccessApproval();
-        const adminOnlyPages = ['users', 'departments'];
+        const adminOnlyPages = ['users', 'departments', 'strategic-objectives', 'strategic-objective-detail'];
 
         // Páginas só de admin
         if (!isAdmin && adminOnlyPages.includes(basePage)) {
@@ -410,7 +446,7 @@ const Layout = {
         this.currentPage = basePage;
 
         // Se navegar para página de OKR, abre o submenu
-        if (basePage === 'my-okrs' || basePage === 'okrs') {
+        if (basePage === 'my-okrs' || basePage === 'okrs' || basePage === 'objectives') {
             this.isOkrMenuOpen = true;
             localStorage.setItem('okrMenuOpen', 'true');
             const submenu = document.querySelector('.nav-submenu');
@@ -427,9 +463,10 @@ const Layout = {
         document.title = `${this.getPageTitle(basePage)} - TOP Construtora OKR`;
 
         // Atualiza nav items ativos
+        const activeNavPage = basePage === 'strategic-objective-detail' ? 'strategic-objectives' : basePage;
         document.querySelectorAll('.nav-item').forEach(item => {
             item.classList.remove('active');
-            if (item.getAttribute('data-page') === basePage) {
+            if (item.getAttribute('data-page') === activeNavPage) {
                 item.classList.add('active');
             }
         });
@@ -456,6 +493,19 @@ const Layout = {
                 case 'cycles':
                     CyclesPage.render();
                     break;
+                case 'strategic-objectives':
+                    StrategicObjectivesPage.render();
+                    break;
+                case 'strategic-objective-detail': {
+                    const detailMatch = window.location.pathname.match(/\/objetivos-estrategicos\/(\d+)/);
+                    const objId = detailMatch ? parseInt(detailMatch[1]) : null;
+                    if (objId) {
+                        StrategicObjectiveDetailPage.render(objId);
+                    } else {
+                        content.innerHTML = '<p>Objetivo não encontrado</p>';
+                    }
+                    break;
+                }
                 case 'objectives':
                     ObjectivesPage.render();
                     break;
@@ -495,17 +545,45 @@ const Layout = {
             app.classList.remove('sidebar-collapsed');
         }
 
-        // Recriar o botão com ícone e texto atualizados
-        const container = document.querySelector('.sidebar-toggle-container');
-        if (container) {
-            container.innerHTML = `
-                <button class="sidebar-toggle" onclick="Layout.toggleSidebar()" title="${this.sidebarCollapsed ? 'Expandir menu' : 'Recolher menu'}">
+        // Recriar o botão de toggle na posição correta
+        const brand = document.querySelector('.sidebar-brand');
+        const oldCollapsed = document.querySelector('.sidebar-toggle-collapsed');
+
+        if (this.sidebarCollapsed) {
+            // Remover botão do header
+            const btnInHeader = brand.querySelector('.sidebar-toggle-btn');
+            if (btnInHeader) btnInHeader.remove();
+
+            // Adicionar container colapsado após o brand
+            if (!oldCollapsed) {
+                const collapsedDiv = document.createElement('div');
+                collapsedDiv.className = 'sidebar-toggle-collapsed';
+                collapsedDiv.innerHTML = `
+                    <button class="sidebar-toggle-btn-collapsed" onclick="Layout.toggleSidebar()" title="Expandir sidebar">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+                `;
+                brand.after(collapsedDiv);
+            }
+        } else {
+            // Remover container colapsado
+            if (oldCollapsed) oldCollapsed.remove();
+
+            // Adicionar botão no header
+            if (!brand.querySelector('.sidebar-toggle-btn')) {
+                const btn = document.createElement('button');
+                btn.className = 'sidebar-toggle-btn';
+                btn.onclick = () => Layout.toggleSidebar();
+                btn.title = 'Retrair sidebar';
+                btn.innerHTML = `
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${this.sidebarCollapsed ? 'M13 5l7 7-7 7M5 5l7 7-7 7' : 'M11 19l-7-7 7-7m8 14l-7-7 7-7'}"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                     </svg>
-                    <span class="toggle-text">${this.sidebarCollapsed ? 'Expandir' : 'Recolher'}</span>
-                </button>
-            `;
+                `;
+                brand.appendChild(btn);
+            }
         }
     },
 

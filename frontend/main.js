@@ -18,6 +18,9 @@ import { OKR, OKR_STATUS } from './Entities/OKR.js'
 import './Entities/KeyResult.js'
 import { Initiative } from './Entities/Initiative.js'
 import { Reminder, REMINDER_TYPES, REMINDER_PRIORITIES } from './Entities/Reminder.js'
+import { StrategicObjective } from './Entities/StrategicObjective.js'
+import { StrategicSubMetric, CATEGORY_METRIC_CONFIG } from './Entities/StrategicSubMetric.js'
+import { StrategicTimelineEntry } from './Entities/StrategicTimelineEntry.js'
 
 // 2.5 Importa Components
 import { Modal } from './Components/Modal.js'
@@ -29,6 +32,8 @@ import { Layout } from './Layout.js'
 // 4. Importa Pages
 import { DashboardPage } from './Pages/Dashboard/Dashboard.js'
 import { ObjectivesPage } from './Pages/Objectives/Objectives.js'
+import { StrategicObjectivesPage } from './Pages/StrategicObjectives/StrategicObjectives.js'
+import { StrategicObjectiveDetailPage } from './Pages/StrategicObjectives/StrategicObjectiveDetail.js'
 import { CalendarPage } from './Pages/Calendar/Calendar.js'
 import { CyclesPage } from './Pages/Cycles/Cycles.js'
 import { DepartmentsPage } from './Pages/Departments/Departments.js'
@@ -60,6 +65,12 @@ window.InitiativeManager = InitiativeManager;
 window.Layout = Layout;
 window.DashboardPage = DashboardPage;
 window.ObjectivesPage = ObjectivesPage;
+window.StrategicObjective = StrategicObjective;
+window.StrategicSubMetric = StrategicSubMetric;
+window.CATEGORY_METRIC_CONFIG = CATEGORY_METRIC_CONFIG;
+window.StrategicTimelineEntry = StrategicTimelineEntry;
+window.StrategicObjectivesPage = StrategicObjectivesPage;
+window.StrategicObjectiveDetailPage = StrategicObjectiveDetailPage;
 window.CalendarPage = CalendarPage;
 window.CyclesPage = CyclesPage;
 window.DepartmentsPage = DepartmentsPage;

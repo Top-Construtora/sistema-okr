@@ -133,6 +133,10 @@ const StorageService = {
         return await this.getAll('objectives');
     },
 
+    async getStrategicObjectives() {
+        return await this.getAll('strategic_objectives');
+    },
+
     // Popular dados de exemplo (agora via SQL)
     async populateExample() {
         try {
