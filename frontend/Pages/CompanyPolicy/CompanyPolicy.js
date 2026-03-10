@@ -1,43 +1,49 @@
-import { StorageService, uid } from '../../services/storage.js';
-import { supabaseClient } from '../../services/supabase.js';
-import { Department } from '../../Entities/Department.js';
+import { AuthService } from '../../services/auth.js';
+import { CompanyPolicy } from '../../Entities/CompanyPolicy.js';
 
-// Página de Departamentos - CRUD Simplificado conforme PRD
-const DepartmentsPage = {
-    currentDept: null,
+const CompanyPolicyPage = {
+    currentPolicy: null,
+    selectedIcon: 'document',
 
     async render() {
         const content = document.getElementById('content');
-        const departments = await Department.getAll();
+        const isAdmin = AuthService.isAdmin();
+
+        if (!isAdmin) {
+            content.innerHTML = '<p>Acesso negado.</p>';
+            return;
+        }
+
+        const policies = await CompanyPolicy.getAll();
 
         content.innerHTML = `
             <div class="page-gio">
                 <!-- Action Button -->
                 <div class="page-actions-gio">
-                    <button class="btn-gio-primary" onclick="DepartmentsPage.openModal()">
+                    <button class="btn-gio-primary" onclick="CompanyPolicyPage.openModal()">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                         </svg>
-                        Novo Departamento
+                        Nova Política
                     </button>
                 </div>
 
                 <!-- Content Card -->
                 <div class="card-gio">
-                    ${departments.length === 0 ? `
+                    ${policies.length === 0 ? `
                         <div class="empty-state-gio">
                             <div class="empty-state-icon">
                                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                 </svg>
                             </div>
-                            <h3>Nenhum departamento cadastrado</h3>
-                            <p>Comece criando seu primeiro departamento</p>
-                            <button class="btn-gio-primary" onclick="DepartmentsPage.openModal()">
+                            <h3>Nenhuma política cadastrada</h3>
+                            <p>Comece criando sua primeira política da empresa</p>
+                            <button class="btn-gio-primary" onclick="CompanyPolicyPage.openModal()">
                                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                                 </svg>
-                                Criar Departamento
+                                Criar Política
                             </button>
                         </div>
                     ` : `
@@ -45,43 +51,35 @@ const DepartmentsPage = {
                             <table class="table-gio">
                                 <thead>
                                     <tr>
-                                        <th>Departamento</th>
-                                        <th style="width:100px;text-align:center;">Status</th>
+                                        <th style="min-width:200px;">Título</th>
+                                        <th>Descrição</th>
                                         <th style="width:80px;text-align:center;">Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${departments.map(dept => `
-                                        <tr class="${!dept.ativo ? 'row-inactive' : ''}">
+                                    ${policies.map(p => `
+                                        <tr>
                                             <td>
                                                 <div class="table-cell-info">
-                                                    <div class="table-cell-icon ${dept.ativo ? 'active' : 'inactive'}">
-                                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                                                        </svg>
+                                                    <div class="table-cell-icon active">
+                                                        ${CompanyPolicy.getIconSVG(p.icon, 20)}
                                                     </div>
-                                                    <span class="table-cell-name">${dept.nome}</span>
+                                                    <span class="table-cell-name">${p.title || '<em style="color:#94a3b8;">Sem título</em>'}</span>
                                                 </div>
                                             </td>
-                                            <td style="text-align:center;">
-                                                <span class="status-chip ${dept.ativo ? 'active' : 'inactive'}">
-                                                    ${dept.ativo ? 'Ativo' : 'Inativo'}
-                                                </span>
+                                            <td>
+                                                <span class="cp-desc-cell">${p.description ? (p.description.length > 100 ? p.description.substring(0, 100) + '...' : p.description) : '<em style="color:#94a3b8;">Sem descrição</em>'}</span>
                                             </td>
                                             <td style="text-align:center;">
                                                 <div class="action-buttons">
-                                                    <button class="action-btn" onclick="DepartmentsPage.edit('${dept.id}')" title="Editar">
+                                                    <button class="action-btn" onclick="CompanyPolicyPage.edit(${p.id})" title="Editar">
                                                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                                         </svg>
                                                     </button>
-                                                    <button class="action-btn ${dept.ativo ? 'warning' : 'success'}" onclick="DepartmentsPage.toggleStatus('${dept.id}')" title="${dept.ativo ? 'Inativar' : 'Ativar'}">
+                                                    <button class="action-btn warning" onclick="CompanyPolicyPage.delete(${p.id}, '${p.title.replace(/'/g, "\\'")}')" title="Excluir">
                                                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            ${dept.ativo ? `
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
-                                                            ` : `
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                                            `}
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                                         </svg>
                                                     </button>
                                                 </div>
@@ -95,39 +93,64 @@ const DepartmentsPage = {
                 </div>
             </div>
 
-            <div id="dept-modal" style="display:none;"></div>
+            <div id="cp-modal" style="display:none;"></div>
         `;
 
         this.addStyles();
     },
 
     async openModal(id = null) {
-        this.currentDept = id ? await Department.getById(id) : null;
-        const modal = document.getElementById('dept-modal');
+        this.currentPolicy = id ? await CompanyPolicy.getById(id) : null;
+        this.selectedIcon = this.currentPolicy ? this.currentPolicy.icon : 'document';
+        const modal = document.getElementById('cp-modal');
+
+        const selectedLabel = CompanyPolicy.ICONS[this.selectedIcon]?.label || 'Documento';
+        const iconPickerHTML = Object.entries(CompanyPolicy.ICONS).map(([key, icon]) => `
+            <button type="button" class="cp-icon-option ${key === this.selectedIcon ? 'selected' : ''}"
+                    data-icon="${key}" onclick="CompanyPolicyPage.selectIcon('${key}')" title="${icon.label}">
+                ${CompanyPolicy.getIconSVG(key, 18)}
+            </button>
+        `).join('');
 
         modal.innerHTML = `
-            <div class="modal-overlay" onclick="DepartmentsPage.closeModal()"></div>
-            <div class="modal-content">
+            <div class="modal-overlay" onclick="CompanyPolicyPage.closeModal()"></div>
+            <div class="modal-content" style="max-width:600px;">
                 <div class="modal-header">
-                    <h3>${this.currentDept ? 'Editar' : 'Novo'} Departamento</h3>
-                    <button class="modal-close" onclick="DepartmentsPage.closeModal()">&times;</button>
+                    <h3>${this.currentPolicy ? 'Editar' : 'Nova'} Política</h3>
+                    <button class="modal-close" onclick="CompanyPolicyPage.closeModal()">&times;</button>
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
-                        <label class="form-label">Nome do Departamento *</label>
-                        <input type="text" id="dept-nome" class="form-control"
-                            placeholder="Ex: Engenharia"
-                            value="${this.currentDept ? this.currentDept.nome : ''}"
-                            autofocus>
-                        <small style="color:var(--text-muted);font-size:12px;margin-top:4px;display:block;">
-                            O nome deve ser único
-                        </small>
-                        <div id="dept-error" class="error-message" style="display:none;"></div>
+                        <label class="form-label">Ícone</label>
+                        <div class="cp-icon-toggle" onclick="CompanyPolicyPage.toggleIconPicker()">
+                            <div class="cp-icon-preview" id="cp-icon-preview">
+                                ${CompanyPolicy.getIconSVG(this.selectedIcon, 20)}
+                            </div>
+                            <span class="cp-icon-toggle-label" id="cp-icon-toggle-label">${selectedLabel}</span>
+                            <svg class="cp-icon-toggle-arrow" id="cp-icon-toggle-arrow" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </div>
+                        <div class="cp-icon-picker" id="cp-icon-picker" style="display:none;">
+                            ${iconPickerHTML}
+                        </div>
                     </div>
+                    <div class="form-group">
+                        <label class="form-label">Título *</label>
+                        <input type="text" id="cp-title-input" class="form-control"
+                            placeholder="Ex: Política de Gestão de Resultados"
+                            value="${this.currentPolicy ? this.currentPolicy.title.replace(/"/g, '&quot;') : ''}"
+                            autofocus>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Descrição</label>
+                        <textarea id="cp-desc-input" class="form-control" rows="8"
+                            placeholder="Descreva a política da empresa..."
+                            style="resize:vertical;min-height:140px;line-height:1.7;font-family:inherit;">${this.currentPolicy ? this.currentPolicy.description : ''}</textarea>
+                    </div>
+                    <div id="cp-error" class="error-message" style="display:none;"></div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-secondary" onclick="DepartmentsPage.closeModal()">Cancelar</button>
-                    <button class="btn btn-primary" onclick="DepartmentsPage.save()">
+                    <button class="btn btn-secondary" onclick="CompanyPolicyPage.closeModal()">Cancelar</button>
+                    <button class="btn btn-primary" id="cp-save-btn" onclick="CompanyPolicyPage.save()">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                         </svg>
@@ -138,107 +161,94 @@ const DepartmentsPage = {
         `;
         modal.style.display = 'flex';
 
-        // Focus no input
-        setTimeout(() => document.getElementById('dept-nome').focus(), 100);
+        setTimeout(() => document.getElementById('cp-title-input').focus(), 100);
 
-        // Enter para salvar
-        document.getElementById('dept-nome').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                this.save();
-            }
+        document.getElementById('cp-title-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.save();
         });
     },
 
-    closeModal() {
-        document.getElementById('dept-modal').style.display = 'none';
-        this.currentDept = null;
+    toggleIconPicker() {
+        const picker = document.getElementById('cp-icon-picker');
+        const arrow = document.getElementById('cp-icon-toggle-arrow');
+        const isOpen = picker.style.display !== 'none';
+        picker.style.display = isOpen ? 'none' : 'flex';
+        arrow.style.transform = isOpen ? '' : 'rotate(180deg)';
     },
 
-    async save() {
-        const nome = document.getElementById('dept-nome').value.trim();
-        const errorDiv = document.getElementById('dept-error');
+    selectIcon(key) {
+        this.selectedIcon = key;
+        document.querySelectorAll('.cp-icon-option').forEach(btn => {
+            btn.classList.toggle('selected', btn.dataset.icon === key);
+        });
+        const label = CompanyPolicy.ICONS[key]?.label || 'Documento';
+        document.getElementById('cp-icon-preview').innerHTML = CompanyPolicy.getIconSVG(key, 20);
+        document.getElementById('cp-icon-toggle-label').textContent = label;
+        document.getElementById('cp-icon-picker').style.display = 'none';
+        document.getElementById('cp-icon-toggle-arrow').style.transform = '';
+    },
 
-        if (!nome) {
-            errorDiv.textContent = 'Nome do departamento é obrigatório';
-            errorDiv.style.display = 'block';
-            return;
-        }
-
-        try {
-            const dept = this.currentDept || new Department();
-            dept.nome = nome;
-            await dept.save();
-
-            this.closeModal();
-            await this.render();
-            this.showToast(`Departamento ${this.currentDept ? 'atualizado' : 'criado'} com sucesso!`, 'success');
-        } catch (error) {
-            errorDiv.textContent = error.message;
-            errorDiv.style.display = 'block';
-        }
+    closeModal() {
+        document.getElementById('cp-modal').style.display = 'none';
+        this.currentPolicy = null;
     },
 
     edit(id) {
         this.openModal(id);
     },
 
-    async toggleStatus(id) {
-        const dept = await Department.getById(id);
-        if (!dept) return;
-
-        const action = dept.ativo ? 'inativar' : 'ativar';
-
+    async delete(id, title) {
         const confirmed = await Modal.confirm({
-            title: `${action.charAt(0).toUpperCase() + action.slice(1)} Departamento`,
-            message: `Deseja realmente ${action} o departamento <strong>"${dept.nome}"</strong>?`,
-            confirmLabel: action.charAt(0).toUpperCase() + action.slice(1),
-            danger: action === 'inativar'
+            title: 'Excluir Política',
+            message: `Deseja realmente excluir a política <strong>"${title}"</strong>?`,
+            confirmLabel: 'Excluir',
+            danger: true
         });
         if (!confirmed) return;
 
         try {
-            await Department.toggleActive(id);
+            await CompanyPolicy.delete(id);
+            DepartmentsPage.showToast('Política excluída com sucesso!', 'success');
+            this.render();
+        } catch (err) {
+            DepartmentsPage.showToast('Erro ao excluir política.', 'error');
+        }
+    },
+
+    async save() {
+        const title = document.getElementById('cp-title-input').value.trim();
+        const description = document.getElementById('cp-desc-input').value.trim();
+        const errorDiv = document.getElementById('cp-error');
+
+        if (!title) {
+            errorDiv.textContent = 'O título é obrigatório';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        try {
+            if (this.currentPolicy) {
+                await CompanyPolicy.update(this.currentPolicy.id, title, description, this.selectedIcon);
+            } else {
+                await CompanyPolicy.create(title, description, this.selectedIcon);
+            }
+
+            this.closeModal();
+            DepartmentsPage.showToast(`Política ${this.currentPolicy ? 'atualizada' : 'criada'} com sucesso!`, 'success');
             await this.render();
-            this.showToast(`Departamento ${dept.ativo ? 'inativado' : 'ativado'} com sucesso!`, 'success');
-        } catch (error) {
-            this.showToast(error.message, 'error');
+        } catch (err) {
+            console.error('Erro ao salvar política:', err);
+            errorDiv.textContent = 'Erro ao salvar política. Tente novamente.';
+            errorDiv.style.display = 'block';
         }
-    },
-
-    toggleMenu(event, deptId) {
-        event.stopPropagation();
-        window.closeAllDropdownMenus();
-        const menu = document.getElementById(`dept-menu-${deptId}`);
-        if (menu) {
-            window.positionDropdownMenu(event.currentTarget, `dept-menu-${deptId}`);
-            menu.classList.toggle('show');
-        }
-    },
-
-    closeAllMenus() {
-        window.closeAllDropdownMenus();
-    },
-
-    showToast(message, type = 'success') {
-        const toast = document.createElement('div');
-        toast.className = `toast toast-${type}`;
-        toast.textContent = message;
-        document.body.appendChild(toast);
-
-        setTimeout(() => toast.classList.add('show'), 100);
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 300);
-        }, 3000);
     },
 
     addStyles() {
-        if (document.getElementById('dept-styles')) return;
-
+        if (document.getElementById('cp-page-styles')) return;
         const style = document.createElement('style');
-        style.id = 'dept-styles';
+        style.id = 'cp-page-styles';
         style.textContent = `
-            /* ===== PAGE GIO STYLES ===== */
+            /* ===== PAGE GIO BASE (shared pattern) ===== */
             .page-gio {
                 background: #f5f9ff;
                 margin: -24px;
@@ -285,7 +295,6 @@ const DepartmentsPage = {
                 overflow: hidden;
             }
 
-            /* Empty State */
             .empty-state-gio {
                 text-align: center;
                 padding: 60px 20px;
@@ -321,7 +330,6 @@ const DepartmentsPage = {
                 margin: 0 0 24px 0;
             }
 
-            /* Table GIO */
             .table-gio-container {
                 overflow-x: auto;
             }
@@ -359,10 +367,6 @@ const DepartmentsPage = {
                 border-bottom: none;
             }
 
-            .table-gio tbody tr.row-inactive {
-                opacity: 0.6;
-            }
-
             .table-gio tbody td {
                 padding: 14px 20px;
                 vertical-align: middle;
@@ -395,33 +399,96 @@ const DepartmentsPage = {
                 box-shadow: 0 2px 8px rgba(18, 176, 160, 0.3);
             }
 
-            .table-cell-icon.inactive {
-                background: #f1f5f9;
-                color: #94a3b8;
-            }
-
             .table-cell-name {
                 font-size: 14px;
                 font-weight: 600;
                 color: #1f2937;
             }
 
-            .status-chip {
-                display: inline-block;
-                padding: 5px 12px;
-                border-radius: 20px;
-                font-size: 11px;
-                font-weight: 700;
-            }
-
-            .status-chip.active {
-                background: rgba(16, 185, 129, 0.12);
-                color: #059669;
-            }
-
-            .status-chip.inactive {
-                background: rgba(100, 116, 139, 0.12);
+            .cp-desc-cell {
+                font-size: 13px;
                 color: #64748b;
+                line-height: 1.5;
+            }
+
+            /* Icon Toggle */
+            .cp-icon-toggle {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 8px 12px;
+                border: 1px solid #e2e8f0;
+                border-radius: 10px;
+                cursor: pointer;
+                transition: all 0.15s;
+                background: white;
+            }
+
+            .cp-icon-toggle:hover {
+                border-color: #cbd5e1;
+                background: #f8fafc;
+            }
+
+            .cp-icon-preview {
+                width: 36px;
+                height: 36px;
+                border-radius: 8px;
+                background: linear-gradient(135deg, #12b0a0 0%, #0d9488 100%);
+                color: white;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+            }
+
+            .cp-icon-toggle-label {
+                font-size: 13px;
+                font-weight: 600;
+                color: #1f2937;
+                flex: 1;
+            }
+
+            .cp-icon-toggle-arrow {
+                color: #94a3b8;
+                transition: transform 0.2s;
+                flex-shrink: 0;
+            }
+
+            /* Icon Picker Grid */
+            .cp-icon-picker {
+                flex-wrap: wrap;
+                gap: 6px;
+                margin-top: 10px;
+                padding: 12px;
+                border: 1px solid #e2e8f0;
+                border-radius: 10px;
+                background: #f8fafc;
+            }
+
+            .cp-icon-option {
+                width: 36px;
+                height: 36px;
+                border-radius: 8px;
+                border: 2px solid transparent;
+                background: white;
+                color: #64748b;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: all 0.15s ease;
+            }
+
+            .cp-icon-option:hover {
+                border-color: #12b0a0;
+                color: #12b0a0;
+            }
+
+            .cp-icon-option.selected {
+                border-color: #12b0a0;
+                background: linear-gradient(135deg, #12b0a0 0%, #0d9488 100%);
+                color: white;
+                box-shadow: 0 2px 8px rgba(18, 176, 160, 0.3);
             }
 
             .action-buttons {
@@ -450,13 +517,8 @@ const DepartmentsPage = {
             }
 
             .action-btn.warning:hover {
-                background: rgba(245, 158, 11, 0.15);
-                color: #d97706;
-            }
-
-            .action-btn.success:hover {
-                background: rgba(16, 185, 129, 0.15);
-                color: #059669;
+                background: rgba(239, 68, 68, 0.15);
+                color: #dc2626;
             }
 
             .action-btn svg {
@@ -465,7 +527,7 @@ const DepartmentsPage = {
             }
 
             /* Modal GIO */
-            #dept-modal {
+            #cp-modal {
                 position: fixed;
                 top: 0;
                 left: 0;
@@ -555,6 +617,7 @@ const DepartmentsPage = {
                 justify-content: flex-end;
                 gap: 12px;
                 background: #f8fafc;
+                border-radius: 0 0 16px 16px;
             }
 
             .form-label {
@@ -573,36 +636,6 @@ const DepartmentsPage = {
                 font-size: 13px;
                 margin-top: 12px;
                 border: 1px solid rgba(239, 68, 68, 0.2);
-            }
-
-            .toast {
-                position: fixed;
-                bottom: 24px;
-                right: 24px;
-                padding: 14px 20px;
-                border-radius: 12px;
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-                font-size: 14px;
-                font-weight: 600;
-                z-index: 10000;
-                opacity: 0;
-                transform: translateY(20px);
-                transition: all 0.3s ease;
-            }
-
-            .toast.show {
-                opacity: 1;
-                transform: translateY(0);
-            }
-
-            .toast-success {
-                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-                color: white;
-            }
-
-            .toast-error {
-                background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-                color: white;
             }
 
             /* Responsive */
@@ -641,6 +674,5 @@ const DepartmentsPage = {
     }
 };
 
-// Expõe globalmente
-window.DepartmentsPage = DepartmentsPage;
-export { DepartmentsPage };
+export { CompanyPolicyPage };
+window.CompanyPolicyPage = CompanyPolicyPage;

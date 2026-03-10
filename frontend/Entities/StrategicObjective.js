@@ -8,6 +8,10 @@ class StrategicObjective {
         this.text = data.text || '';
         this.meta = data.meta || null;
         this.cycle_id = data.cycle_id || null;
+        this.indicadores = data.indicadores || null;
+        this.fonte_coleta = data.fonte_coleta || null;
+        this.frequencia_medicao = data.frequencia_medicao || null;
+        this.responsavel_departamento_ids = data.responsavel_departamento_ids || [];
         this.cycles = data.cycles || null;
         this.sub_metrics = data.sub_metrics || [];
         this.created_at = data.created_at || null;

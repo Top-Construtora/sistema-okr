@@ -1995,7 +1995,6 @@ const CalendarPage = {
                 right: 0;
                 bottom: 0;
                 background: rgba(0, 0, 0, 0.5);
-                backdrop-filter: blur(4px);
                 display: flex;
                 align-items: center;
                 justify-content: center;

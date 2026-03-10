@@ -527,9 +527,13 @@ const CyclesPage = {
     },
 
     async deleteMiniCycle(id, nome) {
-        if (!confirm(`Excluir "${nome}"?\n\nOKRs vinculados perderao a referencia.`)) {
-            return;
-        }
+        const confirmed = await Modal.confirm({
+            title: 'Excluir Miniciclo',
+            message: `Deseja realmente excluir <strong>"${nome}"</strong>?<br><br>OKRs vinculados perderão a referência.`,
+            confirmLabel: 'Excluir',
+            danger: true
+        });
+        if (!confirmed) return;
 
         try {
             const mini = await MiniCycle.getById(id);

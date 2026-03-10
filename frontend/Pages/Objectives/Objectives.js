@@ -332,9 +332,13 @@ const ObjectivesPage = {
             return;
         }
 
-        if (!confirm('Deseja realmente excluir este objetivo de OKR?')) {
-            return;
-        }
+        const confirmed = await Modal.confirm({
+            title: 'Excluir Objetivo',
+            message: 'Deseja realmente excluir este objetivo de OKR?',
+            confirmLabel: 'Excluir',
+            danger: true
+        });
+        if (!confirmed) return;
 
         try {
             const { error } = await supabaseClient

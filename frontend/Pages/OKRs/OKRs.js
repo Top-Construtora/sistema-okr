@@ -1081,15 +1081,21 @@ const OKRsPage = {
             return;
         }
 
-        if (confirm(`Deseja realmente excluir o OKR "${okr.title}"?\n\nTodos os Key Results e iniciativas vinculados também serão excluídos.`)) {
-            try {
-                await OKR.delete(id);
-                await this.render();
-                DepartmentsPage.showToast('OKR excluído com sucesso!', 'success');
-            } catch (error) {
-                console.error('Erro ao excluir OKR:', error);
-                DepartmentsPage.showToast(error.message || 'Erro ao excluir OKR', 'error');
-            }
+        const confirmed = await Modal.confirm({
+            title: 'Excluir OKR',
+            message: `Deseja realmente excluir o OKR <strong>"${okr.title}"</strong>?<br><br>Todos os Key Results e iniciativas vinculados também serão excluídos.`,
+            confirmLabel: 'Excluir',
+            danger: true
+        });
+        if (!confirmed) return;
+
+        try {
+            await OKR.delete(id);
+            await this.render();
+            DepartmentsPage.showToast('OKR excluído com sucesso!', 'success');
+        } catch (error) {
+            console.error('Erro ao excluir OKR:', error);
+            DepartmentsPage.showToast(error.message || 'Erro ao excluir OKR', 'error');
         }
     },
 
@@ -1796,9 +1802,13 @@ const OKRsPage = {
     },
 
     async removeEvidence(okrId, krId, evidenceIndex) {
-        if (!confirm('Tem certeza que deseja remover esta evidência?')) {
-            return;
-        }
+        const confirmed = await Modal.confirm({
+            title: 'Remover Evidência',
+            message: 'Tem certeza que deseja remover esta evidência?',
+            confirmLabel: 'Remover',
+            danger: true
+        });
+        if (!confirmed) return;
 
         try {
             // Buscar evidências atuais
@@ -1919,9 +1929,13 @@ const OKRsPage = {
     },
 
     async deleteKR(okrId, krId) {
-        if (!confirm('Deseja realmente excluir este Key Result?\n\nTodas as iniciativas vinculadas também serão excluídas.')) {
-            return;
-        }
+        const confirmed = await Modal.confirm({
+            title: 'Excluir Key Result',
+            message: 'Deseja realmente excluir este Key Result?<br><br>Todas as iniciativas vinculadas também serão excluídas.',
+            confirmLabel: 'Excluir',
+            danger: true
+        });
+        if (!confirmed) return;
 
         try {
             const okr = await OKR.getById(okrId);
@@ -2439,9 +2453,13 @@ const OKRsPage = {
     },
 
     async deleteInitiative(id, nome) {
-        if (!confirm(`Tem certeza que deseja excluir a iniciativa "${nome}"?`)) {
-            return;
-        }
+        const confirmed = await Modal.confirm({
+            title: 'Excluir Iniciativa',
+            message: `Tem certeza que deseja excluir a iniciativa <strong>"${nome}"</strong>?`,
+            confirmLabel: 'Excluir',
+            danger: true
+        });
+        if (!confirmed) return;
 
         try {
             const initiative = await Initiative.getById(id);

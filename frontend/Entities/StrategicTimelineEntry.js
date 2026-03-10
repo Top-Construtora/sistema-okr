@@ -11,6 +11,7 @@ class StrategicTimelineEntry {
         this.file_path = data.file_path || null;
         this.created_by = data.created_by || null;
         this.created_at = data.created_at || null;
+        this.measured_at = data.measured_at || data.created_at || null;
         this.sub_metric_id = data.sub_metric_id || null;
         this.progress_value = data.progress_value != null ? Number(data.progress_value) : null;
         // Join data
@@ -23,9 +24,14 @@ class StrategicTimelineEntry {
     }
 
     get formattedDate() {
-        if (!this.created_at) return '';
-        const d = new Date(this.created_at);
+        const dateStr = this.measured_at || this.created_at;
+        if (!dateStr) return '';
+        const d = new Date(dateStr);
         return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+
+    get effectiveDate() {
+        return this.measured_at || this.created_at;
     }
 
     static async getByObjectiveId(objectiveId) {
@@ -34,7 +40,7 @@ class StrategicTimelineEntry {
                 .from('strategic_objective_entries')
                 .select('*, users(id, nome), strategic_sub_metrics(id, name, unit)')
                 .eq('objective_id', objectiveId)
-                .order('created_at', { ascending: false });
+                .order('measured_at', { ascending: false });
 
             if (error) throw error;
             return (data || []).map(d => new StrategicTimelineEntry(d));
@@ -56,6 +62,7 @@ class StrategicTimelineEntry {
                     file_name: data.file_name || null,
                     file_path: data.file_path || null,
                     created_by: data.created_by || null,
+                    measured_at: data.measured_at || new Date().toISOString(),
                     sub_metric_id: data.sub_metric_id || null,
                     progress_value: data.progress_value || null
                 }])
@@ -78,6 +85,7 @@ class StrategicTimelineEntry {
             if (data.url !== undefined) updateData.url = data.url;
             if (data.file_name !== undefined) updateData.file_name = data.file_name;
             if (data.file_path !== undefined) updateData.file_path = data.file_path;
+            if (data.measured_at !== undefined) updateData.measured_at = data.measured_at;
             if (data.sub_metric_id !== undefined) updateData.sub_metric_id = data.sub_metric_id;
             if (data.progress_value !== undefined) updateData.progress_value = data.progress_value;
 

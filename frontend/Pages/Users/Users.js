@@ -374,14 +374,20 @@ const UsersPage = {
 
         const action = user.ativo ? 'inativar' : 'ativar';
 
-        if (confirm(`Deseja realmente ${action} o usuário "${user.nome}"?`)) {
-            try {
-                await User.toggleActive(id);
-                await this.render();
-                DepartmentsPage.showToast(`Usuário ${user.ativo ? 'inativado' : 'ativado'} com sucesso!`, 'success');
-            } catch (error) {
-                DepartmentsPage.showToast(error.message, 'error');
-            }
+        const confirmed = await Modal.confirm({
+            title: `${action.charAt(0).toUpperCase() + action.slice(1)} Usuário`,
+            message: `Deseja realmente ${action} o usuário <strong>"${user.nome}"</strong>?`,
+            confirmLabel: action.charAt(0).toUpperCase() + action.slice(1),
+            danger: action === 'inativar'
+        });
+        if (!confirmed) return;
+
+        try {
+            await User.toggleActive(id);
+            await this.render();
+            DepartmentsPage.showToast(`Usuário ${user.ativo ? 'inativado' : 'ativado'} com sucesso!`, 'success');
+        } catch (error) {
+            DepartmentsPage.showToast(error.message, 'error');
         }
     },
 

@@ -7,6 +7,7 @@ const Layout = {
     currentPage: 'dashboard',
     sidebarCollapsed: localStorage.getItem('sidebarCollapsed') === 'true',
     isOkrMenuOpen: localStorage.getItem('okrMenuOpen') !== 'false', // Aberto por padrão
+    isPlanningMenuOpen: localStorage.getItem('planningMenuOpen') !== 'false',
 
     // Renderiza o layout completo
     async render() {
@@ -57,7 +58,9 @@ const Layout = {
     // Converte caminho para nome da página
     getPageFromPath(path) {
         const routes = {
-            '/': 'dashboard',
+            '/': 'home',
+            '/inicio': 'home',
+            '/home': 'home',
             '/dashboard': 'dashboard',
             '/meus-okrs': 'my-okrs',
             '/my-okrs': 'my-okrs',
@@ -69,6 +72,7 @@ const Layout = {
             '/cycles': 'cycles',
             '/objetivos-estrategicos': 'strategic-objectives',
             '/strategic-objectives': 'strategic-objectives',
+            '/kpis': 'kpis',
             '/objetivos': 'objectives',
             '/objectives': 'objectives',
             '/approval': 'approval',
@@ -76,10 +80,15 @@ const Layout = {
             '/users': 'users',
             '/departamentos': 'departments',
             '/departments': 'departments',
+            '/politica-empresa': 'company-policy',
             '/configuracoes': 'settings',
             '/settings': 'settings',
             '/esqueci-senha': 'forgot-password',
-            '/redefinir-senha': 'reset-password'
+            '/redefinir-senha': 'reset-password',
+            '/arvore-problemas': 'problem-tree',
+            '/matriz-swot': 'swot-matrix',
+            '/definicao-impacto': 'impact-definition',
+            '/analise-cenarios': 'scenario-analysis'
         };
 
         // Exact match
@@ -89,32 +98,39 @@ const Layout = {
         const objDetailMatch = path.match(/^\/objetivos-estrategicos\/(\d+)$/);
         if (objDetailMatch) return 'strategic-objective-detail';
 
-        return 'dashboard';
+        return 'home';
     },
 
     // Converte nome da página para caminho
     getPathFromPage(page) {
         const paths = {
+            'home': '/inicio',
             'dashboard': '/dashboard',
             'my-okrs': '/meus-okrs',
             'okrs': '/okrs',
             'calendar': '/calendario',
             'cycles': '/ciclos',
             'strategic-objectives': '/objetivos-estrategicos',
+            'kpis': '/kpis',
+            'company-policy': '/politica-empresa',
             'objectives': '/objetivos',
             'approval': '/approval',
             'users': '/usuarios',
             'departments': '/departamentos',
             'settings': '/configuracoes',
             'forgot-password': '/esqueci-senha',
-            'reset-password': '/redefinir-senha'
+            'reset-password': '/redefinir-senha',
+            'problem-tree': '/arvore-problemas',
+            'swot-matrix': '/matriz-swot',
+            'impact-definition': '/definicao-impacto',
+            'scenario-analysis': '/analise-cenarios'
         };
 
         if (page === 'strategic-objective-detail') {
             return window.location.pathname; // keep current URL with ID
         }
 
-        return paths[page] || '/dashboard';
+        return paths[page] || '/inicio';
     },
 
     // Renderiza sidebar
@@ -156,11 +172,11 @@ const Layout = {
                 <nav class="sidebar-nav">
                     <div class="nav-section">
                         <div class="nav-section-title">Menu Principal</div>
-                        <a class="nav-item" data-page="dashboard" title="Dashboard">
+                        <a class="nav-item" data-page="home" title="Início">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
                             </svg>
-                            <span>Dashboard</span>
+                            <span>Início</span>
                         </a>
                         ${isAdmin ? `
                         <a class="nav-item" data-page="strategic-objectives" title="Objetivos Estratégicos">
@@ -168,6 +184,12 @@ const Layout = {
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
                             </svg>
                             <span>Objetivos Estratégicos</span>
+                        </a>
+                        <a class="nav-item" data-page="kpis" title="KPI's">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                            </svg>
+                            <span>KPI's</span>
                         </a>
                         ` : ''}
                         <div class="nav-submenu ${this.isOkrMenuOpen ? 'open' : ''}">
@@ -181,6 +203,12 @@ const Layout = {
                                 </svg>
                             </a>
                             <div class="nav-submenu-items">
+                                <a class="nav-item nav-subitem" data-page="dashboard" title="Dashboard de OKRs">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                                    </svg>
+                                    <span>Dashboard de OKRs</span>
+                                </a>
                                 <a class="nav-item nav-subitem" data-page="my-okrs" title="Meus OKRs">
                                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
@@ -221,6 +249,43 @@ const Layout = {
                             <span>Comitê de Aprovação</span>
                         </a>
                         ` : ''}
+                        <div class="nav-submenu nav-submenu-planning ${this.isPlanningMenuOpen ? 'open' : ''}">
+                            <a class="nav-item nav-submenu-toggle" onclick="Layout.togglePlanningMenu(event)" title="Planejamento Estratégico">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/>
+                                </svg>
+                                <span>Planejamento</span>
+                                <svg class="submenu-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </a>
+                            <div class="nav-submenu-items">
+                                <a class="nav-item nav-subitem" data-page="problem-tree" title="Árvore de Problemas">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                                    </svg>
+                                    <span>Árvore de Problemas</span>
+                                </a>
+                                <a class="nav-item nav-subitem" data-page="swot-matrix" title="Matriz SWOT">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"/>
+                                    </svg>
+                                    <span>Matriz SWOT</span>
+                                </a>
+                                <a class="nav-item nav-subitem" data-page="impact-definition" title="Definição de Impacto">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                                    </svg>
+                                    <span>Definição de Impacto</span>
+                                </a>
+                                <a class="nav-item nav-subitem" data-page="scenario-analysis" title="Análise de Cenários">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                                    </svg>
+                                    <span>Análise de Cenários</span>
+                                </a>
+                            </div>
+                        </div>
                     </div>
 
                     ${isAdmin ? `
@@ -237,6 +302,12 @@ const Layout = {
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                             </svg>
                             <span>Departamentos</span>
+                        </a>
+                        <a class="nav-item" data-page="company-policy" title="Política da Empresa">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            <span>Política da Empresa</span>
                         </a>
                     </div>
                     ` : ''}
@@ -354,18 +425,25 @@ const Layout = {
     // Pega título da página
     getPageTitle(page) {
         const titles = {
-            dashboard: 'Dashboard',
+            home: 'Início',
+            dashboard: 'Dashboard de OKRs',
             'my-okrs': 'Meus OKRs',
             okrs: 'Todos os OKRs',
             calendar: 'Calendário de Iniciativas',
             cycles: 'Gestão de Ciclos',
             'strategic-objectives': 'Objetivos Estratégicos',
+            kpis: "KPI's",
             'strategic-objective-detail': 'Detalhe do Objetivo',
             objectives: 'Objetivos de OKR',
             approval: 'Comitê de Aprovação',
             users: 'Gestão de Usuários',
             departments: 'Gestão de Departamentos',
-            settings: 'Configurações'
+            'company-policy': 'Política da Empresa',
+            settings: 'Configurações',
+            'problem-tree': 'Árvore de Problemas',
+            'swot-matrix': 'Matriz SWOT',
+            'impact-definition': 'Definição de Impacto',
+            'scenario-analysis': 'Análise de Cenários'
         };
         return titles[page] || 'Gestão de Resultados';
     },
@@ -373,18 +451,25 @@ const Layout = {
     // Pega subtítulo da página
     getPageSubtitle(page) {
         const subtitles = {
-            dashboard: 'Visão geral do progresso dos objetivos',
+            home: 'Painel geral do sistema',
+            dashboard: 'Visão geral do progresso dos OKRs',
             'my-okrs': 'OKRs do seu departamento',
             okrs: 'Visão geral de todos os OKRs da empresa',
             calendar: 'Visualize iniciativas e gerencie seus lembretes',
             cycles: "Configure ciclos e miniciclos para organizar os OKR's",
             'strategic-objectives': 'Gerencie os objetivos estratégicos da empresa',
+            kpis: 'Indicadores de performance da empresa',
             'strategic-objective-detail': 'Sub-métricas e acompanhamento do objetivo',
             objectives: 'Gerencie os objetivos de OKR da empresa',
             approval: 'Aprove e acompanhe os OKRs submetidos',
             users: 'Gerencie os usuários do sistema',
             departments: 'Gerencie os departamentos da empresa',
-            settings: 'Altere sua senha de acesso ao sistema'
+            'company-policy': 'Defina a política de gestão de resultados da empresa',
+            settings: 'Altere sua senha de acesso ao sistema',
+            'problem-tree': 'Análise sistêmica de problemas com post-its',
+            'swot-matrix': 'Forças, fraquezas, oportunidades e ameaças',
+            'impact-definition': 'Cruzamento SWOT para definição de cenários',
+            'scenario-analysis': 'Resultados calculados da definição de impacto'
         };
         return subtitles[page] || '';
     },
@@ -427,18 +512,18 @@ const Layout = {
         // Bloqueia acesso a páginas administrativas para não-admins
         const isAdmin = AuthService.isAdmin();
         const canAccessApproval = AuthService.canAccessApproval();
-        const adminOnlyPages = ['users', 'departments', 'strategic-objectives', 'strategic-objective-detail'];
+        const adminOnlyPages = ['users', 'departments', 'strategic-objectives', 'strategic-objective-detail', 'company-policy', 'kpis'];
 
         // Páginas só de admin
         if (!isAdmin && adminOnlyPages.includes(basePage)) {
-            basePage = 'dashboard';
+            basePage = 'home';
             queryString = '';
             updateURL = true;
         }
 
         // Comitê de Aprovação: admin e consultor podem acessar
         if (!canAccessApproval && basePage === 'approval') {
-            basePage = 'dashboard';
+            basePage = 'home';
             queryString = '';
             updateURL = true;
         }
@@ -446,10 +531,18 @@ const Layout = {
         this.currentPage = basePage;
 
         // Se navegar para página de OKR, abre o submenu
-        if (basePage === 'my-okrs' || basePage === 'okrs' || basePage === 'objectives') {
+        if (basePage === 'dashboard' || basePage === 'my-okrs' || basePage === 'okrs' || basePage === 'objectives') {
             this.isOkrMenuOpen = true;
             localStorage.setItem('okrMenuOpen', 'true');
             const submenu = document.querySelector('.nav-submenu');
+            if (submenu) submenu.classList.add('open');
+        }
+
+        // Se navegar para página de Planejamento, abre o submenu
+        if (['problem-tree', 'swot-matrix', 'impact-definition', 'scenario-analysis'].includes(basePage)) {
+            this.isPlanningMenuOpen = true;
+            localStorage.setItem('planningMenuOpen', 'true');
+            const submenu = document.querySelector('.nav-submenu-planning');
             if (submenu) submenu.classList.add('open');
         }
 
@@ -478,6 +571,9 @@ const Layout = {
         const content = document.getElementById('content');
         if (content) {
             switch (basePage) {
+                case 'home':
+                    HomePage.render();
+                    break;
                 case 'dashboard':
                     DashboardPage.render();
                     break;
@@ -509,6 +605,9 @@ const Layout = {
                 case 'objectives':
                     ObjectivesPage.render();
                     break;
+                case 'kpis':
+                    KPIsPage.render();
+                    break;
                 case 'approval':
                     ApprovalPage.render();
                     break;
@@ -518,8 +617,23 @@ const Layout = {
                 case 'departments':
                     DepartmentsPage.render();
                     break;
+                case 'company-policy':
+                    CompanyPolicyPage.render();
+                    break;
                 case 'settings':
                     SettingsPage.render();
+                    break;
+                case 'problem-tree':
+                    ProblemTreePage.render();
+                    break;
+                case 'swot-matrix':
+                    SwotMatrixPage.render();
+                    break;
+                case 'impact-definition':
+                    ImpactDefinitionPage.render();
+                    break;
+                case 'scenario-analysis':
+                    ScenarioAnalysisPage.render();
                     break;
                 case 'forgot-password':
                     ForgotPasswordPage.render();
@@ -598,6 +712,23 @@ const Layout = {
         const submenu = document.querySelector('.nav-submenu');
         if (submenu) {
             if (this.isOkrMenuOpen) {
+                submenu.classList.add('open');
+            } else {
+                submenu.classList.remove('open');
+            }
+        }
+    },
+
+    togglePlanningMenu(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        this.isPlanningMenuOpen = !this.isPlanningMenuOpen;
+        localStorage.setItem('planningMenuOpen', this.isPlanningMenuOpen);
+
+        const submenu = document.querySelector('.nav-submenu-planning');
+        if (submenu) {
+            if (this.isPlanningMenuOpen) {
                 submenu.classList.add('open');
             } else {
                 submenu.classList.remove('open');
@@ -767,14 +898,26 @@ const Layout = {
     },
 
     // Limpar dados
-    clearData() {
-        if (confirm('⚠️ ATENÇÃO: Isso irá remover TODOS os dados do sistema (departamentos, usuários, OKRs).\n\nDeseja realmente continuar?')) {
-            if (confirm('Confirme novamente: Todos os dados serão perdidos permanentemente!')) {
-                StorageService.clearAllData();
-                DepartmentsPage.showToast('Todos os dados foram removidos!', 'success');
-                setTimeout(() => window.location.reload(), 1500);
-            }
-        }
+    async clearData() {
+        const first = await Modal.confirm({
+            title: 'Limpar Todos os Dados',
+            message: '⚠️ <strong>ATENÇÃO:</strong> Isso irá remover TODOS os dados do sistema (departamentos, usuários, OKRs).<br><br>Deseja realmente continuar?',
+            confirmLabel: 'Continuar',
+            danger: true
+        });
+        if (!first) return;
+
+        const second = await Modal.confirm({
+            title: 'Confirmar Exclusão Total',
+            message: '⚠️ <strong>Última chance!</strong> Todos os dados serão perdidos permanentemente!',
+            confirmLabel: 'Excluir Tudo',
+            danger: true
+        });
+        if (!second) return;
+
+        StorageService.clearAllData();
+        DepartmentsPage.showToast('Todos os dados foram removidos!', 'success');
+        setTimeout(() => window.location.reload(), 1500);
     },
 
     // Toggle Mobile Sidebar

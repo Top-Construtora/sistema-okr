@@ -18,9 +18,13 @@ import { OKR, OKR_STATUS } from './Entities/OKR.js'
 import './Entities/KeyResult.js'
 import { Initiative } from './Entities/Initiative.js'
 import { Reminder, REMINDER_TYPES, REMINDER_PRIORITIES } from './Entities/Reminder.js'
+import { CompanyPolicy } from './Entities/CompanyPolicy.js'
 import { StrategicObjective } from './Entities/StrategicObjective.js'
 import { StrategicSubMetric, CATEGORY_METRIC_CONFIG } from './Entities/StrategicSubMetric.js'
 import { StrategicTimelineEntry } from './Entities/StrategicTimelineEntry.js'
+import { ProblemTree } from './Entities/ProblemTree.js'
+import { SwotItem } from './Entities/SwotItem.js'
+import { SwotCrossing } from './Entities/SwotCrossing.js'
 
 // 2.5 Importa Components
 import { Modal } from './Components/Modal.js'
@@ -30,6 +34,7 @@ import { InitiativeManager } from './Components/InitiativeManager.js'
 import { Layout } from './Layout.js'
 
 // 4. Importa Pages
+import { HomePage } from './Pages/Home/Home.js'
 import { DashboardPage } from './Pages/Dashboard/Dashboard.js'
 import { ObjectivesPage } from './Pages/Objectives/Objectives.js'
 import { StrategicObjectivesPage } from './Pages/StrategicObjectives/StrategicObjectives.js'
@@ -41,10 +46,16 @@ import { UsersPage } from './Pages/Users/Users.js'
 import { MyOKRsPage } from './Pages/OKRs/MyOKRs.js'
 import { OKRsPage } from './Pages/OKRs/OKRs.js'
 import { ApprovalPage } from './Pages/ApprovalCommittee/ApprovalCommittee.js'
+import { CompanyPolicyPage } from './Pages/CompanyPolicy/CompanyPolicy.js'
+import { KPIsPage } from './Pages/KPIs/KPIs.js'
 import { SettingsPage } from './Pages/Settings/Settings.js'
 import ForgotPasswordPage from './Pages/PasswordRecovery/ForgotPassword.js'
 import ResetPasswordPage from './Pages/PasswordRecovery/ResetPassword.js'
 import PasswordRecoveryCallbackPage from './Pages/PasswordRecovery/PasswordRecoveryCallback.js'
+import { ProblemTreePage } from './Pages/StrategicPlanning/ProblemTree.js'
+import { SwotMatrixPage } from './Pages/StrategicPlanning/SwotMatrix.js'
+import { ImpactDefinitionPage } from './Pages/StrategicPlanning/ImpactDefinition.js'
+import { ScenarioAnalysisPage } from './Pages/StrategicPlanning/ScenarioAnalysis.js'
 
 // 5. Importa App
 import { App } from './app.js'
@@ -63,8 +74,10 @@ window.REMINDER_PRIORITIES = REMINDER_PRIORITIES;
 window.Modal = Modal;
 window.InitiativeManager = InitiativeManager;
 window.Layout = Layout;
+window.HomePage = HomePage;
 window.DashboardPage = DashboardPage;
 window.ObjectivesPage = ObjectivesPage;
+window.CompanyPolicy = CompanyPolicy;
 window.StrategicObjective = StrategicObjective;
 window.StrategicSubMetric = StrategicSubMetric;
 window.CATEGORY_METRIC_CONFIG = CATEGORY_METRIC_CONFIG;
@@ -78,10 +91,19 @@ window.UsersPage = UsersPage;
 window.MyOKRsPage = MyOKRsPage;
 window.OKRsPage = OKRsPage;
 window.ApprovalPage = ApprovalPage;
+window.CompanyPolicyPage = CompanyPolicyPage;
+window.KPIsPage = KPIsPage;
 window.SettingsPage = SettingsPage;
 window.ForgotPasswordPage = ForgotPasswordPage;
 window.ResetPasswordPage = ResetPasswordPage;
 window.PasswordRecoveryCallbackPage = PasswordRecoveryCallbackPage;
+window.ProblemTree = ProblemTree;
+window.SwotItem = SwotItem;
+window.SwotCrossing = SwotCrossing;
+window.ProblemTreePage = ProblemTreePage;
+window.SwotMatrixPage = SwotMatrixPage;
+window.ImpactDefinitionPage = ImpactDefinitionPage;
+window.ScenarioAnalysisPage = ScenarioAnalysisPage;
 window.App = App;
 
 // Inicializa o aplicativo

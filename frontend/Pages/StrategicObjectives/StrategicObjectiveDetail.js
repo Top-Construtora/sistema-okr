@@ -2,11 +2,21 @@ import { AuthService } from '../../services/auth.js';
 import { StrategicObjective } from '../../Entities/StrategicObjective.js';
 import { StrategicSubMetric, CATEGORY_METRIC_CONFIG } from '../../Entities/StrategicSubMetric.js';
 import { StrategicTimelineEntry } from '../../Entities/StrategicTimelineEntry.js';
+import { Department } from '../../Entities/Department.js';
+
+const FREQUENCIA_LABELS = {
+    'semanal': 'Semanal',
+    'mensal': 'Mensal',
+    'trimestral': 'Trimestral',
+    'semestral': 'Semestral',
+    'anual': 'Anual'
+};
 
 const StrategicObjectiveDetailPage = {
     objective: null,
     currentMetric: null,
     timelineEntries: [],
+    departments: [],
 
     async render(objectiveId) {
         const content = document.getElementById('content');
@@ -42,8 +52,13 @@ const StrategicObjectiveDetailPage = {
             this.objective.sub_metrics = autoMetrics;
         }
 
-        // Busca entradas da timeline
-        this.timelineEntries = await StrategicTimelineEntry.getByObjectiveId(objectiveId);
+        // Busca entradas da timeline e departamentos em paralelo
+        const [timelineEntries, departments] = await Promise.all([
+            StrategicTimelineEntry.getByObjectiveId(objectiveId),
+            Department.getActive()
+        ]);
+        this.timelineEntries = timelineEntries;
+        this.departments = departments;
 
         this.renderPage();
     },
@@ -161,6 +176,82 @@ const StrategicObjectiveDetailPage = {
         // Timeline HTML
         const timelineHTML = this.renderTimeline(isAdmin);
 
+        // Indicadores section
+        const frequenciaLabel = obj.frequencia_medicao ? FREQUENCIA_LABELS[obj.frequencia_medicao] || obj.frequencia_medicao : null;
+        const deptIds = obj.responsavel_departamento_ids || [];
+        const responsavelNomes = deptIds.map(id => {
+            const dept = this.departments.find(d => d.id === id);
+            return dept ? dept.nome : null;
+        }).filter(Boolean);
+        const hasIndicadores = obj.indicadores || obj.fonte_coleta || obj.frequencia_medicao || deptIds.length > 0;
+
+        const responsavelHTML = responsavelNomes.length > 0
+            ? responsavelNomes.map(nome => `<span class="sod-dept-tag">${nome}</span>`).join('')
+            : '<span class="sod-indicator-empty">Não definido</span>';
+
+        const indicadoresHTML = `
+            <div class="sod-indicators-section">
+                <div class="sod-metrics-header">
+                    <h3 class="sod-metrics-title">Indicadores</h3>
+                    ${isAdmin ? `
+                        <div style="display:flex;gap:8px;">
+                            ${hasIndicadores ? `
+                                <button class="sod-ind-clear-btn" onclick="StrategicObjectiveDetailPage.clearIndicadores()">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                    Limpar
+                                </button>
+                            ` : ''}
+                            <button class="so-page-bar-btn" onclick="StrategicObjectiveDetailPage.openIndicadoresModal()">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                </svg>
+                                Editar
+                            </button>
+                        </div>
+                    ` : ''}
+                </div>
+                ${hasIndicadores ? `
+                    <div class="sod-indicators-grid">
+                        <div class="sod-indicator-item">
+                            <div class="sod-indicator-label">
+                                <svg width="14" height="14" fill="none" stroke="#6b7280" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                                Indicadores
+                            </div>
+                            <div class="sod-indicator-value">${obj.indicadores || '<span class="sod-indicator-empty">Não definido</span>'}</div>
+                        </div>
+                        <div class="sod-indicator-item">
+                            <div class="sod-indicator-label">
+                                <svg width="14" height="14" fill="none" stroke="#6b7280" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                                Fonte de Coleta
+                            </div>
+                            <div class="sod-indicator-value">${obj.fonte_coleta || '<span class="sod-indicator-empty">Não definido</span>'}</div>
+                        </div>
+                        <div class="sod-indicator-item">
+                            <div class="sod-indicator-label">
+                                <svg width="14" height="14" fill="none" stroke="#6b7280" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                Frequência de Medição
+                            </div>
+                            <div class="sod-indicator-value">${frequenciaLabel ? `<span class="sod-frequency-badge">${frequenciaLabel}</span>` : '<span class="sod-indicator-empty">Não definido</span>'}</div>
+                        </div>
+                        <div class="sod-indicator-item">
+                            <div class="sod-indicator-label">
+                                <svg width="14" height="14" fill="none" stroke="#6b7280" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                Responsáveis
+                            </div>
+                            <div class="sod-indicator-value sod-dept-tags">${responsavelHTML}</div>
+                        </div>
+                    </div>
+                ` : `
+                    <div class="sod-empty" style="padding:32px 20px;">
+                        <p class="sod-empty-text">Nenhum indicador configurado</p>
+                        <p class="sod-empty-hint">Configure os indicadores, fonte de coleta, frequência e responsáveis</p>
+                    </div>
+                `}
+            </div>
+        `;
+
         content.innerHTML = `
             <div class="dashboard-gio">
                 <!-- Header do objetivo -->
@@ -178,6 +269,9 @@ const StrategicObjectiveDetailPage = {
                     <h2 class="sod-title">${obj.text}</h2>
                     ${obj.meta ? `<p class="sod-meta">Meta: ${obj.meta}</p>` : ''}
                 </div>
+
+                <!-- Indicadores -->
+                ${indicadoresHTML}
 
                 <!-- Sub-Métricas -->
                 <div class="sod-metrics-section">
@@ -217,6 +311,7 @@ const StrategicObjectiveDetailPage = {
                 <!-- Modal -->
                 <div id="sod-metric-modal" class="modal-gio-container" style="display:none;"></div>
                 <div id="sod-timeline-modal" class="modal-gio-container" style="display:none;"></div>
+                <div id="sod-indicators-modal" class="modal-gio-container" style="display:none;"></div>
             </div>
         `;
     },
@@ -349,22 +444,269 @@ const StrategicObjectiveDetailPage = {
     // TIMELINE
     // =====================================================
 
+    /**
+     * Gera períodos entre startDate e endDate baseado na frequência
+     */
+    generatePeriods(freq, startDate, endDate) {
+        const periods = [];
+        const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+        const mesesFull = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+        if (freq === 'anual') {
+            for (let y = startDate.getFullYear(); y <= endDate.getFullYear(); y++) {
+                periods.push({
+                    label: `${y}`,
+                    short: `${y}`,
+                    start: new Date(y, 0, 1),
+                    end: new Date(y, 11, 31, 23, 59, 59)
+                });
+            }
+        } else if (freq === 'semestral') {
+            let d = new Date(startDate.getFullYear(), startDate.getMonth() < 6 ? 0 : 6, 1);
+            while (d <= endDate) {
+                const sem = d.getMonth() < 6 ? 1 : 2;
+                const y = d.getFullYear();
+                const endMonth = sem === 1 ? 5 : 11;
+                periods.push({
+                    label: `${sem}º Semestre ${y}`,
+                    short: `S${sem}/${y}`,
+                    start: new Date(y, sem === 1 ? 0 : 6, 1),
+                    end: new Date(y, endMonth + 1, 0, 23, 59, 59)
+                });
+                d = new Date(y, sem === 1 ? 6 : 12, 1);
+            }
+        } else if (freq === 'trimestral') {
+            let d = new Date(startDate.getFullYear(), Math.floor(startDate.getMonth() / 3) * 3, 1);
+            while (d <= endDate) {
+                const q = Math.floor(d.getMonth() / 3) + 1;
+                const y = d.getFullYear();
+                const startM = (q - 1) * 3;
+                periods.push({
+                    label: `${q}º Trimestre ${y}`,
+                    short: `T${q}/${y}`,
+                    start: new Date(y, startM, 1),
+                    end: new Date(y, startM + 3, 0, 23, 59, 59)
+                });
+                d = new Date(y, startM + 3, 1);
+            }
+        } else if (freq === 'mensal') {
+            let d = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+            while (d <= endDate) {
+                const m = d.getMonth();
+                const y = d.getFullYear();
+                periods.push({
+                    label: `${mesesFull[m]} ${y}`,
+                    short: `${meses[m]}/${y}`,
+                    start: new Date(y, m, 1),
+                    end: new Date(y, m + 1, 0, 23, 59, 59)
+                });
+                d = new Date(y, m + 1, 1);
+            }
+        } else if (freq === 'semanal') {
+            let d = new Date(startDate);
+            d.setDate(d.getDate() - d.getDay() + 1); // segunda
+            let weekNum = 1;
+            while (d <= endDate) {
+                const wStart = new Date(d);
+                const wEnd = new Date(d);
+                wEnd.setDate(wEnd.getDate() + 6);
+                wEnd.setHours(23, 59, 59);
+                periods.push({
+                    label: `Semana ${weekNum} — ${wStart.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} a ${wEnd.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`,
+                    short: `Sem ${weekNum}`,
+                    start: wStart,
+                    end: wEnd
+                });
+                d.setDate(d.getDate() + 7);
+                weekNum++;
+            }
+        }
+        return periods;
+    },
+
     renderTimeline(isAdmin) {
         const entries = this.timelineEntries || [];
+        const obj = this.objective;
+        const freq = obj.frequencia_medicao;
 
+        // Se não há frequência, mostra lista simples
+        if (!freq) {
+            return this.renderSimpleTimeline(entries, isAdmin);
+        }
+
+        // Determina range de datas
+        const cycle = obj.cycles;
+        const now = new Date();
+        let rangeStart, rangeEnd;
+
+        if (cycle && cycle.data_inicio && cycle.data_fim) {
+            rangeStart = new Date(cycle.data_inicio);
+            rangeEnd = new Date(cycle.data_fim);
+        } else {
+            // Fallback: do registro mais antigo até hoje
+            if (entries.length > 0) {
+                const dates = entries.map(e => new Date(e.created_at));
+                rangeStart = new Date(Math.min(...dates));
+                rangeEnd = new Date(Math.max(...dates.map(d => d.getTime()), now.getTime()));
+            } else {
+                rangeStart = new Date(now.getFullYear(), 0, 1);
+                rangeEnd = now;
+            }
+        }
+
+        const periods = this.generatePeriods(freq, rangeStart, rangeEnd);
+
+        // Agrupa entries em períodos (usa measured_at para agrupar)
+        const grouped = periods.map(period => {
+            const periodEntries = entries.filter(e => {
+                const d = new Date(e.effectiveDate);
+                return d >= period.start && d <= period.end;
+            });
+            return { ...period, entries: periodEntries };
+        });
+
+        // Determina período atual
+        const currentPeriodIdx = grouped.findIndex(p => now >= p.start && now <= p.end);
+
+        // Windowing para semanal/mensal: mostra apenas períodos próximos do atual
+        const WINDOW_SIZE = freq === 'semanal' ? 4 : freq === 'mensal' ? 3 : 0;
+        const forceExpand = this._forceExpandTimeline;
+        this._forceExpandTimeline = null;
+        let visibleStart = 0;
+        let visibleEnd = grouped.length;
+
+        if (WINDOW_SIZE > 0 && grouped.length > WINDOW_SIZE * 2 + 1 && !forceExpand) {
+            const center = currentPeriodIdx >= 0 ? currentPeriodIdx : grouped.length - 1;
+            visibleStart = Math.max(0, center - WINDOW_SIZE);
+            visibleEnd = Math.min(grouped.length, center + WINDOW_SIZE + 1);
+
+            // Expande para incluir períodos com registros que ficaram fora da janela
+            for (let i = 0; i < grouped.length; i++) {
+                if (grouped[i].entries.length > 0) {
+                    if (i < visibleStart) visibleStart = i;
+                    if (i >= visibleEnd) visibleEnd = i + 1;
+                }
+            }
+        }
+
+        // Guarda estado de expansão
+        this._timelineWindow = { visibleStart, visibleEnd, total: grouped.length };
+
+        const freqLabel = FREQUENCIA_LABELS[freq] || freq;
+
+        const hiddenBefore = visibleStart;
+        const hiddenAfter = grouped.length - visibleEnd;
+
+        const beforeBtnHTML = hiddenBefore > 0 ? `
+            <div class="sod-period-expand-btn" onclick="StrategicObjectiveDetailPage.expandTimeline('before')">
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
+                Ver ${hiddenBefore} período${hiddenBefore > 1 ? 's' : ''} anterior${hiddenBefore > 1 ? 'es' : ''}
+            </div>` : '';
+
+        const afterBtnHTML = hiddenAfter > 0 ? `
+            <div class="sod-period-expand-btn" onclick="StrategicObjectiveDetailPage.expandTimeline('after')">
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                Ver ${hiddenAfter} período${hiddenAfter > 1 ? 's' : ''} seguinte${hiddenAfter > 1 ? 's' : ''}
+            </div>` : '';
+
+        const visiblePeriods = grouped.slice(visibleStart, visibleEnd);
+
+        const periodsHTML = visiblePeriods.length === 0
+            ? `<div class="sod-empty" style="padding:32px 20px;">
+                    <p class="sod-empty-text">Nenhum período disponível</p>
+               </div>`
+            : visiblePeriods.map((period, localIdx) => {
+                const globalIdx = visibleStart + localIdx;
+                const isCurrent = globalIdx === currentPeriodIdx;
+                const isPast = period.end < now;
+                const count = period.entries.length;
+                const hasEntries = count > 0;
+                const statusClass = isCurrent ? 'sod-period-current' : (isPast ? (hasEntries ? 'sod-period-done' : 'sod-period-missed') : 'sod-period-future');
+
+                const entriesHTML = period.entries.map(e => this.renderTimelineEntry(e, isAdmin)).join('');
+
+                return `
+                    <div class="sod-period ${statusClass}">
+                        <div class="sod-period-header" onclick="StrategicObjectiveDetailPage.togglePeriod(this)">
+                            <div class="sod-period-marker">
+                                <div class="sod-period-dot"></div>
+                                ${localIdx < visiblePeriods.length - 1 ? '<div class="sod-period-line"></div>' : ''}
+                            </div>
+                            <div class="sod-period-info">
+                                <span class="sod-period-label">${period.label}</span>
+                                ${isCurrent ? '<span class="sod-period-badge-current">Atual</span>' : ''}
+                            </div>
+                            <div class="sod-period-right">
+                                ${hasEntries
+                                    ? `<span class="sod-period-count">${count} registro${count > 1 ? 's' : ''}</span>`
+                                    : `<span class="sod-period-count sod-period-count-empty">${isPast ? 'Sem registros' : 'Pendente'}</span>`
+                                }
+                                <svg class="sod-period-chevron" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="${isCurrent || hasEntries ? 'transform:rotate(180deg)' : ''}"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </div>
+                        </div>
+                        <div class="sod-period-body" style="display:${isCurrent || hasEntries ? 'block' : 'none'};">
+                            ${hasEntries
+                                ? `<div class="sod-timeline-list">${entriesHTML}</div>`
+                                : `<div class="sod-period-empty">
+                                        <span>${isCurrent ? 'Nenhum registro neste período ainda' : 'Nenhum registro neste período'}</span>
+                                   </div>`
+                            }
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+        return `
+            <div class="sod-metrics-section sod-timeline-section">
+                <div class="sod-metrics-header">
+                    <div>
+                        <h3 class="sod-metrics-title">Timeline</h3>
+                        <span class="sod-timeline-freq-label">
+                            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            Frequência ${freqLabel} — ${entries.length} registro${entries.length !== 1 ? 's' : ''} total
+                        </span>
+                    </div>
+                    ${isAdmin ? `
+                        <button class="so-page-bar-btn" onclick="StrategicObjectiveDetailPage.openTimelineModal()">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            Novo Registro
+                        </button>
+                    ` : ''}
+                </div>
+                <div class="sod-periods-container">
+                    ${beforeBtnHTML}
+                    ${periodsHTML}
+                    ${afterBtnHTML}
+                </div>
+            </div>
+        `;
+    },
+
+    expandTimeline(direction) {
+        // Re-render com todos os períodos visíveis
+        this._forceExpandTimeline = direction;
+        this.renderPage();
+    },
+
+    renderSimpleTimeline(entries, isAdmin) {
         const entriesHTML = entries.length === 0
-            ? `
-                <div class="sod-empty" style="padding:32px 20px;">
+            ? `<div class="sod-empty" style="padding:32px 20px;">
                     <p class="sod-empty-text">Nenhum registro na timeline</p>
                     <p class="sod-empty-hint">Adicione registros para acompanhar o histórico deste objetivo</p>
-                </div>
-            `
+               </div>`
             : entries.map(entry => this.renderTimelineEntry(entry, isAdmin)).join('');
 
         return `
             <div class="sod-metrics-section sod-timeline-section">
                 <div class="sod-metrics-header">
-                    <h3 class="sod-metrics-title">Timeline</h3>
+                    <div>
+                        <h3 class="sod-metrics-title">Timeline</h3>
+                        <span class="sod-timeline-freq-label" style="color:#9ca3af;">
+                            Sem frequência definida — ${entries.length} registro${entries.length !== 1 ? 's' : ''}
+                        </span>
+                    </div>
                     ${isAdmin ? `
                         <button class="so-page-bar-btn" onclick="StrategicObjectiveDetailPage.openTimelineModal()">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
@@ -379,6 +721,14 @@ const StrategicObjectiveDetailPage = {
                 </div>
             </div>
         `;
+    },
+
+    togglePeriod(headerEl) {
+        const body = headerEl.nextElementSibling;
+        const chevron = headerEl.querySelector('.sod-period-chevron');
+        const isOpen = body.style.display !== 'none';
+        body.style.display = isOpen ? 'none' : 'block';
+        chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
     },
 
     renderTimelineEntry(entry, isAdmin) {
@@ -507,6 +857,14 @@ const StrategicObjectiveDetailPage = {
                             <option value="link">Link</option>
                             <option value="file">Arquivo</option>
                         </select>
+                    </div>
+                    <div class="form-group-gio">
+                        <label class="form-label-gio">Data da Medição</label>
+                        <input type="date" id="sod-timeline-measured-at" class="form-control-gio"
+                            value="${new Date().toISOString().split('T')[0]}">
+                        <small style="color:#6b7280;font-size:11px;margin-top:4px;display:block;">
+                            Data em que a medição foi realizada
+                        </small>
                     </div>
                     <div class="form-group-gio">
                         <label class="form-label-gio">Descrição *</label>
@@ -643,12 +1001,16 @@ const StrategicObjectiveDetailPage = {
             return;
         }
 
+        const measuredAtInput = document.getElementById('sod-timeline-measured-at');
+        const measuredAt = measuredAtInput ? measuredAtInput.value : null;
+
         const currentUser = AuthService.getCurrentUser();
         const entryData = {
             objective_id: this.objective.id,
             description,
             entry_type: type,
-            created_by: currentUser ? currentUser.id : null
+            created_by: currentUser ? currentUser.id : null,
+            measured_at: measuredAt ? new Date(measuredAt + 'T12:00:00').toISOString() : new Date().toISOString()
         };
 
         if (selectedMetricId) {
@@ -758,6 +1120,11 @@ const StrategicObjectiveDetailPage = {
                 <div class="modal-body-gio">
                     ${metricDropdownHTML}
                     <div class="form-group-gio">
+                        <label class="form-label-gio">Data da Medição</label>
+                        <input type="date" id="sod-timeline-measured-at" class="form-control-gio"
+                            value="${entry.measured_at ? new Date(entry.measured_at).toISOString().split('T')[0] : new Date(entry.created_at).toISOString().split('T')[0]}">
+                    </div>
+                    <div class="form-group-gio">
                         <label class="form-label-gio">Descrição *</label>
                         <textarea id="sod-timeline-description" class="form-control-gio" rows="3"
                             placeholder="Descreva o registro...">${entry.description}</textarea>
@@ -805,7 +1172,13 @@ const StrategicObjectiveDetailPage = {
             return;
         }
 
-        const updateData = { description };
+        const measuredAtInput = document.getElementById('sod-timeline-measured-at');
+        const measuredAt = measuredAtInput ? measuredAtInput.value : null;
+
+        const updateData = {
+            description,
+            measured_at: measuredAt ? new Date(measuredAt + 'T12:00:00').toISOString() : undefined
+        };
 
         const newMetricId = selectedMetricId ? parseInt(selectedMetricId) : null;
         const newProgressValue = selectedMetricId ? progressValue : null;
@@ -854,7 +1227,13 @@ const StrategicObjectiveDetailPage = {
     },
 
     async deleteTimelineEntry(entryId) {
-        if (!confirm('Deseja realmente excluir este registro?')) return;
+        const confirmed = await Modal.confirm({
+            title: 'Excluir Registro',
+            message: 'Deseja realmente excluir este registro da timeline?',
+            confirmLabel: 'Excluir',
+            danger: true
+        });
+        if (!confirmed) return;
 
         try {
             // Verifica se a entrada tem sub-métrica vinculada para reverter o progresso
@@ -1009,7 +1388,13 @@ const StrategicObjectiveDetailPage = {
     },
 
     async deleteMetric(metricId) {
-        if (!confirm('Deseja realmente excluir esta sub-métrica?')) return;
+        const confirmed = await Modal.confirm({
+            title: 'Excluir Sub-Métrica',
+            message: 'Deseja realmente excluir esta sub-métrica?',
+            confirmLabel: 'Excluir',
+            danger: true
+        });
+        if (!confirmed) return;
 
         try {
             await StrategicSubMetric.delete(metricId);
@@ -1018,6 +1403,211 @@ const StrategicObjectiveDetailPage = {
         } catch (error) {
             console.error('Erro ao excluir sub-métrica:', error);
             DepartmentsPage.showToast('Erro ao excluir sub-métrica', 'error');
+        }
+    },
+
+    // =====================================================
+    // INDICADORES MODAL
+    // =====================================================
+
+    async openIndicadoresModal() {
+        const obj = this.objective;
+        const modal = document.getElementById('sod-indicators-modal');
+
+        if (this.departments.length === 0) {
+            this.departments = await Department.getActive();
+        }
+
+        const selectedIds = obj.responsavel_departamento_ids || [];
+
+        const selectedCount = selectedIds.length;
+        const totalDepts = this.departments.length;
+
+        modal.innerHTML = `
+            <div class="modal-overlay-gio" onclick="StrategicObjectiveDetailPage.closeIndicadoresModal()"></div>
+            <div class="modal-content-gio" style="max-width:640px;">
+                <div class="modal-header-gio">
+                    <div>
+                        <h3>Editar Indicadores</h3>
+                        <p>Objetivo: ${obj.text.substring(0, 60)}${obj.text.length > 60 ? '...' : ''}</p>
+                    </div>
+                    <button class="modal-close-gio" onclick="StrategicObjectiveDetailPage.closeIndicadoresModal()">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body-gio">
+                    <div class="sod-ind-row">
+                        <div class="form-group-gio" style="flex:1;">
+                            <label class="form-label-gio">Indicadores</label>
+                            <textarea id="sod-ind-indicadores" class="form-control-gio" rows="2"
+                                placeholder="Ex: Faturamento mensal, NPS...">${obj.indicadores || ''}</textarea>
+                        </div>
+                        <div class="form-group-gio" style="flex:1;">
+                            <label class="form-label-gio">Fonte de Coleta</label>
+                            <textarea id="sod-ind-fonte" class="form-control-gio" rows="2"
+                                placeholder="Ex: Sistema ERP, Planilha...">${obj.fonte_coleta || ''}</textarea>
+                        </div>
+                    </div>
+                    <div class="form-group-gio">
+                        <label class="form-label-gio">Frequência de Medição</label>
+                        <div class="sod-freq-options">
+                            ${[
+                                { value: 'semanal', label: 'Semanal', icon: '7d' },
+                                { value: 'mensal', label: 'Mensal', icon: '30d' },
+                                { value: 'trimestral', label: 'Trimestral', icon: '3m' },
+                                { value: 'semestral', label: 'Semestral', icon: '6m' },
+                                { value: 'anual', label: 'Anual', icon: '1a' }
+                            ].map(f => `
+                                <label class="sod-freq-chip ${obj.frequencia_medicao === f.value ? 'sod-freq-chip-active' : ''}">
+                                    <input type="radio" name="sod-ind-frequencia" value="${f.value}" ${obj.frequencia_medicao === f.value ? 'checked' : ''} onchange="StrategicObjectiveDetailPage.onFreqChange()">
+                                    <span class="sod-freq-chip-icon">${f.icon}</span>
+                                    <span>${f.label}</span>
+                                </label>
+                            `).join('')}
+                            <label class="sod-freq-chip sod-freq-chip-none ${!obj.frequencia_medicao ? 'sod-freq-chip-active' : ''}">
+                                <input type="radio" name="sod-ind-frequencia" value="" ${!obj.frequencia_medicao ? 'checked' : ''} onchange="StrategicObjectiveDetailPage.onFreqChange()">
+                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                                <span>Nenhuma</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group-gio">
+                        <div class="sod-dept-header">
+                            <label class="form-label-gio" style="margin:0;">Responsáveis</label>
+                            <div class="sod-dept-header-actions">
+                                <button type="button" class="sod-dept-action-link" onclick="StrategicObjectiveDetailPage.toggleAllDepts(true)">Todos</button>
+                                <span style="color:#d1d5db;">|</span>
+                                <button type="button" class="sod-dept-action-link" onclick="StrategicObjectiveDetailPage.toggleAllDepts(false)">Nenhum</button>
+                                <span class="sod-dept-counter" id="sod-dept-counter">${selectedCount} de ${totalDepts}</span>
+                            </div>
+                        </div>
+                        <div class="sod-dept-checklist-box">
+                            ${this.departments.length > 0 ? `
+                                <div class="sod-dept-checklist-grid">
+                                    ${this.departments.map(d => `
+                                        <label class="sod-dept-chip ${selectedIds.includes(d.id) ? 'sod-dept-chip-active' : ''}">
+                                            <input type="checkbox" name="sod-ind-depts" value="${d.id}" ${selectedIds.includes(d.id) ? 'checked' : ''} onchange="StrategicObjectiveDetailPage.onDeptToggle(this)">
+                                            <span class="sod-dept-chip-text">${d.nome}</span>
+                                            <svg class="sod-dept-chip-check" width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                        </label>
+                                    `).join('')}
+                                </div>
+                            ` : '<span style="color:#9ca3af;font-size:13px;padding:12px;">Nenhum departamento cadastrado</span>'}
+                        </div>
+                    </div>
+                    <div id="sod-ind-error" class="error-message-gio" style="display:none;"></div>
+                </div>
+                <div class="modal-footer-gio">
+                    <button class="btn-gio-secondary" onclick="StrategicObjectiveDetailPage.closeIndicadoresModal()">Cancelar</button>
+                    <button class="btn-gio-primary" onclick="StrategicObjectiveDetailPage.saveIndicadores()">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Salvar
+                    </button>
+                </div>
+            </div>
+        `;
+        modal.style.display = 'flex';
+    },
+
+    onFreqChange() {
+        document.querySelectorAll('.sod-freq-chip').forEach(chip => {
+            const radio = chip.querySelector('input[type="radio"]');
+            chip.classList.toggle('sod-freq-chip-active', radio.checked);
+        });
+    },
+
+    toggleAllDepts(selectAll) {
+        document.querySelectorAll('input[name="sod-ind-depts"]').forEach(cb => {
+            cb.checked = selectAll;
+            const chip = cb.closest('.sod-dept-chip');
+            chip.classList.toggle('sod-dept-chip-active', selectAll);
+        });
+        const total = document.querySelectorAll('input[name="sod-ind-depts"]').length;
+        const counter = document.getElementById('sod-dept-counter');
+        if (counter) counter.textContent = `${selectAll ? total : 0} de ${total}`;
+    },
+
+    onDeptToggle(checkbox) {
+        const chip = checkbox.closest('.sod-dept-chip');
+        chip.classList.toggle('sod-dept-chip-active', checkbox.checked);
+        const total = document.querySelectorAll('input[name="sod-ind-depts"]').length;
+        const checked = document.querySelectorAll('input[name="sod-ind-depts"]:checked').length;
+        const counter = document.getElementById('sod-dept-counter');
+        if (counter) counter.textContent = `${checked} de ${total}`;
+    },
+
+    closeIndicadoresModal() {
+        const modal = document.getElementById('sod-indicators-modal');
+        if (modal) modal.style.display = 'none';
+    },
+
+    async saveIndicadores() {
+        const indicadores = document.getElementById('sod-ind-indicadores').value.trim();
+        const fonte_coleta = document.getElementById('sod-ind-fonte').value.trim();
+        const freqRadio = document.querySelector('input[name="sod-ind-frequencia"]:checked');
+        const frequencia_medicao = freqRadio ? freqRadio.value : '';
+        const checkedBoxes = document.querySelectorAll('input[name="sod-ind-depts"]:checked');
+        const selectedDeptIds = Array.from(checkedBoxes).map(cb => cb.value);
+        const errorDiv = document.getElementById('sod-ind-error');
+
+        try {
+            const { supabaseClient } = await import('../../services/supabase.js');
+            const updateData = {
+                indicadores: indicadores || null,
+                fonte_coleta: fonte_coleta || null,
+                frequencia_medicao: frequencia_medicao || null,
+                responsavel_departamento_ids: selectedDeptIds
+            };
+
+            const { error } = await supabaseClient
+                .from('strategic_objectives')
+                .update(updateData)
+                .eq('id', this.objective.id);
+
+            if (error) throw error;
+
+            DepartmentsPage.showToast('Indicadores atualizados!', 'success');
+            this.closeIndicadoresModal();
+            await this.refreshData();
+        } catch (error) {
+            console.error('Erro ao salvar indicadores:', error);
+            errorDiv.textContent = error.message || 'Erro ao salvar indicadores';
+            errorDiv.style.display = 'block';
+        }
+    },
+
+    async clearIndicadores() {
+        const confirmed = await Modal.confirm({
+            title: 'Limpar Indicadores',
+            message: 'Deseja realmente limpar todos os indicadores deste objetivo?',
+            confirmLabel: 'Limpar',
+            danger: true
+        });
+        if (!confirmed) return;
+
+        try {
+            const { supabaseClient } = await import('../../services/supabase.js');
+            const { error } = await supabaseClient
+                .from('strategic_objectives')
+                .update({
+                    indicadores: null,
+                    fonte_coleta: null,
+                    frequencia_medicao: null,
+                    responsavel_departamento_ids: []
+                })
+                .eq('id', this.objective.id);
+
+            if (error) throw error;
+
+            DepartmentsPage.showToast('Indicadores removidos!', 'success');
+            await this.refreshData();
+        } catch (error) {
+            console.error('Erro ao limpar indicadores:', error);
+            DepartmentsPage.showToast('Erro ao limpar indicadores', 'error');
         }
     },
 
@@ -1139,6 +1729,246 @@ const StrategicObjectiveDetailPage = {
                 color: #6b7280;
                 margin: 0;
                 line-height: 1.5;
+            }
+
+            /* Indicators Section */
+            .sod-indicators-section {
+                background: #fff;
+                border-radius: 24px;
+                padding: 24px 28px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+                margin-top: 16px;
+            }
+            .sod-indicators-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 16px;
+            }
+            .sod-indicator-item {
+                padding: 14px 16px;
+                background: #F9FAFB;
+                border-radius: 14px;
+                transition: all 0.2s;
+            }
+            .sod-indicator-item:hover {
+                background: #F3F4F6;
+            }
+            .sod-indicator-label {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 11px;
+                font-weight: 700;
+                color: #6b7280;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin-bottom: 8px;
+            }
+            .sod-indicator-value {
+                font-size: 14px;
+                font-weight: 500;
+                color: #1f2937;
+                line-height: 1.5;
+                white-space: pre-line;
+            }
+            .sod-indicator-empty {
+                color: #9ca3af;
+                font-style: italic;
+                font-weight: 400;
+            }
+            .sod-dept-tags {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            .sod-dept-tag {
+                display: inline-block;
+                padding: 3px 10px;
+                background: rgba(30, 96, 118, 0.1);
+                color: #1e6076;
+                border-radius: 8px;
+                font-size: 12px;
+                font-weight: 600;
+            }
+
+            /* Modal layout */
+            .sod-ind-row {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 14px;
+            }
+
+            /* Frequency chips */
+            .sod-freq-options {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            .sod-freq-chip {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                padding: 7px 14px;
+                border: 1.5px solid #E5E7EB;
+                border-radius: 10px;
+                font-size: 13px;
+                font-weight: 500;
+                color: #6b7280;
+                cursor: pointer;
+                transition: all 0.15s;
+                background: #fff;
+            }
+            .sod-freq-chip:hover {
+                border-color: #12b0a0;
+                background: rgba(18, 176, 160, 0.04);
+            }
+            .sod-freq-chip-active {
+                border-color: #12b0a0;
+                background: rgba(18, 176, 160, 0.08);
+                color: #0e8f82;
+                font-weight: 600;
+            }
+            .sod-freq-chip input { display: none; }
+            .sod-freq-chip-icon {
+                font-size: 10px;
+                font-weight: 700;
+                background: rgba(18, 176, 160, 0.12);
+                color: #12b0a0;
+                padding: 2px 6px;
+                border-radius: 6px;
+                letter-spacing: 0.3px;
+            }
+            .sod-freq-chip-none {
+                color: #9ca3af;
+                border-style: dashed;
+            }
+            .sod-freq-chip-none.sod-freq-chip-active {
+                border-color: #9ca3af;
+                background: #f9fafb;
+                color: #6b7280;
+            }
+            .sod-freq-chip-none svg { opacity: 0.6; }
+
+            /* Dept header */
+            .sod-dept-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 8px;
+            }
+            .sod-dept-header-actions {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .sod-dept-action-link {
+                background: none;
+                border: none;
+                color: #12b0a0;
+                font-size: 11px;
+                font-weight: 600;
+                cursor: pointer;
+                padding: 2px 4px;
+                border-radius: 4px;
+                transition: all 0.15s;
+            }
+            .sod-dept-action-link:hover {
+                background: rgba(18, 176, 160, 0.08);
+                text-decoration: underline;
+            }
+            .sod-dept-counter {
+                font-size: 11px;
+                color: #9ca3af;
+                font-weight: 600;
+                margin-left: 6px;
+                background: #f3f4f6;
+                padding: 2px 8px;
+                border-radius: 6px;
+            }
+
+            /* Dept chips grid */
+            .sod-dept-checklist-box {
+                border: 1.5px solid #E5E7EB;
+                border-radius: 14px;
+                padding: 12px;
+                max-height: 180px;
+                overflow-y: auto;
+                background: #fafbfc;
+            }
+            .sod-dept-checklist-grid {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            .sod-dept-chip {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 6px 12px;
+                border: 1.5px solid #E5E7EB;
+                border-radius: 10px;
+                font-size: 13px;
+                color: #6b7280;
+                cursor: pointer;
+                transition: all 0.15s;
+                background: #fff;
+                user-select: none;
+            }
+            .sod-dept-chip:hover {
+                border-color: #1e6076;
+                background: rgba(30, 96, 118, 0.04);
+            }
+            .sod-dept-chip input { display: none; }
+            .sod-dept-chip-check {
+                display: none;
+                color: #fff;
+            }
+            .sod-dept-chip-active {
+                border-color: #1e6076;
+                background: rgba(30, 96, 118, 0.1);
+                color: #1e6076;
+                font-weight: 600;
+            }
+            .sod-dept-chip-active .sod-dept-chip-check {
+                display: block;
+            }
+            .sod-ind-clear-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 9px 16px;
+                background: #fff;
+                color: #ef4444;
+                border: 1px solid #fecaca;
+                border-radius: 12px;
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                white-space: nowrap;
+                transition: all 0.2s;
+                font-family: 'Lemon Milk', 'Inter', sans-serif;
+                letter-spacing: 0.5px;
+            }
+            .sod-ind-clear-btn:hover {
+                background: #fef2f2;
+                border-color: #ef4444;
+            }
+            .sod-frequency-badge {
+                display: inline-block;
+                padding: 3px 10px;
+                background: rgba(18, 176, 160, 0.1);
+                color: #12b0a0;
+                border-radius: 8px;
+                font-size: 13px;
+                font-weight: 600;
+            }
+            @media (max-width: 768px) {
+                .sod-indicators-grid {
+                    grid-template-columns: 1fr;
+                }
+                .sod-ind-row {
+                    grid-template-columns: 1fr;
+                }
             }
 
             /* Metrics Section */
@@ -1310,17 +2140,188 @@ const StrategicObjectiveDetailPage = {
 
             /* Timeline Section */
             .sod-timeline-section { margin-top: 16px; }
+            .sod-timeline-freq-label {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                font-size: 12px;
+                color: #6b7280;
+                font-weight: 500;
+                margin-top: 4px;
+            }
+
+            /* Periods */
+            .sod-periods-container {
+                display: flex;
+                flex-direction: column;
+            }
+            .sod-period {
+                position: relative;
+            }
+            .sod-period-header {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px 8px;
+                cursor: pointer;
+                border-radius: 12px;
+                transition: background 0.15s;
+                user-select: none;
+            }
+            .sod-period-header:hover {
+                background: #f9fafb;
+            }
+
+            /* Timeline dot + line */
+            .sod-period-marker {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                flex-shrink: 0;
+                width: 20px;
+                position: relative;
+            }
+            .sod-period-dot {
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+                border: 2.5px solid #d1d5db;
+                background: #fff;
+                z-index: 1;
+                transition: all 0.2s;
+                flex-shrink: 0;
+            }
+            .sod-period-line {
+                position: absolute;
+                top: 12px;
+                width: 2px;
+                height: calc(100% + 12px);
+                background: #e5e7eb;
+            }
+
+            /* Period states */
+            .sod-period-current .sod-period-dot {
+                border-color: #12b0a0;
+                background: #12b0a0;
+                box-shadow: 0 0 0 4px rgba(18, 176, 160, 0.15);
+            }
+            .sod-period-done .sod-period-dot {
+                border-color: #10b981;
+                background: #10b981;
+            }
+            .sod-period-missed .sod-period-dot {
+                border-color: #f59e0b;
+                background: #fef3c7;
+            }
+            .sod-period-future .sod-period-dot {
+                border-color: #d1d5db;
+                background: #fff;
+            }
+
+            .sod-period-info {
+                flex: 1;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                min-width: 0;
+            }
+            .sod-period-label {
+                font-size: 14px;
+                font-weight: 600;
+                color: #1f2937;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .sod-period-future .sod-period-label {
+                color: #9ca3af;
+            }
+            .sod-period-badge-current {
+                font-size: 10px;
+                font-weight: 700;
+                color: #12b0a0;
+                background: rgba(18, 176, 160, 0.1);
+                padding: 2px 8px;
+                border-radius: 6px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                flex-shrink: 0;
+            }
+            .sod-period-right {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                flex-shrink: 0;
+            }
+            .sod-period-count {
+                font-size: 12px;
+                font-weight: 600;
+                color: #374151;
+                background: #f3f4f6;
+                padding: 2px 10px;
+                border-radius: 8px;
+            }
+            .sod-period-count-empty {
+                color: #9ca3af;
+                background: none;
+                font-weight: 500;
+            }
+            .sod-period-missed .sod-period-count-empty {
+                color: #f59e0b;
+            }
+            .sod-period-chevron {
+                color: #9ca3af;
+                transition: transform 0.2s;
+                flex-shrink: 0;
+            }
+
+            /* Period body (collapsible) */
+            .sod-period-body {
+                margin-left: 30px;
+                padding-left: 12px;
+                border-left: 2px solid #f3f4f6;
+                margin-bottom: 4px;
+            }
+            .sod-period-empty {
+                padding: 14px 16px;
+                font-size: 13px;
+                color: #9ca3af;
+                font-style: italic;
+            }
+            .sod-period-expand-btn {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+                padding: 10px 16px;
+                font-size: 13px;
+                font-weight: 500;
+                color: #0d9488;
+                background: rgba(13, 148, 136, 0.05);
+                border: 1px dashed rgba(13, 148, 136, 0.3);
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.2s;
+                margin: 4px 0;
+            }
+            .sod-period-expand-btn:hover {
+                background: rgba(13, 148, 136, 0.1);
+                border-color: rgba(13, 148, 136, 0.5);
+            }
+
             .sod-timeline-list {
                 display: flex;
                 flex-direction: column;
                 gap: 0;
             }
             .sod-timeline-entry {
-                padding: 16px 20px;
+                padding: 14px 16px;
                 border-bottom: 1px solid #F3F4F6;
                 transition: background 0.2s;
+                border-radius: 10px;
+                margin-bottom: 2px;
             }
-            .sod-timeline-entry:last-child { border-bottom: none; }
+            .sod-timeline-entry:last-child { border-bottom: none; margin-bottom: 0; }
             .sod-timeline-entry:hover { background: #F9FAFB; }
             .sod-timeline-entry-header {
                 display: flex;
@@ -1415,6 +2416,8 @@ const StrategicObjectiveDetailPage = {
                 }
                 .sod-metric-actions { opacity: 1; }
                 .sod-timeline-actions { opacity: 1; }
+                .sod-period-label { font-size: 13px; }
+                .sod-period-body { margin-left: 20px; padding-left: 8px; }
                 .sod-total-row {
                     flex-direction: column;
                     align-items: flex-start;

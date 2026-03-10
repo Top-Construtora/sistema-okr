@@ -1,6 +1,7 @@
 import { supabaseClient } from '../../services/supabase.js';
 import { AuthService } from '../../services/auth.js';
 import { Cycle } from '../../Entities/Cycle.js';
+import { Department } from '../../Entities/Department.js';
 import { StrategicSubMetric, CATEGORY_METRIC_CONFIG } from '../../Entities/StrategicSubMetric.js';
 
 // Página de Gestão de Objetivos Estratégicos (Alto Nível)
@@ -267,6 +268,8 @@ const StrategicObjectivesPage = {
             this.cycles = await Cycle.getAll();
         }
 
+        const departments = await Department.getActive();
+
         const modal = document.getElementById('strategic-objective-modal');
         const currentCycleId = this.currentObjective?.cycle_id || '';
 
@@ -317,6 +320,42 @@ const StrategicObjectivesPage = {
                         <textarea id="strat-obj-meta" class="form-control-gio" rows="2"
                             placeholder="Ex: < 5%, 75%, > 10%, etc.">${this.currentObjective ? this.currentObjective.meta || '' : ''}</textarea>
                     </div>
+                    <hr style="border:none;border-top:1px solid #E5E7EB;margin:8px 0;">
+                    <div class="form-group-gio">
+                        <label class="form-label-gio">Indicadores</label>
+                        <textarea id="strat-obj-indicadores" class="form-control-gio" rows="2"
+                            placeholder="Ex: Faturamento mensal, NPS, Taxa de conversão...">${this.currentObjective?.indicadores || ''}</textarea>
+                    </div>
+                    <div class="form-group-gio">
+                        <label class="form-label-gio">Fonte de Coleta</label>
+                        <textarea id="strat-obj-fonte" class="form-control-gio" rows="2"
+                            placeholder="Ex: Sistema ERP, Planilha de controle...">${this.currentObjective?.fonte_coleta || ''}</textarea>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                        <div class="form-group-gio">
+                            <label class="form-label-gio">Frequência de Medição</label>
+                            <select id="strat-obj-frequencia" class="form-control-gio">
+                                <option value="">Selecione</option>
+                                <option value="semanal" ${this.currentObjective?.frequencia_medicao === 'semanal' ? 'selected' : ''}>Semanal</option>
+                                <option value="mensal" ${this.currentObjective?.frequencia_medicao === 'mensal' ? 'selected' : ''}>Mensal</option>
+                                <option value="trimestral" ${this.currentObjective?.frequencia_medicao === 'trimestral' ? 'selected' : ''}>Trimestral</option>
+                                <option value="semestral" ${this.currentObjective?.frequencia_medicao === 'semestral' ? 'selected' : ''}>Semestral</option>
+                                <option value="anual" ${this.currentObjective?.frequencia_medicao === 'anual' ? 'selected' : ''}>Anual</option>
+                            </select>
+                        </div>
+                        <div class="form-group-gio">
+                            <label class="form-label-gio">Responsáveis</label>
+                            <div class="sod-dept-checklist">
+                                ${departments.map(d => `
+                                    <label class="sod-dept-check-item">
+                                        <input type="checkbox" name="strat-obj-depts" value="${d.id}" ${(this.currentObjective?.responsavel_departamento_ids || []).includes(d.id) ? 'checked' : ''}>
+                                        <span class="sod-dept-check-label">${d.nome}</span>
+                                    </label>
+                                `).join('')}
+                                ${departments.length === 0 ? '<span style="color:#9ca3af;font-size:13px;">Nenhum departamento cadastrado</span>' : ''}
+                            </div>
+                        </div>
+                    </div>
                     <div id="strat-obj-error" class="error-message-gio" style="display:none;"></div>
                 </div>
                 <div class="modal-footer-gio">
@@ -343,6 +382,11 @@ const StrategicObjectivesPage = {
         const category = document.getElementById('strat-obj-category').value;
         const meta = document.getElementById('strat-obj-meta').value.trim();
         const cycleId = document.getElementById('strat-obj-cycle').value;
+        const indicadores = document.getElementById('strat-obj-indicadores').value.trim();
+        const fonte_coleta = document.getElementById('strat-obj-fonte').value.trim();
+        const frequencia_medicao = document.getElementById('strat-obj-frequencia').value;
+        const checkedBoxes = document.querySelectorAll('input[name="strat-obj-depts"]:checked');
+        const responsavel_departamento_ids = Array.from(checkedBoxes).map(cb => cb.value);
         const errorDiv = document.getElementById('strat-obj-error');
 
         if (!cycleId) { errorDiv.textContent = 'O ciclo é obrigatório'; errorDiv.style.display = 'block'; return; }
@@ -350,7 +394,13 @@ const StrategicObjectivesPage = {
         if (!category) { errorDiv.textContent = 'A categoria é obrigatória'; errorDiv.style.display = 'block'; return; }
 
         try {
-            const objectiveData = { text, category, meta: meta || null, cycle_id: cycleId };
+            const objectiveData = {
+                text, category, meta: meta || null, cycle_id: cycleId,
+                indicadores: indicadores || null,
+                fonte_coleta: fonte_coleta || null,
+                frequencia_medicao: frequencia_medicao || null,
+                responsavel_departamento_ids: responsavel_departamento_ids
+            };
 
             if (this.currentObjective) {
                 const { error } = await supabaseClient.from('strategic_objectives').update(objectiveData).eq('id', this.currentObjective.id);
@@ -372,7 +422,13 @@ const StrategicObjectivesPage = {
     },
 
     async deleteObjective(id) {
-        if (!confirm('Deseja realmente excluir este objetivo estratégico?')) return;
+        const confirmed = await Modal.confirm({
+            title: 'Excluir Objetivo Estratégico',
+            message: 'Deseja realmente excluir este objetivo estratégico?',
+            confirmLabel: 'Excluir',
+            danger: true
+        });
+        if (!confirmed) return;
 
         try {
             const { error } = await supabaseClient.from('strategic_objectives').delete().eq('id', id);
@@ -609,6 +665,40 @@ const StrategicObjectivesPage = {
             .so-card-metric-done {
                 color: #10b981;
                 background: rgba(16, 185, 129, 0.1);
+            }
+
+            /* Dept Checklist (modal) */
+            .sod-dept-checklist {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                max-height: 200px;
+                overflow-y: auto;
+                padding: 8px 0;
+            }
+            .sod-dept-check-item {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 8px 12px;
+                border-radius: 10px;
+                cursor: pointer;
+                transition: background 0.15s;
+            }
+            .sod-dept-check-item:hover {
+                background: #F3F4F6;
+            }
+            .sod-dept-check-item input[type="checkbox"] {
+                width: 18px;
+                height: 18px;
+                accent-color: #12b0a0;
+                cursor: pointer;
+                flex-shrink: 0;
+            }
+            .sod-dept-check-label {
+                font-size: 14px;
+                color: #374151;
+                font-weight: 500;
             }
 
             /* Mobile */

@@ -152,7 +152,13 @@ const StorageService = {
 
     // Limpa todos os dados (agora via SQL)
     async clearAllData() {
-        if (confirm('⚠️ Isso irá executar TRUNCATE em todas as tabelas. Continue apenas via SQL Editor!')) {
+        const confirmed = await Modal.confirm({
+            title: 'Truncar Tabelas',
+            message: '⚠️ Isso irá executar TRUNCATE em todas as tabelas.<br><strong>Continue apenas via SQL Editor!</strong>',
+            confirmLabel: 'Entendi',
+            danger: true
+        });
+        if (confirmed) {
             console.log('Execute no Supabase SQL Editor:');
             console.log('TRUNCATE TABLE key_results, okrs, users, departments, okr_status_history RESTART IDENTITY CASCADE;');
             return false;
