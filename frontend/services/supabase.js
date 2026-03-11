@@ -64,25 +64,11 @@ function convertToProxyUrl(url) {
     if (proxyMatch) {
         const bucket = proxyMatch[1];
         const filePath = proxyMatch[2];
-        // Arquivos HTML precisam do proxy do backend para renderizar corretamente
-        if (filePath.toLowerCase().endsWith('.html')) {
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-            return `${API_URL}/api/evidence/view/${bucket}/${filePath}`;
-        }
         return getProxyUrl(bucket, filePath);
     }
 
-    // Se é URL pública do Supabase, verificar se é HTML
+    // Se já é URL pública do Supabase, retorna como está
     if (url.includes('supabase.co/storage/v1/object/public/')) {
-        if (url.toLowerCase().endsWith('.html')) {
-            // Extrair bucket e path da URL do Supabase para rotear pelo proxy do backend
-            const supabasePattern = /\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/;
-            const supabaseMatch = url.match(supabasePattern);
-            if (supabaseMatch) {
-                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-                return `${API_URL}/api/evidence/view/${supabaseMatch[1]}/${supabaseMatch[2]}`;
-            }
-        }
         return url;
     }
 

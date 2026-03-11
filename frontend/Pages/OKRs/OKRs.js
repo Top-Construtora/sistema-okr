@@ -625,9 +625,14 @@ const OKRsPage = {
                                                                                     </svg>
                                                                                 </div>
                                                                                 <div class="file-info">
-                                                                                    <a href="${convertToProxyUrl(ev.content)}" target="_blank" rel="noopener noreferrer" class="file-download-link">
-                                                                                        ${ev.name || 'Arquivo'}
-                                                                                    </a>
+                                                                                    ${(ev.name || ev.content || '').toLowerCase().endsWith('.html')
+                                                                                        ? `<a href="${convertToDownloadUrl(ev.content)}" download="${ev.name || 'arquivo.html'}" class="file-download-link">
+                                                                                            ${ev.name || 'Arquivo'}
+                                                                                        </a>`
+                                                                                        : `<a href="${convertToProxyUrl(ev.content)}" target="_blank" rel="noopener noreferrer" class="file-download-link">
+                                                                                            ${ev.name || 'Arquivo'}
+                                                                                        </a>`
+                                                                                    }
                                                                                     ${ev.size ? `<span class="file-size-display">${this.formatFileSize(ev.size)}</span>` : ''}
                                                                                 </div>
                                                                                 <a href="${convertToDownloadUrl(ev.content)}" download class="btn btn-xs btn-secondary" title="Baixar">
@@ -793,12 +798,19 @@ const OKRsPage = {
                                                                                                 <div class="init-evidence-item">
                                                                                                     ${ev.type === 'text'
                                                                                                         ? `<span class="init-evidence-text">${ev.content}</span>`
-                                                                                                        : `<a href="${convertToProxyUrl(ev.content)}" target="_blank" class="init-evidence-file">
-                                                                                                            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                                                                                            </svg>
-                                                                                                            ${ev.name || 'Arquivo'}
-                                                                                                        </a>`
+                                                                                                        : (ev.name || ev.content || '').toLowerCase().endsWith('.html')
+                                                                                                            ? `<a href="${convertToDownloadUrl(ev.content)}" download="${ev.name || 'arquivo.html'}" class="init-evidence-file">
+                                                                                                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                                                                                                </svg>
+                                                                                                                ${ev.name || 'Arquivo'}
+                                                                                                            </a>`
+                                                                                                            : `<a href="${convertToProxyUrl(ev.content)}" target="_blank" class="init-evidence-file">
+                                                                                                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                                                                                                </svg>
+                                                                                                                ${ev.name || 'Arquivo'}
+                                                                                                            </a>`
                                                                                                     }
                                                                                                 </div>
                                                                                                 ${idx < init.evidence.length - 1 ? '<span class="init-evidence-separator">•</span>' : ''}
