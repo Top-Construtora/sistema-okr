@@ -562,7 +562,7 @@ const MyOKRsPage = {
                                                                                 </div>
                                                                                 <div class="file-info">
                                                                                     ${(ev.name || ev.content || '').toLowerCase().endsWith('.html')
-                                                                                        ? `<a href="${convertToDownloadUrl(ev.content)}" download="${ev.name || 'arquivo.html'}" class="file-download-link">
+                                                                                        ? `<a href="#" onclick="event.preventDefault(); MyOKRsPage.openHtmlEvidence('${convertToProxyUrl(ev.content)}')" class="file-download-link">
                                                                                             ${ev.name || 'Arquivo'}
                                                                                         </a>`
                                                                                         : `<a href="${convertToProxyUrl(ev.content)}" target="_blank" rel="noopener noreferrer" class="file-download-link">
@@ -720,7 +720,7 @@ const MyOKRsPage = {
                                                                                                     ${ev.type === 'text'
                                                                                                         ? `<span class="init-evidence-text">${ev.content}</span>`
                                                                                                         : (ev.name || ev.content || '').toLowerCase().endsWith('.html')
-                                                                                                            ? `<a href="${convertToDownloadUrl(ev.content)}" download="${ev.name || 'arquivo.html'}" class="init-evidence-file">
+                                                                                                            ? `<a href="#" onclick="event.preventDefault(); MyOKRsPage.openHtmlEvidence('${convertToProxyUrl(ev.content)}')" class="init-evidence-file">
                                                                                                                 <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                                                                                                 </svg>
@@ -1342,6 +1342,19 @@ const MyOKRsPage = {
         if (bytes < 1024) return bytes + ' B';
         if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
         return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    },
+
+    async openHtmlEvidence(url) {
+        try {
+            const response = await fetch(url);
+            const html = await response.text();
+            const blob = new Blob([html], { type: 'text/html' });
+            const blobUrl = URL.createObjectURL(blob);
+            window.open(blobUrl, '_blank');
+        } catch (error) {
+            console.error('Erro ao abrir HTML:', error);
+            window.open(url, '_blank');
+        }
     },
 
     async uploadFile(file, krId) {
