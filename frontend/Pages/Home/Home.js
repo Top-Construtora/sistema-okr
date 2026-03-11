@@ -7,22 +7,7 @@ import { Cycle } from '../../Entities/Cycle.js';
 const HomePage = {
     async render() {
         const content = document.getElementById('content');
-        content.innerHTML = `
-            <div class="hp-page">
-                <div class="hp-welcome-wrap">
-                    <div class="widget-skeleton" style="height:70px;"></div>
-                </div>
-                <div class="hp-main-grid">
-                    <div class="hp-col-left">
-                        <div id="hp-policies" class="hp-cell"></div>
-                        <div id="hp-shortcuts" class="hp-cell"></div>
-                    </div>
-                    <div class="hp-col-right">
-                        <div id="hp-strategic" class="hp-cell"></div>
-                    </div>
-                </div>
-            </div>
-        `;
+        content.innerHTML = SkeletonLoader.home();
 
         this.addStyles();
 
@@ -36,6 +21,21 @@ const HomePage = {
         ]);
 
         const activeCycle = cycles.find(c => c.ativo);
+
+        content.innerHTML = `
+            <div class="hp-page">
+                <div class="hp-welcome-wrap"></div>
+                <div class="hp-main-grid">
+                    <div class="hp-col-left">
+                        <div id="hp-policies" class="hp-cell"></div>
+                        <div id="hp-shortcuts" class="hp-cell"></div>
+                    </div>
+                    <div class="hp-col-right">
+                        <div id="hp-strategic" class="hp-cell"></div>
+                    </div>
+                </div>
+            </div>
+        `;
 
         this.renderWelcome(user, activeCycle);
         this.renderPolicies(policies, isAdmin);

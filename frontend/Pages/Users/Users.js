@@ -9,6 +9,8 @@ const UsersPage = {
 
     async render() {
         const content = document.getElementById('content');
+        content.innerHTML = SkeletonLoader.users();
+
         const allUsers = await User.getAll();
         const users = allUsers.filter(u => u.email !== 'admin@sistema.com');
         const departments = await Department.getActive();

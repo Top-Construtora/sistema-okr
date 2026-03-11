@@ -9,6 +9,7 @@ const CyclesPage = {
 
     async render() {
         const content = document.getElementById('content');
+        content.innerHTML = SkeletonLoader.cycles();
         const cycles = await Cycle.getAll();
         const isAdmin = AuthService.isAdmin();
         const canEdit = isAdmin;

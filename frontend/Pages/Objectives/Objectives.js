@@ -10,6 +10,7 @@ const ObjectivesPage = {
 
     async render() {
         const content = document.getElementById('content');
+        content.innerHTML = SkeletonLoader.objectives();
         const objectives = await StorageService.getObjectives();
         const isAdmin = AuthService.isAdmin();
 

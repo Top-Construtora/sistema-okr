@@ -26,6 +26,7 @@ const ApprovalPage = {
 
     async render() {
         const content = document.getElementById('content');
+        content.innerHTML = SkeletonLoader.approval();
         const currentUser = AuthService.getCurrentUser();
         const isAdmin = currentUser && currentUser.tipo === 'admin';
         const userDepartmentNames = this.getUserDepartmentNames(currentUser);

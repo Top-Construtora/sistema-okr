@@ -37,6 +37,8 @@ const CalendarPage = {
             return;
         }
 
+        content.innerHTML = SkeletonLoader.calendar();
+
         // Obter departamentos do usuário
         this.userDepartments = this.getUserDepartmentNames(this.currentUser);
 

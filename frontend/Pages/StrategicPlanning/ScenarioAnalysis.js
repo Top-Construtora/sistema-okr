@@ -7,7 +7,7 @@ const ScenarioAnalysisPage = {
 
     async render() {
         const content = document.getElementById('content');
-        content.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text-muted);">Carregando...</div>';
+        content.innerHTML = SkeletonLoader.scenarioAnalysis();
         this.addStyles();
 
         const [items, scores] = await Promise.all([

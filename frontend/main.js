@@ -29,6 +29,7 @@ import { SwotCrossing } from './Entities/SwotCrossing.js'
 // 2.5 Importa Components
 import { Modal } from './Components/Modal.js'
 import { InitiativeManager } from './Components/InitiativeManager.js'
+import { SkeletonLoader } from './Components/SkeletonLoader.js'
 
 // 3. Importa Layout
 import { Layout } from './Layout.js'
@@ -104,6 +105,7 @@ window.ProblemTreePage = ProblemTreePage;
 window.SwotMatrixPage = SwotMatrixPage;
 window.ImpactDefinitionPage = ImpactDefinitionPage;
 window.ScenarioAnalysisPage = ScenarioAnalysisPage;
+window.SkeletonLoader = SkeletonLoader;
 window.App = App;
 
 // Inicializa o aplicativo

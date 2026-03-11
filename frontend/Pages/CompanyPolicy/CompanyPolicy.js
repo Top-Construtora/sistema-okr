@@ -14,6 +14,8 @@ const CompanyPolicyPage = {
             return;
         }
 
+        content.innerHTML = SkeletonLoader.companyPolicy();
+
         const policies = await CompanyPolicy.getAll();
 
         content.innerHTML = `

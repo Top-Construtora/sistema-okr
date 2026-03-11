@@ -6,7 +6,7 @@ const SwotMatrixPage = {
 
     async render() {
         const content = document.getElementById('content');
-        content.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text-muted);">Carregando...</div>';
+        content.innerHTML = SkeletonLoader.swotMatrix();
         this.addStyles();
         this.items = await SwotItem.getAll();
         this.editing = false;

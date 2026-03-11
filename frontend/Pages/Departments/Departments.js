@@ -8,6 +8,7 @@ const DepartmentsPage = {
 
     async render() {
         const content = document.getElementById('content');
+        content.innerHTML = SkeletonLoader.departments();
         const departments = await Department.getAll();
 
         content.innerHTML = `

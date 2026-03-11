@@ -249,6 +249,7 @@ const Layout = {
                             <span>Comitê de Aprovação</span>
                         </a>
                         ` : ''}
+                        ${isAdmin ? `
                         <div class="nav-submenu nav-submenu-planning ${this.isPlanningMenuOpen ? 'open' : ''}">
                             <a class="nav-item nav-submenu-toggle" onclick="Layout.togglePlanningMenu(event)" title="Planejamento Estratégico">
                                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -286,6 +287,7 @@ const Layout = {
                                 </a>
                             </div>
                         </div>
+                        ` : ''}
                     </div>
 
                     ${isAdmin ? `
@@ -512,7 +514,7 @@ const Layout = {
         // Bloqueia acesso a páginas administrativas para não-admins
         const isAdmin = AuthService.isAdmin();
         const canAccessApproval = AuthService.canAccessApproval();
-        const adminOnlyPages = ['users', 'departments', 'strategic-objectives', 'strategic-objective-detail', 'company-policy', 'kpis'];
+        const adminOnlyPages = ['users', 'departments', 'strategic-objectives', 'strategic-objective-detail', 'company-policy', 'kpis', 'problem-tree', 'swot-matrix', 'impact-definition', 'scenario-analysis'];
 
         // Páginas só de admin
         if (!isAdmin && adminOnlyPages.includes(basePage)) {
