@@ -14,7 +14,8 @@ const contentTypes = {
     'jpg': 'image/jpeg',
     'jpeg': 'image/jpeg',
     'gif': 'image/gif',
-    'txt': 'text/plain'
+    'txt': 'text/plain',
+    'html': 'text/html'
 };
 
 // Função auxiliar para buscar e servir arquivo

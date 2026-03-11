@@ -1276,7 +1276,7 @@ const MyOKRsPage = {
                 ? `<textarea class="form-control evidence-content" rows="2" placeholder="Descrição da evidência..."></textarea>`
                 : `<div class="file-upload-wrapper">
                     <input type="file" class="evidence-file-input" id="evidence-file-${index}"
-                        accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.txt"
+                        accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.txt,.html"
                         onchange="MyOKRsPage.handleFileSelect(${index}, this)">
                     <label for="evidence-file-${index}" class="file-upload-label">
                         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1513,7 +1513,7 @@ const MyOKRsPage = {
                         <label class="form-label">Arquivo</label>
                         <div class="file-upload-wrapper">
                             <input type="file" id="quick-evidence-file" class="evidence-file-input"
-                                accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif"
+                                accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.html"
                                 onchange="MyOKRsPage.handleQuickFileSelect(this)">
                             <label for="quick-evidence-file" class="file-upload-label">
                                 <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1992,7 +1992,7 @@ const MyOKRsPage = {
             ${type === 'text'
                 ? `<textarea class="form-control evidence-content" rows="2" placeholder="Descrição da evidência..."></textarea>`
                 : `<div class="file-upload-wrapper">
-                    <input type="file" id="init-file-input-${index}" class="evidence-file-input" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif" onchange="MyOKRsPage.handleInitFileSelect(${index}, this)">
+                    <input type="file" id="init-file-input-${index}" class="evidence-file-input" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.html" onchange="MyOKRsPage.handleInitFileSelect(${index}, this)">
                     <label class="file-upload-label" for="init-file-input-${index}">
                         <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
