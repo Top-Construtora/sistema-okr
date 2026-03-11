@@ -1,5 +1,5 @@
 import { AuthService } from '../../services/auth.js';
-import { supabaseClient } from '../../services/supabase.js';
+import { supabaseClient, convertToProxyUrl } from '../../services/supabase.js';
 import { Initiative } from '../../Entities/Initiative.js';
 import { Reminder, REMINDER_TYPES, REMINDER_PRIORITIES } from '../../Entities/Reminder.js';
 import { Modal } from '../../Components/Modal.js';
@@ -849,8 +849,12 @@ const CalendarPage = {
                                 ${initiative.evidence.map((ev, idx) => `
                                     <li>
                                         ${ev.type === 'link' ? `
-                                            <a href="${ev.content}" target="_blank" rel="noopener noreferrer">
+                                            <a href="${convertToProxyUrl(ev.content)}" target="_blank" rel="noopener noreferrer">
                                                 ${ev.name || `Evidência ${idx + 1}`}
+                                            </a>
+                                        ` : ev.type === 'file' ? `
+                                            <a href="${convertToProxyUrl(ev.content)}" target="_blank" rel="noopener noreferrer">
+                                                ${ev.name || `Arquivo ${idx + 1}`}
                                             </a>
                                         ` : `
                                             <span>${ev.content}</span>

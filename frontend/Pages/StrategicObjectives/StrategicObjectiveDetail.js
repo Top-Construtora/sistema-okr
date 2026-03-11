@@ -1,4 +1,5 @@
 import { AuthService } from '../../services/auth.js';
+import { convertToProxyUrl } from '../../services/supabase.js';
 import { StrategicObjective } from '../../Entities/StrategicObjective.js';
 import { StrategicSubMetric, CATEGORY_METRIC_CONFIG } from '../../Entities/StrategicSubMetric.js';
 import { StrategicTimelineEntry } from '../../Entities/StrategicTimelineEntry.js';
@@ -741,14 +742,14 @@ const StrategicObjectiveDetailPage = {
         let attachmentHTML = '';
         if (entry.entry_type === 'link' && entry.url) {
             attachmentHTML = `
-                <a href="${entry.url}" target="_blank" rel="noopener noreferrer" class="sod-timeline-attachment sod-timeline-link">
+                <a href="${convertToProxyUrl(entry.url)}" target="_blank" rel="noopener noreferrer" class="sod-timeline-attachment sod-timeline-link">
                     <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                     ${entry.url.length > 50 ? entry.url.substring(0, 50) + '...' : entry.url}
                 </a>
             `;
         } else if (entry.entry_type === 'file' && entry.url) {
             attachmentHTML = `
-                <a href="${entry.url}" target="_blank" rel="noopener noreferrer" class="sod-timeline-attachment sod-timeline-file">
+                <a href="${convertToProxyUrl(entry.url)}" target="_blank" rel="noopener noreferrer" class="sod-timeline-attachment sod-timeline-file">
                     <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
                     ${entry.file_name || 'Arquivo'}
                 </a>
