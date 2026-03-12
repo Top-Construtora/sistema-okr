@@ -337,6 +337,19 @@ const UsersPage = {
             return;
         }
 
+        // Desabilita o botão e mostra loading
+        const saveBtn = document.querySelector('.modal-footer .btn-primary');
+        const originalBtnText = saveBtn ? saveBtn.innerHTML : '';
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = `
+                <svg width="18" height="18" viewBox="0 0 24 24" style="animation:spin 1s linear infinite;">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="31.4 31.4" stroke-linecap="round"/>
+                </svg>
+                ${this.currentUser ? 'Atualizando...' : 'Criando...'}
+            `;
+        }
+
         try {
             const user = this.currentUser || new User();
             user.nome = nome;
@@ -363,6 +376,11 @@ const UsersPage = {
         } catch (error) {
             errorDiv.textContent = error.message;
             errorDiv.style.display = 'block';
+            // Restaura o botão em caso de erro
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalBtnText;
+            }
         }
     },
 
@@ -473,6 +491,7 @@ const UsersPage = {
         const style = document.createElement('style');
         style.id = 'users-gio-styles';
         style.textContent = `
+            @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
             /* ===== PAGE GIO USERS STYLES ===== */
             .page-gio-users {
                 background: #f5f9ff;
