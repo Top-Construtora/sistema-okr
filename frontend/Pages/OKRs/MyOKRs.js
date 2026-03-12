@@ -107,6 +107,19 @@ const MyOKRsPage = {
         let okrs = await OKR.getAll();
         const miniCycles = await MiniCycle.getActive();
 
+        // Se ainda não foi selecionado um miniciclo, pré-seleciona os ativos atuais
+        if (this.currentMiniCycle === 'all') {
+            const today = new Date();
+            const activeMCs = miniCycles.filter(mc => {
+                const inicio = new Date(mc.data_inicio);
+                const fim = new Date(mc.data_fim);
+                return today >= inicio && today <= fim;
+            });
+            if (activeMCs.length > 0) {
+                this.currentMiniCycle = activeMCs.map(mc => mc.id);
+            }
+        }
+
         // Sempre filtra OKRs dos departamentos do usuário
         if (userDepartmentNames.length > 0) {
             okrs = okrs.filter(o => userDepartmentNames.includes(o.department));
@@ -154,14 +167,28 @@ const MyOKRsPage = {
                 </div>
 
                 <div style="margin-left:auto;display:flex;gap:12px;">
-                    <select id="minicycle-filter" class="form-control" onchange="MyOKRsPage.filterByMiniCycle(this.value)" style="min-width:180px;">
-                        <option value="all" ${this.currentMiniCycle === 'all' ? 'selected' : ''}>Todos os Miniciclos</option>
-                        ${miniCycles.map(mc => `
-                            <option value="${mc.id}" ${this.currentMiniCycle === mc.id ? 'selected' : ''}>
-                                ${mc.nome}
-                            </option>
-                        `).join('')}
-                    </select>
+                    <div class="minicycle-multiselect" id="minicycle-filter-container">
+                        <div class="multiselect-toggle" onclick="MyOKRsPage.toggleMiniCycleDropdown()">
+                            <span id="minicycle-filter-label">${this.getMiniCycleFilterLabel(miniCycles)}</span>
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </div>
+                        <div class="multiselect-options" id="minicycle-dropdown" style="display:none;">
+                            <label class="multiselect-option">
+                                <input type="checkbox" value="all" onchange="MyOKRsPage.toggleAllMiniCycles(this.checked)" ${this.currentMiniCycle === 'all' ? 'checked' : ''}>
+                                <span>Todos os Miniciclos</span>
+                            </label>
+                            ${miniCycles.map(mc => {
+                                const isChecked = this.currentMiniCycle === 'all' || (Array.isArray(this.currentMiniCycle) && this.currentMiniCycle.includes(mc.id));
+                                return `
+                                <label class="multiselect-option">
+                                    <input type="checkbox" value="${mc.id}" onchange="MyOKRsPage.toggleMiniCycleCheck('${mc.id}', this.checked)" ${isChecked ? 'checked' : ''}>
+                                    <span>${mc.nome}</span>
+                                </label>`;
+                            }).join('')}
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -212,7 +239,8 @@ const MyOKRsPage = {
 
         // Filtro por miniciclo
         if (this.currentMiniCycle !== 'all') {
-            okrs = okrs.filter(o => o.mini_cycle_id === this.currentMiniCycle);
+            const selected = Array.isArray(this.currentMiniCycle) ? this.currentMiniCycle : [this.currentMiniCycle];
+            okrs = okrs.filter(o => selected.includes(o.mini_cycle_id));
         }
 
         if (okrs.length === 0) {
@@ -784,6 +812,95 @@ const MyOKRsPage = {
     async filterByDepartment(department) {
         this.currentDepartment = department;
         await this.renderList();
+    },
+
+    getMiniCycleFilterLabel(miniCycles) {
+        if (this.currentMiniCycle === 'all') return 'Todos os Miniciclos';
+        const selected = Array.isArray(this.currentMiniCycle) ? this.currentMiniCycle : [this.currentMiniCycle];
+        if (selected.length === 0) return 'Todos os Miniciclos';
+        if (selected.length === 1) {
+            const mc = miniCycles.find(m => m.id === selected[0]);
+            return mc ? mc.nome : '1 miniciclo';
+        }
+        return `${selected.length} miniciclos selecionados`;
+    },
+
+    toggleMiniCycleDropdown() {
+        const dropdown = document.getElementById('minicycle-dropdown');
+        const isOpen = dropdown.style.display !== 'none';
+        dropdown.style.display = isOpen ? 'none' : 'block';
+
+        if (!isOpen) {
+            const closeHandler = (e) => {
+                const container = document.getElementById('minicycle-filter-container');
+                if (container && !container.contains(e.target)) {
+                    dropdown.style.display = 'none';
+                    document.removeEventListener('click', closeHandler);
+                }
+            };
+            setTimeout(() => document.addEventListener('click', closeHandler), 0);
+        }
+    },
+
+    async toggleAllMiniCycles(checked) {
+        if (checked) {
+            this.currentMiniCycle = 'all';
+            document.querySelectorAll('#minicycle-dropdown input[type="checkbox"]').forEach(cb => cb.checked = true);
+        } else {
+            this.currentMiniCycle = [];
+            document.querySelectorAll('#minicycle-dropdown input[type="checkbox"]').forEach(cb => cb.checked = false);
+        }
+        this.updateMiniCycleLabel();
+        await this.renderList();
+    },
+
+    async toggleMiniCycleCheck(miniCycleId, checked) {
+        if (this.currentMiniCycle === 'all') {
+            const allChecked = [...document.querySelectorAll('#minicycle-dropdown input[type="checkbox"]:not([value="all"])')];
+            this.currentMiniCycle = allChecked.filter(cb => cb.checked).map(cb => cb.value);
+        } else {
+            if (!Array.isArray(this.currentMiniCycle)) this.currentMiniCycle = [this.currentMiniCycle];
+            if (checked) {
+                if (!this.currentMiniCycle.includes(miniCycleId)) {
+                    this.currentMiniCycle.push(miniCycleId);
+                }
+            } else {
+                this.currentMiniCycle = this.currentMiniCycle.filter(id => id !== miniCycleId);
+            }
+        }
+
+        const allCheckbox = document.querySelector('#minicycle-dropdown input[value="all"]');
+        const totalOptions = document.querySelectorAll('#minicycle-dropdown input[type="checkbox"]:not([value="all"])').length;
+        if (Array.isArray(this.currentMiniCycle) && this.currentMiniCycle.length === totalOptions) {
+            this.currentMiniCycle = 'all';
+            if (allCheckbox) allCheckbox.checked = true;
+        } else {
+            if (allCheckbox) allCheckbox.checked = false;
+        }
+
+        if (Array.isArray(this.currentMiniCycle) && this.currentMiniCycle.length === 0) {
+            this.currentMiniCycle = 'all';
+            document.querySelectorAll('#minicycle-dropdown input[type="checkbox"]').forEach(cb => cb.checked = true);
+        }
+
+        this.updateMiniCycleLabel();
+        await this.renderList();
+    },
+
+    updateMiniCycleLabel() {
+        const label = document.getElementById('minicycle-filter-label');
+        if (!label) return;
+        if (this.currentMiniCycle === 'all') {
+            label.textContent = 'Todos os Miniciclos';
+        } else {
+            const selected = Array.isArray(this.currentMiniCycle) ? this.currentMiniCycle : [this.currentMiniCycle];
+            if (selected.length === 1) {
+                const checkedLabel = document.querySelector(`#minicycle-dropdown input[value="${selected[0]}"]`);
+                label.textContent = checkedLabel ? checkedLabel.parentElement.querySelector('span').textContent : '1 miniciclo';
+            } else {
+                label.textContent = `${selected.length} miniciclos selecionados`;
+            }
+        }
     },
 
     async filterByMiniCycle(miniCycleId) {
@@ -2365,7 +2482,8 @@ const MyOKRsPage = {
 
         // Filter by mini cycle
         if (this.currentMiniCycle !== 'all') {
-            filtered = filtered.filter(o => o.mini_cycle_id === this.currentMiniCycle);
+            const selected = Array.isArray(this.currentMiniCycle) ? this.currentMiniCycle : [this.currentMiniCycle];
+            filtered = filtered.filter(o => selected.includes(o.mini_cycle_id));
         }
 
         return filtered;
@@ -2448,6 +2566,79 @@ const MyOKRsPage = {
         const style = document.createElement('style');
         style.id = 'okr-styles';
         style.textContent = `
+            /* Multi-select miniciclo */
+            .minicycle-multiselect {
+                position: relative;
+                min-width: 180px;
+            }
+            .multiselect-toggle {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                padding: 8px 12px;
+                background: white;
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 13px;
+                font-weight: 500;
+                color: var(--text-secondary);
+                transition: all 0.2s;
+                min-height: 38px;
+                white-space: nowrap;
+            }
+            .multiselect-toggle:hover {
+                border-color: var(--top-teal, #12b0a0);
+            }
+            .multiselect-options {
+                position: absolute;
+                top: calc(100% + 4px);
+                left: 0;
+                right: 0;
+                min-width: 220px;
+                background: white;
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+                z-index: 100;
+                max-height: 260px;
+                overflow-y: auto;
+                padding: 4px 0;
+            }
+            .multiselect-option {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 9px 14px;
+                cursor: pointer;
+                font-size: 13px;
+                color: var(--text-primary);
+                transition: background 0.15s;
+                user-select: none;
+            }
+            .multiselect-option:hover {
+                background: #f3f4f6;
+            }
+            .multiselect-option input[type="checkbox"] {
+                width: 16px;
+                height: 16px;
+                accent-color: var(--top-teal, #12b0a0);
+                cursor: pointer;
+                flex-shrink: 0;
+            }
+            .multiselect-option span {
+                flex: 1;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .multiselect-option:first-child {
+                border-bottom: 1px solid #e5e7eb;
+                margin-bottom: 2px;
+                padding-bottom: 10px;
+                font-weight: 600;
+            }
             .okr-filters {
                 display: flex;
                 gap: 8px;
@@ -3973,7 +4164,17 @@ const MyOKRsPage = {
                     gap: 10px !important;
                 }
 
-                #minicycle-filter,
+                .minicycle-multiselect {
+                    width: 100%;
+                    min-width: 100% !important;
+                }
+                .multiselect-toggle {
+                    min-height: 48px;
+                    padding: 12px 14px;
+                    font-size: 14px;
+                    border-radius: 12px;
+                    border: 2px solid var(--border);
+                }
                 #dept-filter {
                     width: 100% !important;
                     min-width: 100% !important;
