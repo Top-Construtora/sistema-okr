@@ -82,7 +82,7 @@ router.post('/', async (req, res) => {
         if (!createdUser) {
             console.log('Trigger não criou usuário, criando manualmente...');
 
-            const { data: manualUser, error: insertError } = await supabase
+            const { data: manualUser, error: insertError } = await supabaseAdmin
                 .from('users')
                 .insert({
                     auth_id: authData.user.id,
@@ -144,7 +144,7 @@ router.put('/:id', async (req, res) => {
         if (departamento_id !== undefined) updateData.departamento_id = departamento_id;
         if (ativo !== undefined) updateData.ativo = ativo;
 
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
             .from('users')
             .update(updateData)
             .eq('id', id)
@@ -193,7 +193,7 @@ router.delete('/:id', async (req, res) => {
             .single();
 
         // Deletar da tabela users
-        const { error } = await supabase
+        const { error } = await supabaseAdmin
             .from('users')
             .delete()
             .eq('id', id);
