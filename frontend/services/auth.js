@@ -361,20 +361,43 @@ const AuthService = {
                 };
             }
 
-            console.log('✅ Token SSO validado. Carregando dados completos do usuário...');
+            console.log('✅ Token SSO validado. Criando sessão Supabase Auth...');
+
+            // Criar sessão real no Supabase Auth usando o magic link token
+            if (data.session?.hashed_token) {
+                try {
+                    const { data: otpData, error: otpError } = await supabaseClient.auth.verifyOtp({
+                        token_hash: data.session.hashed_token,
+                        type: 'magiclink'
+                    });
+
+                    if (otpError) {
+                        console.warn('⚠️ Não foi possível criar sessão Supabase Auth via SSO:', otpError.message);
+                    } else {
+                        console.log('✅ Sessão Supabase Auth criada com sucesso via SSO');
+                    }
+                } catch (otpErr) {
+                    console.warn('⚠️ Erro ao verificar OTP do SSO:', otpErr.message);
+                }
+            } else {
+                console.warn('⚠️ Backend não retornou token de sessão. Operações com RLS podem falhar.');
+            }
 
             // Busca dados completos do usuário e departamento
-            const { data: userData, error: userError } = await supabaseClient
+            let userData;
+            const { data: fetchedUser, error: userError } = await supabaseClient
                 .from('users')
                 .select('*, departamento:departments(id, nome)')
                 .eq('email', data.user.email)
                 .eq('ativo', true)
                 .single();
 
-            if (userError || !userData) {
+            if (userError || !fetchedUser) {
                 console.error('❌ Erro ao buscar dados do usuário:', userError);
                 // Fallback: usa dados retornados pelo backend
                 userData = data.user;
+            } else {
+                userData = fetchedUser;
             }
 
             // Busca departamentos vinculados (múltiplos departamentos)
@@ -398,8 +421,12 @@ const AuthService = {
                 }];
             }
 
+            // Adiciona auth_id se disponível
+            if (data.user.auth_id) {
+                userData.auth_id = data.user.auth_id;
+            }
+
             // Salva na sessão local
-            // NOTA: SSO não cria sessão Supabase Auth, apenas sessão local
             StorageService.setCurrentUser(userData);
 
             console.log('✅ Autenticação SSO realizada com sucesso!');

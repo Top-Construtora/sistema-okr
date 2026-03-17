@@ -194,8 +194,30 @@ router.post('/sso-login', async (req, res) => {
             });
         }
 
+        // Gerar magic link token para criar sessão real no Supabase Auth
+        // Isso permite que o frontend tenha um JWT válido para operações com RLS
+        let sessionData = null;
+        if (user.auth_id) {
+            try {
+                const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+                    type: 'magiclink',
+                    email: user.email,
+                });
+
+                if (!linkError && linkData) {
+                    sessionData = {
+                        hashed_token: linkData.properties?.hashed_token,
+                        email: user.email
+                    };
+                } else {
+                    console.warn('Não foi possível gerar magic link para SSO:', linkError?.message);
+                }
+            } catch (linkErr) {
+                console.warn('Erro ao gerar magic link para SSO:', linkErr.message);
+            }
+        }
+
         // Retornar dados de autenticação validados
-        // O frontend vai criar a sessão localmente com esses dados
         return res.json({
             success: true,
             message: 'Autenticação SSO realizada com sucesso',
@@ -208,7 +230,8 @@ router.post('/sso-login', async (req, res) => {
                 primeiro_acesso: user.primeiro_acesso,
                 auth_id: user.auth_id,
                 ativo: user.ativo
-            }
+            },
+            session: sessionData
         });
 
     } catch (error) {
