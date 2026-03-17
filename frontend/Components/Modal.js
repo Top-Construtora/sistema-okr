@@ -32,7 +32,7 @@ const Modal = {
 
             // Cria overlay e estrutura do modal
             const modalHTML = `
-                <div id="custom-modal" class="modal-overlay">
+                <div id="custom-modal" class="custom-modal-overlay">
                     <div class="modal-container">
                         <div class="modal-header">
                             <h3 class="modal-title">${title}</h3>
@@ -153,7 +153,7 @@ const Modal = {
             }
 
             const modalHTML = `
-                <div id="custom-modal" class="modal-overlay">
+                <div id="custom-modal" class="custom-modal-overlay">
                     <div class="modal-container">
                         <div class="modal-header">
                             <h3 class="modal-title">${title}</h3>
@@ -210,7 +210,7 @@ const Modal = {
         const style = document.createElement('style');
         style.id = 'modal-styles';
         style.textContent = `
-            .modal-overlay {
+            .custom-modal-overlay {
                 position: fixed;
                 top: 0;
                 left: 0;
@@ -225,7 +225,7 @@ const Modal = {
                 padding: 20px;
             }
 
-            .modal-overlay.modal-closing {
+            .custom-modal-overlay.modal-closing {
                 animation: modalFadeOut 0.2s ease-in;
             }
 
