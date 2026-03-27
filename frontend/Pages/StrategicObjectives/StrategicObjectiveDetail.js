@@ -4,13 +4,16 @@ import { StrategicObjective } from '../../Entities/StrategicObjective.js';
 import { StrategicSubMetric, CATEGORY_METRIC_CONFIG } from '../../Entities/StrategicSubMetric.js';
 import { StrategicTimelineEntry } from '../../Entities/StrategicTimelineEntry.js';
 import { Department } from '../../Entities/Department.js';
+import { User } from '../../Entities/User.js';
+import { CompanyPolicy } from '../../Entities/CompanyPolicy.js';
 
 const FREQUENCIA_LABELS = {
     'semanal': 'Semanal',
     'mensal': 'Mensal',
     'trimestral': 'Trimestral',
     'semestral': 'Semestral',
-    'anual': 'Anual'
+    'anual': 'Anual',
+    'fim_obra': 'Ao final de cada Obra'
 };
 
 const StrategicObjectiveDetailPage = {
@@ -18,6 +21,8 @@ const StrategicObjectiveDetailPage = {
     currentMetric: null,
     timelineEntries: [],
     departments: [],
+    users: [],
+    allPolicies: [],
 
     async render(objectiveId) {
         const content = document.getElementById('content');
@@ -53,13 +58,17 @@ const StrategicObjectiveDetailPage = {
             this.objective.sub_metrics = autoMetrics;
         }
 
-        // Busca entradas da timeline e departamentos em paralelo
-        const [timelineEntries, departments] = await Promise.all([
+        // Busca entradas da timeline, departamentos, usuários e políticas em paralelo
+        const [timelineEntries, departments, users, allPolicies] = await Promise.all([
             StrategicTimelineEntry.getByObjectiveId(objectiveId),
-            Department.getActive()
+            Department.getActive(),
+            User.getActive(),
+            CompanyPolicy.getAll()
         ]);
         this.timelineEntries = timelineEntries;
         this.departments = departments;
+        this.users = users;
+        this.allPolicies = allPolicies;
 
         this.renderPage();
     },
@@ -81,7 +90,8 @@ const StrategicObjectiveDetailPage = {
         };
         const colors = categoryColors[obj.category] || { bg: '#f3f4f6', color: '#6b7280' };
 
-        const subMetrics = obj.sub_metrics || [];
+        const subMetrics = (obj.sub_metrics || []).filter(m => m.sub_metric_type !== 'operational_kpi');
+        const kpiMetrics = (obj.sub_metrics || []).filter(m => m.sub_metric_type === 'operational_kpi');
 
         // Calcula totais baseado no modo
         let totalHTML = '';
@@ -160,6 +170,17 @@ const StrategicObjectiveDetailPage = {
 
         const metricsHTML = subMetrics.map(m => this.renderMetricRow(m, categoryConfig, colors, isAdmin, metricMode)).join('');
 
+        // Satisfaction sections (only for Melhoria Contínua)
+        let satisfactionHTML = '';
+        if (metricMode === 'auto_okr') {
+            const satExt = obj.satisfaction_external || [];
+            const satInt = obj.satisfaction_internal || [];
+            satisfactionHTML = `
+                ${this.renderSatisfactionSection('satisfaction_external', satExt, isAdmin, '#3b82f6', 'Satisfação de Clientes Externos')}
+                ${this.renderSatisfactionSection('satisfaction_internal', satInt, isAdmin, '#10b981', 'Satisfação de Clientes Internos')}
+            `;
+        }
+
         // Determina se mostra botão de nova sub-métrica (não para auto_okr)
         const showAddMetricBtn = isAdmin && metricMode !== 'auto_okr';
 
@@ -174,8 +195,14 @@ const StrategicObjectiveDetailPage = {
             ? 'Os departamentos aparecerão automaticamente quando houver OKRs vinculados'
             : 'Adicione sub-métricas para acompanhar o progresso deste objetivo';
 
+        // KPI Operacionais section
+        const kpiSectionHTML = this.renderKpiSection(kpiMetrics, isAdmin);
+
         // Timeline HTML
         const timelineHTML = this.renderTimeline(isAdmin);
+
+        // Política da Qualidade section
+        const politicaHTML = this.renderPoliticaSection(obj, isAdmin);
 
         // Indicadores section
         const frequenciaLabel = obj.frequencia_medicao ? FREQUENCIA_LABELS[obj.frequencia_medicao] || obj.frequencia_medicao : null;
@@ -184,10 +211,17 @@ const StrategicObjectiveDetailPage = {
             const dept = this.departments.find(d => d.id === id);
             return dept ? dept.nome : null;
         }).filter(Boolean);
-        const hasIndicadores = obj.indicadores || obj.fonte_coleta || obj.frequencia_medicao || deptIds.length > 0;
+        const responsavelUsuario = obj.responsavel_usuario_id
+            ? this.users.find(u => u.id === obj.responsavel_usuario_id)
+            : null;
+        const hasIndicadores = obj.indicadores || obj.fonte_coleta || obj.frequencia_medicao || deptIds.length > 0 || obj.responsavel_usuario_id;
 
-        const responsavelHTML = responsavelNomes.length > 0
+        const deptTagsHTML = responsavelNomes.length > 0
             ? responsavelNomes.map(nome => `<span class="sod-dept-tag">${nome}</span>`).join('')
+            : '<span class="sod-indicator-empty">Não definido</span>';
+
+        const usuarioTagHTML = responsavelUsuario
+            ? `<span class="sod-dept-tag">${responsavelUsuario.nome}</span>`
             : '<span class="sod-indicator-empty">Não definido</span>';
 
         const indicadoresHTML = `
@@ -238,10 +272,17 @@ const StrategicObjectiveDetailPage = {
                         </div>
                         <div class="sod-indicator-item">
                             <div class="sod-indicator-label">
-                                <svg width="14" height="14" fill="none" stroke="#6b7280" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                                Responsáveis
+                                <svg width="14" height="14" fill="none" stroke="#6b7280" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                                Departamentos Responsáveis
                             </div>
-                            <div class="sod-indicator-value sod-dept-tags">${responsavelHTML}</div>
+                            <div class="sod-indicator-value sod-dept-tags">${deptTagsHTML}</div>
+                        </div>
+                        <div class="sod-indicator-item">
+                            <div class="sod-indicator-label">
+                                <svg width="14" height="14" fill="none" stroke="#6b7280" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                                Usuário Responsável
+                            </div>
+                            <div class="sod-indicator-value sod-dept-tags">${usuarioTagHTML}</div>
                         </div>
                     </div>
                 ` : `
@@ -306,6 +347,15 @@ const StrategicObjectiveDetailPage = {
                     `}
                 </div>
 
+                <!-- Satisfação de Clientes -->
+                ${satisfactionHTML}
+
+                <!-- Objetivos Operacionais (KPIs) -->
+                ${kpiSectionHTML}
+
+                <!-- Política da Qualidade -->
+                ${politicaHTML}
+
                 <!-- Timeline -->
                 ${timelineHTML}
 
@@ -313,14 +363,81 @@ const StrategicObjectiveDetailPage = {
                 <div id="sod-metric-modal" class="modal-gio-container" style="display:none;"></div>
                 <div id="sod-timeline-modal" class="modal-gio-container" style="display:none;"></div>
                 <div id="sod-indicators-modal" class="modal-gio-container" style="display:none;"></div>
+                <div id="sod-satisfaction-modal" class="modal-gio-container" style="display:none;"></div>
+                <div id="sod-politica-modal" class="modal-gio-container" style="display:none;"></div>
+                <div id="sod-kpi-modal" class="modal-gio-container" style="display:none;"></div>
             </div>
         `;
     },
 
+    renderMetricIndicatorInfo(metric) {
+        const deptIds = metric.responsavel_ids || [];
+        const deptNomes = deptIds.map(id => {
+            const dept = this.departments.find(d => d.id === id);
+            return dept ? dept.nome : null;
+        }).filter(Boolean);
+
+        const parts = [];
+        if (metric.indicadores) {
+            parts.push(`<span class="sod-sm-info-item">
+                <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                ${metric.indicadores}
+            </span>`);
+        }
+        if (metric.fonte_coleta) {
+            parts.push(`<span class="sod-sm-info-item">
+                <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                ${metric.fonte_coleta}
+            </span>`);
+        }
+        if (deptNomes.length > 0) {
+            parts.push(`<span class="sod-sm-info-item sod-sm-info-depts">
+                <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                ${deptNomes.map(n => `<span class="sod-sm-dept-tag">${n}</span>`).join('')}
+            </span>`);
+        }
+
+        if (parts.length === 0) return '';
+        return `<div class="sod-sm-info-row">${parts.join('')}</div>`;
+    },
+
     renderMetricRow(metric, categoryConfig, colors, isAdmin, metricMode) {
         const isText = metric.unit === 'texto';
+        const isDate = metric.unit === 'data';
         const isAuto = metric._is_auto;
         const isInverse = metricMode === 'inverse';
+
+        // Date mode
+        if (isDate) {
+            const status = metric.dateStatus || { label: 'Sem prazo', color: '#6b7280' };
+            const targetDateFmt = StrategicSubMetric.formatDate(metric.target_date);
+            const currentDateFmt = StrategicSubMetric.formatDate(metric.conclusion_date);
+            return `
+                <div class="sod-metric-row">
+                    <div class="sod-metric-info">
+                        <span class="sod-metric-name">${metric.name}</span>
+                        <div class="sod-metric-values">
+                            <svg width="12" height="12" fill="none" stroke="${status.color}" viewBox="0 0 24 24" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            <span style="color:#6b7280;font-size:12px;">Prazo: <strong>${targetDateFmt}</strong></span>
+                            ${metric.conclusion_date ? `<span style="color:#6b7280;font-size:12px;margin-left:8px;">Concluído: <strong>${currentDateFmt}</strong></span>` : ''}
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="font-size:11px;font-weight:600;padding:3px 8px;border-radius:12px;background:${status.color}20;color:${status.color};white-space:nowrap;">${status.label}</span>
+                        ${isAdmin ? `
+                            <div class="sod-metric-actions" onclick="event.stopPropagation();">
+                                <button class="so-obj-action-btn" onclick="StrategicObjectiveDetailPage.openMetricModal(${metric.id})" title="Editar">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                </button>
+                                <button class="so-obj-action-btn so-obj-action-del" onclick="StrategicObjectiveDetailPage.deleteMetric(${metric.id})" title="Excluir">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
 
         // Qualitative mode (texto)
         if (isText) {
@@ -329,6 +446,7 @@ const StrategicObjectiveDetailPage = {
                     <div class="sod-metric-info">
                         <span class="sod-metric-name">${metric.name}</span>
                         <span class="sod-metric-value-text">${metric.current_value ? 'Registrado' : 'Pendente'}</span>
+                        ${this.renderMetricIndicatorInfo(metric)}
                     </div>
                     ${isAdmin && !isAuto ? `
                         <div class="sod-metric-actions" onclick="event.stopPropagation();">
@@ -389,6 +507,7 @@ const StrategicObjectiveDetailPage = {
                             <span class="sod-metric-sep">Meta: &lt;</span>
                             <span class="sod-metric-target">${StrategicSubMetric.formatValue(target, metric.unit)}</span>
                         </div>
+                        ${this.renderMetricIndicatorInfo(metric)}
                     </div>
                     <div class="sod-metric-progress-area">
                         <div class="sod-progress-bar">
@@ -420,6 +539,7 @@ const StrategicObjectiveDetailPage = {
                         <span class="sod-metric-sep">/</span>
                         <span class="sod-metric-target">${StrategicSubMetric.formatValue(metric.target_value, metric.unit)}</span>
                     </div>
+                    ${this.renderMetricIndicatorInfo(metric)}
                 </div>
                 <div class="sod-metric-progress-area">
                     <div class="sod-progress-bar">
@@ -437,6 +557,98 @@ const StrategicObjectiveDetailPage = {
                         </button>
                     </div>
                 ` : ''}
+            </div>
+        `;
+    },
+
+    renderSatisfactionSection(type, metrics, isAdmin, color, title) {
+        const iconExternal = `<svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`;
+        const iconInternal = `<svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>`;
+        const icon = type === 'satisfaction_external' ? iconExternal : iconInternal;
+
+        const avgScore = metrics.length > 0
+            ? Math.round(metrics.reduce((sum, m) => sum + m.current_value, 0) / metrics.length)
+            : null;
+
+        const rowsHTML = metrics.map(m => {
+            const progress = m.target_value > 0 ? Math.min((m.current_value / m.target_value) * 100, 100) : 0;
+            const barColor = progress >= 70 ? '#10b981' : (progress >= 40 ? '#f59e0b' : '#ef4444');
+            return `
+                <div class="sod-metric-row">
+                    <div class="sod-metric-info">
+                        <span class="sod-metric-name">${m.name}</span>
+                        <div class="sod-metric-values">
+                            <span class="sod-metric-current" style="color:${barColor};">${m.current_value.toFixed(1)}%</span>
+                            <span class="sod-metric-sep">/</span>
+                            <span class="sod-metric-target">Meta: ${m.target_value.toFixed(0)}%</span>
+                        </div>
+                    </div>
+                    <div class="sod-metric-progress-area">
+                        <div class="sod-progress-bar">
+                            <div class="sod-progress-fill" style="width:${progress}%;background:${barColor};"></div>
+                        </div>
+                        <span class="sod-metric-pct" style="color:${barColor};">${progress.toFixed(0)}%</span>
+                    </div>
+                    ${isAdmin ? `
+                        <div class="sod-metric-actions" onclick="event.stopPropagation();">
+                            <button class="so-obj-action-btn" onclick="StrategicObjectiveDetailPage.openSatisfactionModal('${type}', ${m.id})" title="Editar">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                            </button>
+                            <button class="so-obj-action-btn so-obj-action-del" onclick="StrategicObjectiveDetailPage.deleteSatisfactionMetric(${m.id})" title="Excluir">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            </button>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }).join('');
+
+        const avgHTML = avgScore !== null ? `
+            <div class="sod-total-row">
+                <div class="sod-total-label">MÉDIA</div>
+                <div class="sod-total-values">
+                    <span class="sod-total-current">${avgScore}%</span>
+                    <span class="sod-total-sep">de satisfação</span>
+                </div>
+                <div class="sod-total-progress-container">
+                    <div class="sod-progress-bar">
+                        <div class="sod-progress-fill" style="width:${avgScore}%;background:${color};"></div>
+                    </div>
+                    <span class="sod-total-pct">${avgScore}%</span>
+                </div>
+            </div>
+        ` : '';
+
+        return `
+            <div class="sod-metrics-section">
+                <div class="sod-metrics-header">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="color:${color};">${icon}</span>
+                        <h3 class="sod-metrics-title">${title}</h3>
+                    </div>
+                    ${isAdmin ? `
+                        <button class="so-page-bar-btn" onclick="StrategicObjectiveDetailPage.openSatisfactionModal('${type}')">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            Novo Registro
+                        </button>
+                    ` : ''}
+                </div>
+                ${metrics.length === 0 ? `
+                    <div class="sod-empty">
+                        <div class="sod-empty-icon" style="color:${color};opacity:0.5;">
+                            ${icon}
+                        </div>
+                        <p class="sod-empty-text">Nenhum registro de satisfação</p>
+                        <p class="sod-empty-hint">Adicione registros para acompanhar a satisfação ao longo do tempo</p>
+                    </div>
+                ` : `
+                    <div class="sod-metrics-list">
+                        ${rowsHTML}
+                    </div>
+                    ${avgHTML}
+                `}
             </div>
         `;
     },
@@ -803,9 +1015,16 @@ const StrategicObjectiveDetailPage = {
     getEligibleSubMetrics() {
         const categoryConfig = CATEGORY_METRIC_CONFIG[this.objective.category] || {};
         const metricMode = categoryConfig.metric_mode || 'normal';
-        // Não mostra dropdown para auto_okr (Melhoria Contínua) nem qualitative (Empreendimento Econômico)
-        if (metricMode === 'auto_okr' || metricMode === 'qualitative') return [];
-        return (this.objective.sub_metrics || []).filter(m => !m._is_auto && m.unit !== 'texto');
+        if (metricMode === 'qualitative') return [];
+
+        const regular = metricMode === 'auto_okr'
+            ? []
+            : (this.objective.sub_metrics || []).filter(m => !m._is_auto && m.unit !== 'texto' && m.sub_metric_type !== 'operational_kpi');
+
+        const satisfactionExt = (this.objective.satisfaction_external || []);
+        const satisfactionInt = (this.objective.satisfaction_internal || []);
+
+        return [...regular, ...satisfactionExt, ...satisfactionInt];
     },
 
     openTimelineModal() {
@@ -1261,14 +1480,71 @@ const StrategicObjectiveDetailPage = {
     },
 
     // =====================================================
-    // METRIC MODAL (existente)
+    // METRIC MODAL
     // =====================================================
+
+    _getMetricUnitOptions(categoryUnit, selectedUnit) {
+        const unitLabels = { 'R$': 'R$ (Monetário)', '%': '% (Percentual)', 'texto': 'Texto (Qualitativo)', 'data': 'Data (Prazo)' };
+        const options = [categoryUnit, 'data'].filter((v, i, a) => a.indexOf(v) === i);
+        return options.map(u => `<option value="${u}"${u === selectedUnit ? ' selected' : ''}>${unitLabels[u] || u}</option>`).join('');
+    },
+
+    _renderMetricFields(selectedUnit) {
+        const categoryConfig = CATEGORY_METRIC_CONFIG[this.objective?.category] || { metric_mode: 'normal' };
+        const isInverse = categoryConfig.metric_mode === 'inverse';
+        const isDate = selectedUnit === 'data';
+        const isText = selectedUnit === 'texto';
+        const metric = this.currentMetric;
+
+        if (isDate) {
+            const targetVal = metric?.target_date || '';
+            const currentVal = metric?.conclusion_date || '';
+            return `
+                <div class="form-group-gio">
+                    <label class="form-label-gio">Data Limite (Prazo) *</label>
+                    <input type="date" id="sod-metric-target-date" class="form-control-gio" value="${targetVal}">
+                </div>
+                <div class="form-group-gio">
+                    <label class="form-label-gio">Data de Conclusão</label>
+                    <small style="color:#6b7280;font-size:11px;display:block;margin-bottom:6px;">Preencha quando a atividade for concluída</small>
+                    <input type="date" id="sod-metric-conclusion-date" class="form-control-gio" value="${currentVal}">
+                </div>
+            `;
+        }
+
+        const unitLabel = isText ? '' : selectedUnit;
+        const targetLabel = isText ? 'Descrição da Meta' : (isInverse ? `Meta Máxima (${unitLabel})` : `Meta (${unitLabel})`);
+        const currentLabel = isText ? 'Evidência / Registro' : `Valor Atual (${unitLabel})`;
+        const targetVal = metric ? (isText ? (metric.target_value || '') : metric.target_value) : '';
+
+        return `
+            <div class="form-group-gio">
+                <label class="form-label-gio">${targetLabel}</label>
+                ${isInverse ? '<small style="color:#6b7280;font-size:11px;display:block;margin-bottom:6px;">O valor atual deve ficar ABAIXO desta meta</small>' : ''}
+                <input type="${isText ? 'text' : 'number'}" id="sod-metric-target" class="form-control-gio"
+                    placeholder="${isText ? 'Descreva a meta qualitativa' : '0'}"
+                    ${!isText ? 'min="0" step="any"' : ''}
+                    value="${targetVal}">
+            </div>
+            ${!metric ? `<div class="form-group-gio">
+                <label class="form-label-gio">${currentLabel}</label>
+                <input type="${isText ? 'text' : 'number'}" id="sod-metric-current" class="form-control-gio"
+                    placeholder="${isText ? 'Registre evidências ou observações' : '0'}"
+                    ${!isText ? 'min="0" step="any"' : ''}
+                    value="">
+            </div>` : ''}
+        `;
+    },
+
+    onMetricUnitChange(selectedUnit) {
+        const fieldsDiv = document.getElementById('sod-metric-fields');
+        if (fieldsDiv) fieldsDiv.innerHTML = this._renderMetricFields(selectedUnit);
+    },
 
     async openMetricModal(metricId = null) {
         const obj = this.objective;
         const categoryConfig = CATEGORY_METRIC_CONFIG[obj.category] || { unit: 'R$', format: 'currency', metric_mode: 'normal' };
-        const unit = categoryConfig.unit;
-        const metricMode = categoryConfig.metric_mode || 'normal';
+        const categoryUnit = categoryConfig.unit;
 
         if (metricId) {
             this.currentMetric = (obj.sub_metrics || []).find(m => m.id === metricId) || null;
@@ -1276,18 +1552,16 @@ const StrategicObjectiveDetailPage = {
             this.currentMetric = null;
         }
 
+        const selectedUnit = this.currentMetric?.unit || categoryUnit;
         const modal = document.getElementById('sod-metric-modal');
-        const isText = unit === 'texto';
-        const isPercent = unit === '%';
-        const isInverse = metricMode === 'inverse';
 
-        const unitLabel = isText ? '' : (isPercent ? '%' : 'R$');
-        const targetLabel = isText ? 'Descrição da Meta' : (isInverse ? `Meta Máxima (${unitLabel})` : `Meta (${unitLabel})`);
-        const currentLabel = isText ? 'Evidência / Registro' : `Valor Atual (${unitLabel})`;
+        const selectedResponsavelIds = this.currentMetric ? (this.currentMetric.responsavel_ids || []) : [];
+        const totalDepts = this.departments.length;
+        const selectedCount = selectedResponsavelIds.length;
 
         modal.innerHTML = `
             <div class="modal-overlay-gio" onclick="StrategicObjectiveDetailPage.closeMetricModal()"></div>
-            <div class="modal-content-gio" style="max-width:520px;">
+            <div class="modal-content-gio" style="max-width:600px;">
                 <div class="modal-header-gio">
                     <div>
                         <h3>${this.currentMetric ? 'Editar' : 'Nova'} Sub-Métrica</h3>
@@ -1307,19 +1581,50 @@ const StrategicObjectiveDetailPage = {
                             value="${this.currentMetric ? this.currentMetric.name : ''}">
                     </div>
                     <div class="form-group-gio">
-                        <label class="form-label-gio">${targetLabel}</label>
-                        ${isInverse ? '<small style="color:#6b7280;font-size:11px;display:block;margin-bottom:6px;">O valor atual deve ficar ABAIXO desta meta</small>' : ''}
-                        <input type="${isText ? 'text' : 'number'}" id="sod-metric-target" class="form-control-gio"
-                            placeholder="${isText ? 'Descreva a meta qualitativa' : '0'}"
-                            ${!isText ? 'min="0" step="any"' : ''}
-                            value="${this.currentMetric ? (isText ? (this.currentMetric.target_value || '') : this.currentMetric.target_value) : ''}">
+                        <label class="form-label-gio">Tipo de Medição</label>
+                        <select id="sod-metric-unit" class="form-control-gio"
+                            onchange="StrategicObjectiveDetailPage.onMetricUnitChange(this.value)">
+                            ${this._getMetricUnitOptions(categoryUnit, selectedUnit)}
+                        </select>
+                    </div>
+                    <div id="sod-metric-fields">
+                        ${this._renderMetricFields(selectedUnit)}
+                    </div>
+                    <div class="sod-ind-row">
+                        <div class="form-group-gio" style="flex:1;">
+                            <label class="form-label-gio">Indicadores</label>
+                            <textarea id="sod-metric-indicadores" class="form-control-gio" rows="2"
+                                placeholder="Ex: % obras no prazo...">${this.currentMetric ? (this.currentMetric.indicadores || '') : ''}</textarea>
+                        </div>
+                        <div class="form-group-gio" style="flex:1;">
+                            <label class="form-label-gio">Fonte de Coleta</label>
+                            <textarea id="sod-metric-fonte" class="form-control-gio" rows="2"
+                                placeholder="Ex: Sienge, Planilha...">${this.currentMetric ? (this.currentMetric.fonte_coleta || '') : ''}</textarea>
+                        </div>
                     </div>
                     <div class="form-group-gio">
-                        <label class="form-label-gio">${currentLabel}</label>
-                        <input type="${isText ? 'text' : 'number'}" id="sod-metric-current" class="form-control-gio"
-                            placeholder="${isText ? 'Registre evidências ou observações' : '0'}"
-                            ${!isText ? 'min="0" step="any"' : ''}
-                            value="${this.currentMetric ? (isText ? (this.currentMetric.current_value || '') : this.currentMetric.current_value) : ''}">
+                        <div class="sod-dept-header">
+                            <label class="form-label-gio" style="margin:0;">Responsáveis</label>
+                            <div class="sod-dept-header-actions">
+                                <button type="button" class="sod-dept-action-link" onclick="StrategicObjectiveDetailPage.toggleAllMetricDepts(true)">Todos</button>
+                                <span style="color:#d1d5db;">|</span>
+                                <button type="button" class="sod-dept-action-link" onclick="StrategicObjectiveDetailPage.toggleAllMetricDepts(false)">Nenhum</button>
+                                <span class="sod-dept-counter" id="sod-metric-dept-counter">${selectedCount} de ${totalDepts}</span>
+                            </div>
+                        </div>
+                        <div class="sod-dept-checklist-box">
+                            ${this.departments.length > 0 ? `
+                                <div class="sod-dept-checklist-grid">
+                                    ${this.departments.map(d => `
+                                        <label class="sod-dept-chip ${selectedResponsavelIds.includes(d.id) ? 'sod-dept-chip-active' : ''}">
+                                            <input type="checkbox" name="sod-metric-depts" value="${d.id}" ${selectedResponsavelIds.includes(d.id) ? 'checked' : ''} onchange="StrategicObjectiveDetailPage.onMetricDeptToggle(this)">
+                                            <span class="sod-dept-chip-text">${d.nome}</span>
+                                            <svg class="sod-dept-chip-check" width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                        </label>
+                                    `).join('')}
+                                </div>
+                            ` : '<span style="color:#9ca3af;font-size:13px;padding:12px;">Nenhum departamento cadastrado</span>'}
+                        </div>
                     </div>
                     <div id="sod-metric-error" class="error-message-gio" style="display:none;"></div>
                 </div>
@@ -1345,12 +1650,12 @@ const StrategicObjectiveDetailPage = {
 
     async saveMetric() {
         const name = document.getElementById('sod-metric-name').value.trim();
-        const targetRaw = document.getElementById('sod-metric-target').value;
-        const currentRaw = document.getElementById('sod-metric-current').value;
+        const unitEl = document.getElementById('sod-metric-unit');
         const errorDiv = document.getElementById('sod-metric-error');
 
         const categoryConfig = CATEGORY_METRIC_CONFIG[this.objective.category] || { unit: 'R$' };
-        const unit = categoryConfig.unit;
+        const unit = unitEl ? unitEl.value : categoryConfig.unit;
+        const isDate = unit === 'data';
         const isText = unit === 'texto';
 
         if (!name) {
@@ -1359,17 +1664,46 @@ const StrategicObjectiveDetailPage = {
             return;
         }
 
-        const targetValue = isText ? (targetRaw ? 1 : 0) : (parseFloat(targetRaw) || 0);
-        const currentValue = isText ? (currentRaw ? 1 : 0) : (parseFloat(currentRaw) || 0);
+        const indicadoresEl = document.getElementById('sod-metric-indicadores');
+        const fonteEl = document.getElementById('sod-metric-fonte');
+        const checkedDepts = document.querySelectorAll('input[name="sod-metric-depts"]:checked');
+        const responsavelIds = Array.from(checkedDepts).map(cb => cb.value);
 
         try {
             const data = {
                 objective_id: this.objective.id,
                 name,
-                target_value: targetValue,
-                current_value: currentValue,
-                unit
+                unit,
+                indicadores: indicadoresEl ? (indicadoresEl.value.trim() || null) : null,
+                fonte_coleta: fonteEl ? (fonteEl.value.trim() || null) : null,
+                responsavel_ids: responsavelIds
             };
+
+            if (isDate) {
+                const targetDate = document.getElementById('sod-metric-target-date')?.value || null;
+                const currentDate = document.getElementById('sod-metric-conclusion-date')?.value || null;
+                if (!targetDate) {
+                    errorDiv.textContent = 'Data Limite é obrigatória';
+                    errorDiv.style.display = 'block';
+                    return;
+                }
+                data.target_date = targetDate;
+                data.conclusion_date = currentDate || null;
+                data.target_value = 0;
+                data.current_value = 0;
+            } else {
+                const targetRaw = document.getElementById('sod-metric-target')?.value || '';
+                const currentEl = document.getElementById('sod-metric-current');
+                const currentRaw = currentEl ? currentEl.value : null;
+                data.target_value = isText ? (targetRaw ? 1 : 0) : (parseFloat(targetRaw) || 0);
+                if (!this.currentMetric && currentRaw !== null) {
+                    data.current_value = isText ? (currentRaw ? 1 : 0) : (parseFloat(currentRaw) || 0);
+                }
+                if (this.currentMetric?.unit === 'data') {
+                    data.target_date = null;
+                    data.conclusion_date = null;
+                }
+            }
 
             if (this.currentMetric) {
                 await StrategicSubMetric.update(this.currentMetric.id, data);
@@ -1408,6 +1742,599 @@ const StrategicObjectiveDetailPage = {
     },
 
     // =====================================================
+    // SATISFACTION MODAL
+    // =====================================================
+
+    openSatisfactionModal(type, metricId = null) {
+        const obj = this.objective;
+        const typeLabel = type === 'satisfaction_external' ? 'Clientes Externos' : 'Clientes Internos';
+        const metrics = type === 'satisfaction_external'
+            ? (obj.satisfaction_external || [])
+            : (obj.satisfaction_internal || []);
+
+        const existingMetric = metricId
+            ? metrics.find(m => m.id === metricId) || null
+            : null;
+
+        this._editingSatisfactionType = type;
+        this._editingSatisfactionId = metricId || null;
+
+        const modal = document.getElementById('sod-satisfaction-modal');
+
+        modal.innerHTML = `
+            <div class="modal-overlay-gio" onclick="StrategicObjectiveDetailPage.closeSatisfactionModal()"></div>
+            <div class="modal-content-gio" style="max-width:480px;">
+                <div class="modal-header-gio">
+                    <div>
+                        <h3>${existingMetric ? 'Editar' : 'Novo'} Registro — ${typeLabel}</h3>
+                        <p>${obj.text.substring(0, 60)}${obj.text.length > 60 ? '...' : ''}</p>
+                    </div>
+                    <button class="modal-close-gio" onclick="StrategicObjectiveDetailPage.closeSatisfactionModal()">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body-gio">
+                    <div class="form-group-gio">
+                        <label class="form-label-gio">Nome / Período *</label>
+                        <input type="text" id="sod-sat-name" class="form-control-gio"
+                            placeholder="Ex: NPS Março 2026, Pesquisa Q1 2026"
+                            value="${existingMetric ? existingMetric.name : ''}">
+                        <small style="color:#6b7280;font-size:11px;margin-top:4px;display:block;">Identifique o período ou pesquisa de origem</small>
+                    </div>
+                    <div class="form-group-gio">
+                        <label class="form-label-gio">Score Atual (%)</label>
+                        <input type="number" id="sod-sat-current" class="form-control-gio"
+                            placeholder="0" min="0" max="100" step="0.1"
+                            value="${existingMetric ? existingMetric.current_value : ''}">
+                        <small style="color:#6b7280;font-size:11px;margin-top:4px;display:block;">Resultado obtido na pesquisa de satisfação (0–100%)</small>
+                    </div>
+                    <div class="form-group-gio">
+                        <label class="form-label-gio">Meta (%)</label>
+                        <input type="number" id="sod-sat-target" class="form-control-gio"
+                            placeholder="80" min="0" max="100" step="1"
+                            value="${existingMetric ? existingMetric.target_value : '80'}">
+                    </div>
+                    <div id="sod-sat-error" class="error-message-gio" style="display:none;"></div>
+                </div>
+                <div class="modal-footer-gio">
+                    <button class="btn-gio-secondary" onclick="StrategicObjectiveDetailPage.closeSatisfactionModal()">Cancelar</button>
+                    <button class="btn-gio-primary" id="sod-sat-save-btn" onclick="StrategicObjectiveDetailPage.saveSatisfactionMetric()">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        ${existingMetric ? 'Atualizar' : 'Salvar'}
+                    </button>
+                </div>
+            </div>
+        `;
+        modal.style.display = 'flex';
+    },
+
+    closeSatisfactionModal() {
+        const modal = document.getElementById('sod-satisfaction-modal');
+        if (modal) modal.style.display = 'none';
+        this._editingSatisfactionType = null;
+        this._editingSatisfactionId = null;
+    },
+
+    async saveSatisfactionMetric() {
+        const name = document.getElementById('sod-sat-name').value.trim();
+        const currentRaw = document.getElementById('sod-sat-current').value;
+        const targetRaw = document.getElementById('sod-sat-target').value;
+        const errorDiv = document.getElementById('sod-sat-error');
+        const saveBtn = document.getElementById('sod-sat-save-btn');
+
+        if (!name) {
+            errorDiv.textContent = 'Nome é obrigatório';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        const currentValue = parseFloat(currentRaw) || 0;
+        const targetValue = parseFloat(targetRaw) || 80;
+
+        if (currentValue < 0 || currentValue > 100 || targetValue < 0 || targetValue > 100) {
+            errorDiv.textContent = 'Os valores devem estar entre 0 e 100';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        try {
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="spinner-gio"></span> Salvando...';
+
+            if (this._editingSatisfactionId) {
+                await StrategicSubMetric.update(this._editingSatisfactionId, {
+                    name,
+                    current_value: currentValue,
+                    target_value: targetValue
+                });
+                DepartmentsPage.showToast('Registro atualizado!', 'success');
+            } else {
+                const existingMetrics = this._editingSatisfactionType === 'satisfaction_external'
+                    ? (this.objective.satisfaction_external || [])
+                    : (this.objective.satisfaction_internal || []);
+
+                await StrategicSubMetric.create({
+                    objective_id: this.objective.id,
+                    name,
+                    target_value: targetValue,
+                    current_value: currentValue,
+                    unit: '%',
+                    position: existingMetrics.length,
+                    sub_metric_type: this._editingSatisfactionType
+                });
+                DepartmentsPage.showToast('Registro adicionado!', 'success');
+            }
+
+            this.closeSatisfactionModal();
+            await this.refreshData();
+        } catch (error) {
+            console.error('Erro ao salvar registro de satisfação:', error);
+            errorDiv.textContent = error.message || 'Erro ao salvar';
+            errorDiv.style.display = 'block';
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Salvar';
+        }
+    },
+
+    async deleteSatisfactionMetric(metricId) {
+        const confirmed = await Modal.confirm({
+            title: 'Excluir Registro',
+            message: 'Deseja realmente excluir este registro de satisfação?',
+            confirmLabel: 'Excluir',
+            danger: true
+        });
+        if (!confirmed) return;
+
+        try {
+            await StrategicSubMetric.delete(metricId);
+            DepartmentsPage.showToast('Registro excluído!', 'success');
+            await this.refreshData();
+        } catch (error) {
+            console.error('Erro ao excluir registro de satisfação:', error);
+            DepartmentsPage.showToast('Erro ao excluir registro', 'error');
+        }
+    },
+
+    // =====================================================
+    // POLÍTICA DA QUALIDADE
+    // =====================================================
+
+    renderPoliticaSection(obj, isAdmin) {
+        const linkedIds = (obj.politica_qualidade_ids || []).map(Number);
+        const linkedPolicies = this.allPolicies.filter(p => linkedIds.includes(Number(p.id)));
+        const hasLinks = linkedPolicies.length > 0;
+
+        const policiesHTML = hasLinks
+            ? linkedPolicies.map(p => `
+                <div class="sod-politica-card">
+                    <div class="sod-politica-icon">
+                        ${CompanyPolicy.getIconSVG(p.icon, 18)}
+                    </div>
+                    <div class="sod-politica-body">
+                        <div class="sod-politica-title">${p.title}</div>
+                        ${p.description ? `<div class="sod-politica-desc">${p.description}</div>` : ''}
+                    </div>
+                </div>
+            `).join('')
+            : `<div class="sod-empty" style="padding:24px 20px;">
+                <p class="sod-empty-text">Nenhuma política vinculada</p>
+                <p class="sod-empty-hint">Vincule políticas da qualidade a este objetivo</p>
+               </div>`;
+
+        return `
+            <div class="sod-indicators-section">
+                <div class="sod-metrics-header">
+                    <h3 class="sod-metrics-title">Política da Qualidade</h3>
+                    ${isAdmin ? `
+                        <button class="so-page-bar-btn" onclick="StrategicObjectiveDetailPage.openPoliticaModal()">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                            Editar
+                        </button>
+                    ` : ''}
+                </div>
+                <div class="sod-politica-list">
+                    ${policiesHTML}
+                </div>
+            </div>
+        `;
+    },
+
+    openPoliticaModal() {
+        const obj = this.objective;
+        const modal = document.getElementById('sod-politica-modal');
+        const linkedIds = (obj.politica_qualidade_ids || []).map(Number);
+
+        const listHTML = this.allPolicies.length > 0
+            ? this.allPolicies.map(p => `
+                <label class="sod-dept-chip ${linkedIds.includes(Number(p.id)) ? 'sod-dept-chip-active' : ''}" style="width:100%;align-items:flex-start;padding:10px 12px;gap:10px;">
+                    <input type="checkbox" name="sod-politica-ids" value="${p.id}" ${linkedIds.includes(Number(p.id)) ? 'checked' : ''} onchange="StrategicObjectiveDetailPage.onPoliticaToggle(this)">
+                    <span style="display:flex;align-items:center;gap:8px;flex:1;">
+                        <span style="flex-shrink:0;color:#6b7280;">${CompanyPolicy.getIconSVG(p.icon, 16)}</span>
+                        <span>
+                            <span class="sod-dept-chip-text" style="font-weight:600;">${p.title}</span>
+                            ${p.description ? `<br><span style="font-size:11px;color:#6b7280;font-weight:400;">${p.description.substring(0, 80)}${p.description.length > 80 ? '...' : ''}</span>` : ''}
+                        </span>
+                    </span>
+                    <svg class="sod-dept-chip-check" width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                </label>
+            `).join('')
+            : '<span style="color:#9ca3af;font-size:13px;padding:12px;">Nenhuma política cadastrada. Crie políticas em "Política da Empresa".</span>';
+
+        modal.innerHTML = `
+            <div class="modal-overlay-gio" onclick="StrategicObjectiveDetailPage.closePoliticaModal()"></div>
+            <div class="modal-content-gio" style="max-width:560px;">
+                <div class="modal-header-gio">
+                    <div>
+                        <h3>Política da Qualidade</h3>
+                        <p>Selecione as políticas vinculadas a este objetivo</p>
+                    </div>
+                    <button class="modal-close-gio" onclick="StrategicObjectiveDetailPage.closePoliticaModal()">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body-gio">
+                    <div class="form-group-gio">
+                        <div class="sod-dept-checklist-box" style="max-height:360px;overflow-y:auto;">
+                            <div style="display:flex;flex-direction:column;gap:6px;padding:4px;">
+                                ${listHTML}
+                            </div>
+                        </div>
+                    </div>
+                    <div id="sod-politica-error" class="error-message-gio" style="display:none;"></div>
+                </div>
+                <div class="modal-footer-gio">
+                    <button class="btn-gio-secondary" onclick="StrategicObjectiveDetailPage.closePoliticaModal()">Cancelar</button>
+                    <button class="btn-gio-primary" onclick="StrategicObjectiveDetailPage.savePolitica()">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Salvar
+                    </button>
+                </div>
+            </div>
+        `;
+        modal.style.display = 'flex';
+    },
+
+    onPoliticaToggle(checkbox) {
+        const label = checkbox.closest('label');
+        if (label) label.classList.toggle('sod-dept-chip-active', checkbox.checked);
+    },
+
+    closePoliticaModal() {
+        document.getElementById('sod-politica-modal').style.display = 'none';
+    },
+
+    async savePolitica() {
+        const checkedBoxes = document.querySelectorAll('input[name="sod-politica-ids"]:checked');
+        const selectedIds = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
+        const errorDiv = document.getElementById('sod-politica-error');
+
+        try {
+            const { supabaseClient } = await import('../../services/supabase.js');
+            const { error } = await supabaseClient
+                .from('strategic_objectives')
+                .update({ politica_qualidade_ids: selectedIds })
+                .eq('id', this.objective.id);
+
+            if (error) throw error;
+
+            DepartmentsPage.showToast('Políticas vinculadas com sucesso!', 'success');
+            this.closePoliticaModal();
+            await this.refreshData();
+        } catch (error) {
+            console.error('Erro ao salvar políticas:', error);
+            errorDiv.textContent = error.message || 'Erro ao salvar';
+            errorDiv.style.display = 'block';
+        }
+    },
+
+    // =====================================================
+    // OBJETIVOS OPERACIONAIS (KPIs)
+    // =====================================================
+
+    renderKpiSection(kpis, isAdmin) {
+        const hasKpis = kpis.length > 0;
+        return `
+            <div class="sod-kpi-section">
+                <div class="sod-metrics-header">
+                    <h3 class="sod-metrics-title">Objetivos Operacionais</h3>
+                    ${isAdmin ? `
+                        <button class="so-page-bar-btn" onclick="StrategicObjectiveDetailPage.openKpiModal()">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            Novo KPI
+                        </button>
+                    ` : ''}
+                </div>
+                ${hasKpis ? `
+                    <div class="sod-kpi-list">
+                        ${kpis.map(kpi => this.renderKpiRow(kpi, isAdmin)).join('')}
+                    </div>
+                ` : `
+                    <div class="sod-empty">
+                        <div class="sod-empty-icon">
+                            <svg width="28" height="28" fill="none" stroke="#94a3b8" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                            </svg>
+                        </div>
+                        <p class="sod-empty-text">Nenhum KPI operacional cadastrado</p>
+                        <p class="sod-empty-hint">Adicione KPIs para definir como este objetivo será medido operacionalmente</p>
+                    </div>
+                `}
+            </div>
+        `;
+    },
+
+    renderKpiRow(kpi, isAdmin) {
+        const deptIds = kpi.responsavel_ids || [];
+        const deptNomes = deptIds.map(id => {
+            const dept = this.departments.find(d => d.id === id);
+            return dept ? dept.nome : null;
+        }).filter(Boolean);
+        const freqLabel = kpi.frequencia ? (FREQUENCIA_LABELS[kpi.frequencia] || kpi.frequencia) : null;
+
+        return `
+            <div class="sod-kpi-row">
+                <div class="sod-kpi-content">
+                    <div class="sod-kpi-header-row">
+                        <span class="sod-kpi-name">${kpi.name}</span>
+                        ${kpi.meta_texto ? `<span class="sod-kpi-meta-badge">Meta: ${kpi.meta_texto}</span>` : ''}
+                    </div>
+                    <div class="sod-kpi-fields">
+                        ${kpi.indicadores ? `
+                            <div class="sod-kpi-field">
+                                <span class="sod-kpi-field-label">
+                                    <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                                    Indicador
+                                </span>
+                                <span class="sod-kpi-field-value">${kpi.indicadores}</span>
+                            </div>
+                        ` : ''}
+                        ${freqLabel ? `
+                            <div class="sod-kpi-field">
+                                <span class="sod-kpi-field-label">
+                                    <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    Frequência
+                                </span>
+                                <span class="sod-frequency-badge">${freqLabel}</span>
+                            </div>
+                        ` : ''}
+                        ${kpi.fonte_coleta ? `
+                            <div class="sod-kpi-field">
+                                <span class="sod-kpi-field-label">
+                                    <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                                    Fonte de Coleta
+                                </span>
+                                <span class="sod-kpi-field-value">${kpi.fonte_coleta}</span>
+                            </div>
+                        ` : ''}
+                        ${deptNomes.length > 0 ? `
+                            <div class="sod-kpi-field">
+                                <span class="sod-kpi-field-label">
+                                    <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                    Responsável
+                                </span>
+                                <span class="sod-kpi-field-value">${deptNomes.map(n => `<span class="sod-sm-dept-tag">${n}</span>`).join('')}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+                ${isAdmin ? `
+                    <div class="sod-metric-actions" onclick="event.stopPropagation();">
+                        <button class="so-obj-action-btn" onclick="StrategicObjectiveDetailPage.openKpiModal(${kpi.id})" title="Editar">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        </button>
+                        <button class="so-obj-action-btn so-obj-action-del" onclick="StrategicObjectiveDetailPage.deleteKpi(${kpi.id})" title="Excluir">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        </button>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    },
+
+    openKpiModal(kpiId = null) {
+        const obj = this.objective;
+        const kpi = kpiId ? (obj.sub_metrics || []).find(m => m.id === kpiId) || null : null;
+        this._editingKpiId = kpiId || null;
+
+        const modal = document.getElementById('sod-kpi-modal');
+        const selectedIds = kpi ? (kpi.responsavel_ids || []) : [];
+        const currentFreq = kpi ? (kpi.frequencia || '') : '';
+
+        const freqOptions = [
+            { value: 'semanal', label: 'Semanal', icon: '7d' },
+            { value: 'mensal', label: 'Mensal', icon: '30d' },
+            { value: 'trimestral', label: 'Trimestral', icon: '3m' },
+            { value: 'semestral', label: 'Semestral', icon: '6m' },
+            { value: 'anual', label: 'Anual', icon: '1a' },
+            ...(obj.category === 'Obra' ? [{ value: 'fim_obra', label: 'Ao final de cada Obra', icon: '🏗' }] : [])
+        ];
+
+        modal.innerHTML = `
+            <div class="modal-overlay-gio" onclick="StrategicObjectiveDetailPage.closeKpiModal()"></div>
+            <div class="modal-content-gio" style="max-width:620px;">
+                <div class="modal-header-gio">
+                    <div>
+                        <h3>${kpi ? 'Editar' : 'Novo'} KPI Operacional</h3>
+                        <p>Objetivo: ${obj.text.substring(0, 60)}${obj.text.length > 60 ? '...' : ''}</p>
+                    </div>
+                    <button class="modal-close-gio" onclick="StrategicObjectiveDetailPage.closeKpiModal()">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body-gio">
+                    <div class="form-group-gio">
+                        <label class="form-label-gio">KPI *</label>
+                        <input type="text" id="sod-kpi-name" class="form-control-gio"
+                            placeholder="Ex: Taxa de conversão de vendas"
+                            value="${kpi ? kpi.name : ''}">
+                    </div>
+                    <div class="form-group-gio">
+                        <label class="form-label-gio">Meta</label>
+                        <input type="text" id="sod-kpi-meta" class="form-control-gio"
+                            placeholder="Ex: NPS acima de 70, 25% ao mês"
+                            value="${kpi && kpi.meta_texto ? kpi.meta_texto : ''}">
+                    </div>
+                    <div class="sod-ind-row">
+                        <div class="form-group-gio" style="flex:1;">
+                            <label class="form-label-gio">Indicador</label>
+                            <textarea id="sod-kpi-indicadores" class="form-control-gio" rows="2"
+                                placeholder="Ex: % de leads convertidos">${kpi ? (kpi.indicadores || '') : ''}</textarea>
+                        </div>
+                        <div class="form-group-gio" style="flex:1;">
+                            <label class="form-label-gio">Fonte de Coleta</label>
+                            <textarea id="sod-kpi-fonte" class="form-control-gio" rows="2"
+                                placeholder="Ex: CRM, Planilha de vendas">${kpi ? (kpi.fonte_coleta || '') : ''}</textarea>
+                        </div>
+                    </div>
+                    <div class="form-group-gio">
+                        <label class="form-label-gio">Frequência de Medição</label>
+                        <div class="sod-freq-options">
+                            ${freqOptions.map(f => `
+                                <label class="sod-freq-chip ${currentFreq === f.value ? 'sod-freq-chip-active' : ''}">
+                                    <input type="radio" name="sod-kpi-frequencia" value="${f.value}" ${currentFreq === f.value ? 'checked' : ''} onchange="StrategicObjectiveDetailPage.onKpiFreqChange()">
+                                    <span class="sod-freq-chip-icon">${f.icon}</span>
+                                    <span>${f.label}</span>
+                                </label>
+                            `).join('')}
+                            <label class="sod-freq-chip sod-freq-chip-none ${!currentFreq ? 'sod-freq-chip-active' : ''}">
+                                <input type="radio" name="sod-kpi-frequencia" value="" ${!currentFreq ? 'checked' : ''} onchange="StrategicObjectiveDetailPage.onKpiFreqChange()">
+                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                                <span>Nenhuma</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group-gio">
+                        <label class="form-label-gio">Responsáveis</label>
+                        <div class="sod-dept-checklist-box" style="max-height:unset;">
+                            <div class="sod-dept-checklist-grid">
+                                ${this.departments.map(d => `
+                                    <label class="sod-dept-chip ${selectedIds.includes(d.id) ? 'sod-dept-chip-active' : ''}">
+                                        <input type="checkbox" name="sod-kpi-depts" value="${d.id}" ${selectedIds.includes(d.id) ? 'checked' : ''} onchange="this.closest('label').classList.toggle('sod-dept-chip-active', this.checked)">
+                                        <span class="sod-dept-chip-text">${d.nome}</span>
+                                        <svg class="sod-dept-chip-check" width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                    </label>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                    <div id="sod-kpi-error" class="error-message-gio" style="display:none;"></div>
+                </div>
+                <div class="modal-footer-gio">
+                    <button class="btn-gio-secondary" onclick="StrategicObjectiveDetailPage.closeKpiModal()">Cancelar</button>
+                    <button class="btn-gio-primary" id="sod-kpi-save-btn" onclick="StrategicObjectiveDetailPage.saveKpi()">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        ${kpi ? 'Atualizar' : 'Criar'}
+                    </button>
+                </div>
+            </div>
+        `;
+        modal.style.display = 'flex';
+    },
+
+    closeKpiModal() {
+        const modal = document.getElementById('sod-kpi-modal');
+        if (modal) modal.style.display = 'none';
+        this._editingKpiId = null;
+    },
+
+    onKpiFreqChange() {
+        document.querySelectorAll('#sod-kpi-modal .sod-freq-chip').forEach(chip => {
+            const radio = chip.querySelector('input[type="radio"]');
+            chip.classList.toggle('sod-freq-chip-active', radio.checked);
+        });
+    },
+
+    async saveKpi() {
+        const name = document.getElementById('sod-kpi-name').value.trim();
+        const errorDiv = document.getElementById('sod-kpi-error');
+        const saveBtn = document.getElementById('sod-kpi-save-btn');
+
+        if (!name) {
+            errorDiv.textContent = 'O campo KPI é obrigatório';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        const meta_texto = document.getElementById('sod-kpi-meta').value.trim() || null;
+        const indicadores = document.getElementById('sod-kpi-indicadores').value.trim() || null;
+        const fonte_coleta = document.getElementById('sod-kpi-fonte').value.trim() || null;
+        const freqRadio = document.querySelector('input[name="sod-kpi-frequencia"]:checked');
+        const frequencia = freqRadio ? freqRadio.value || null : null;
+        const checkedBoxes = document.querySelectorAll('input[name="sod-kpi-depts"]:checked');
+        const responsavel_ids = Array.from(checkedBoxes).map(cb => cb.value);
+
+        try {
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="spinner-gio"></span> Salvando...';
+
+            const data = {
+                objective_id: this.objective.id,
+                name,
+                meta_texto,
+                indicadores,
+                fonte_coleta,
+                frequencia,
+                responsavel_ids,
+                sub_metric_type: 'operational_kpi',
+                target_value: 0,
+                unit: 'texto'
+            };
+
+            if (this._editingKpiId) {
+                await StrategicSubMetric.update(this._editingKpiId, data);
+                DepartmentsPage.showToast('KPI atualizado!', 'success');
+            } else {
+                await StrategicSubMetric.create(data);
+                DepartmentsPage.showToast('KPI criado!', 'success');
+            }
+
+            this.closeKpiModal();
+            await this.refreshData();
+        } catch (error) {
+            console.error('Erro ao salvar KPI:', error);
+            errorDiv.textContent = error.message || 'Erro ao salvar KPI';
+            errorDiv.style.display = 'block';
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> ' + (this._editingKpiId ? 'Atualizar' : 'Criar');
+        }
+    },
+
+    async deleteKpi(kpiId) {
+        const confirmed = await Modal.confirm({
+            title: 'Excluir KPI',
+            message: 'Deseja realmente excluir este KPI operacional?',
+            confirmLabel: 'Excluir',
+            danger: true
+        });
+        if (!confirmed) return;
+
+        try {
+            await StrategicSubMetric.delete(kpiId);
+            DepartmentsPage.showToast('KPI excluído!', 'success');
+            await this.refreshData();
+        } catch (error) {
+            console.error('Erro ao excluir KPI:', error);
+            DepartmentsPage.showToast('Erro ao excluir KPI', 'error');
+        }
+    },
+
+    // =====================================================
     // INDICADORES MODAL
     // =====================================================
 
@@ -1418,8 +2345,12 @@ const StrategicObjectiveDetailPage = {
         if (this.departments.length === 0) {
             this.departments = await Department.getActive();
         }
+        if (this.users.length === 0) {
+            this.users = await User.getActive();
+        }
 
         const selectedIds = obj.responsavel_departamento_ids || [];
+        const selectedUsuarioId = obj.responsavel_usuario_id || '';
 
         const selectedCount = selectedIds.length;
         const totalDepts = this.departments.length;
@@ -1459,7 +2390,8 @@ const StrategicObjectiveDetailPage = {
                                 { value: 'mensal', label: 'Mensal', icon: '30d' },
                                 { value: 'trimestral', label: 'Trimestral', icon: '3m' },
                                 { value: 'semestral', label: 'Semestral', icon: '6m' },
-                                { value: 'anual', label: 'Anual', icon: '1a' }
+                                { value: 'anual', label: 'Anual', icon: '1a' },
+                                ...(obj.category === 'Obra' ? [{ value: 'fim_obra', label: 'Ao final de cada Obra', icon: '🏗' }] : [])
                             ].map(f => `
                                 <label class="sod-freq-chip ${obj.frequencia_medicao === f.value ? 'sod-freq-chip-active' : ''}">
                                     <input type="radio" name="sod-ind-frequencia" value="${f.value}" ${obj.frequencia_medicao === f.value ? 'checked' : ''} onchange="StrategicObjectiveDetailPage.onFreqChange()">
@@ -1476,7 +2408,7 @@ const StrategicObjectiveDetailPage = {
                     </div>
                     <div class="form-group-gio">
                         <div class="sod-dept-header">
-                            <label class="form-label-gio" style="margin:0;">Responsáveis</label>
+                            <label class="form-label-gio" style="margin:0;">Departamentos Responsáveis</label>
                             <div class="sod-dept-header-actions">
                                 <button type="button" class="sod-dept-action-link" onclick="StrategicObjectiveDetailPage.toggleAllDepts(true)">Todos</button>
                                 <span style="color:#d1d5db;">|</span>
@@ -1497,6 +2429,15 @@ const StrategicObjectiveDetailPage = {
                                 </div>
                             ` : '<span style="color:#9ca3af;font-size:13px;padding:12px;">Nenhum departamento cadastrado</span>'}
                         </div>
+                    </div>
+                    <div class="form-group-gio">
+                        <label class="form-label-gio">Usuário Responsável</label>
+                        <select id="sod-ind-usuario" class="form-control-gio">
+                            <option value="">— Nenhum —</option>
+                            ${this.users.map(u => `
+                                <option value="${u.id}" ${selectedUsuarioId === u.id ? 'selected' : ''}>${u.nome}</option>
+                            `).join('')}
+                        </select>
                     </div>
                     <div id="sod-ind-error" class="error-message-gio" style="display:none;"></div>
                 </div>
@@ -1541,6 +2482,26 @@ const StrategicObjectiveDetailPage = {
         if (counter) counter.textContent = `${checked} de ${total}`;
     },
 
+    toggleAllMetricDepts(selectAll) {
+        document.querySelectorAll('input[name="sod-metric-depts"]').forEach(cb => {
+            cb.checked = selectAll;
+            const chip = cb.closest('.sod-dept-chip');
+            chip.classList.toggle('sod-dept-chip-active', selectAll);
+        });
+        const total = document.querySelectorAll('input[name="sod-metric-depts"]').length;
+        const counter = document.getElementById('sod-metric-dept-counter');
+        if (counter) counter.textContent = `${selectAll ? total : 0} de ${total}`;
+    },
+
+    onMetricDeptToggle(checkbox) {
+        const chip = checkbox.closest('.sod-dept-chip');
+        chip.classList.toggle('sod-dept-chip-active', checkbox.checked);
+        const total = document.querySelectorAll('input[name="sod-metric-depts"]').length;
+        const checked = document.querySelectorAll('input[name="sod-metric-depts"]:checked').length;
+        const counter = document.getElementById('sod-metric-dept-counter');
+        if (counter) counter.textContent = `${checked} de ${total}`;
+    },
+
     closeIndicadoresModal() {
         const modal = document.getElementById('sod-indicators-modal');
         if (modal) modal.style.display = 'none';
@@ -1553,6 +2514,8 @@ const StrategicObjectiveDetailPage = {
         const frequencia_medicao = freqRadio ? freqRadio.value : '';
         const checkedBoxes = document.querySelectorAll('input[name="sod-ind-depts"]:checked');
         const selectedDeptIds = Array.from(checkedBoxes).map(cb => cb.value);
+        const usuarioSelect = document.getElementById('sod-ind-usuario');
+        const selectedUsuarioId = usuarioSelect ? (usuarioSelect.value || null) : null;
         const errorDiv = document.getElementById('sod-ind-error');
 
         try {
@@ -1561,7 +2524,8 @@ const StrategicObjectiveDetailPage = {
                 indicadores: indicadores || null,
                 fonte_coleta: fonte_coleta || null,
                 frequencia_medicao: frequencia_medicao || null,
-                responsavel_departamento_ids: selectedDeptIds
+                responsavel_departamento_ids: selectedDeptIds,
+                responsavel_usuario_id: selectedUsuarioId
             };
 
             const { error } = await supabaseClient
@@ -1598,7 +2562,8 @@ const StrategicObjectiveDetailPage = {
                     indicadores: null,
                     fonte_coleta: null,
                     frequencia_medicao: null,
-                    responsavel_departamento_ids: []
+                    responsavel_departamento_ids: [],
+                    responsavel_usuario_id: null
                 })
                 .eq('id', this.objective.id);
 
@@ -1790,6 +2755,45 @@ const StrategicObjectiveDetailPage = {
                 border-radius: 8px;
                 font-size: 12px;
                 font-weight: 600;
+            }
+
+            /* Sub-metric indicator info row */
+            .sod-sm-info-row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin-top: 5px;
+            }
+            .sod-sm-info-item {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                font-size: 11px;
+                color: #6b7280;
+                background: #f3f4f6;
+                border-radius: 6px;
+                padding: 2px 8px;
+                max-width: 300px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .sod-sm-info-item svg {
+                flex-shrink: 0;
+                opacity: 0.7;
+            }
+            .sod-sm-info-depts {
+                flex-wrap: wrap;
+                max-width: none;
+                white-space: normal;
+            }
+            .sod-sm-dept-tag {
+                background: #e0f2fe;
+                color: #0369a1;
+                border-radius: 4px;
+                padding: 1px 6px;
+                font-size: 11px;
+                font-weight: 500;
             }
 
             /* Modal layout */
@@ -2428,6 +3432,138 @@ const StrategicObjectiveDetailPage = {
                     width: 100%;
                     min-width: unset;
                 }
+            }
+
+            /* Política da Qualidade */
+            .sod-politica-list {
+                padding: 8px 0;
+            }
+            .sod-politica-card {
+                display: flex;
+                align-items: flex-start;
+                gap: 12px;
+                padding: 12px 16px;
+                border-radius: 8px;
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                margin-bottom: 8px;
+            }
+            .sod-politica-card:last-child { margin-bottom: 0; }
+            .sod-politica-icon {
+                flex-shrink: 0;
+                color: #6b7280;
+                margin-top: 1px;
+            }
+            .sod-politica-body { flex: 1; }
+            .sod-politica-title {
+                font-size: 13px;
+                font-weight: 600;
+                color: #1e293b;
+            }
+            .sod-politica-desc {
+                font-size: 12px;
+                color: #64748b;
+                margin-top: 2px;
+                line-height: 1.4;
+            }
+
+            /* KPI Section */
+            .sod-kpi-section {
+                background: #fff;
+                border-radius: 24px;
+                padding: 24px 28px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+                margin-top: 16px;
+            }
+            .sod-kpi-list {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+                padding: 4px 0;
+            }
+            .sod-kpi-row {
+                display: flex;
+                align-items: flex-start;
+                gap: 12px;
+                padding: 14px 16px;
+                border-radius: 12px;
+                border: 1px solid #f1f5f9;
+                transition: background 0.15s;
+            }
+            .sod-kpi-row:hover { background: #f8fafc; }
+            .sod-kpi-row:hover .sod-metric-actions { opacity: 1; }
+            .sod-kpi-content { flex: 1; min-width: 0; }
+            .sod-kpi-header-row {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                flex-wrap: wrap;
+                margin-bottom: 8px;
+            }
+            .sod-kpi-name {
+                font-size: 14px;
+                font-weight: 700;
+                color: #1e293b;
+            }
+            .sod-kpi-meta-badge {
+                display: inline-block;
+                padding: 2px 10px;
+                background: rgba(30, 96, 118, 0.1);
+                color: #1e6076;
+                border-radius: 8px;
+                font-size: 12px;
+                font-weight: 600;
+            }
+            .sod-kpi-fields {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 12px 24px;
+            }
+            .sod-kpi-field {
+                display: flex;
+                align-items: flex-start;
+                gap: 5px;
+                font-size: 12px;
+            }
+            .sod-kpi-field-label {
+                display: flex;
+                align-items: center;
+                gap: 3px;
+                color: #6b7280;
+                font-weight: 600;
+                white-space: nowrap;
+                padding-top: 1px;
+            }
+            .sod-kpi-field-value {
+                color: #374151;
+                line-height: 1.4;
+            }
+
+            /* KPI Modal dept list */
+            .sod-kpi-dept-list {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                padding: 4px 0;
+            }
+            .sod-kpi-dept-item {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 6px 12px;
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                font-size: 13px;
+                cursor: pointer;
+                transition: all 0.15s;
+                color: #374151;
+            }
+            .sod-kpi-dept-item:hover { border-color: #1e6076; background: rgba(30,96,118,0.05); }
+            .sod-kpi-dept-item input { cursor: pointer; accent-color: #1e6076; }
+
+            @media (max-width: 768px) {
+                .sod-kpi-section { border-radius: 18px; padding: 18px 16px; }
+                .sod-kpi-fields { gap: 8px 16px; }
             }
         `;
         document.head.appendChild(style);

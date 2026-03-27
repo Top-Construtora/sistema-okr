@@ -36,8 +36,28 @@ const DashboardPage = {
         ]);
     },
 
-    async renderRanking() {
+    async renderRanking(period = 'anual') {
         const container = document.getElementById('ranking-section');
+
+        // Busca ciclo ativo e seus miniciclos para filtro por trimestre
+        const { data: cycleData } = await supabaseClient
+            .from('cycles')
+            .select('id, nome')
+            .eq('ativo', true)
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+        const activeCycle = cycleData && cycleData.length > 0 ? cycleData[0] : null;
+
+        let miniCycles = [];
+        if (activeCycle) {
+            const { data: mc } = await supabaseClient
+                .from('mini_cycles')
+                .select('id, nome, ordem')
+                .eq('cycle_id', activeCycle.id)
+                .order('ordem', { ascending: true });
+            miniCycles = mc || [];
+        }
 
         // Busca departamentos para mapear nome -> id
         const { data: departments } = await supabaseClient
@@ -52,7 +72,17 @@ const DashboardPage = {
         }
 
         // Calcula ranking em tempo real com base nos OKRs atuais
-        const okrs = await OKR.getAll();
+        const allOkrs = await OKR.getAll();
+
+        // Filtra por período (trimestre ou anual)
+        let okrs = allOkrs;
+        if (period !== 'anual' && activeCycle) {
+            const qNumber = parseInt(period.replace('Q', ''));
+            const qMiniCycle = miniCycles.find(mc => mc.ordem === qNumber);
+            okrs = qMiniCycle
+                ? allOkrs.filter(okr => okr.mini_cycle_id === qMiniCycle.id)
+                : [];
+        }
         const deptStats = {};
 
         okrs.forEach(okr => {
@@ -147,6 +177,10 @@ const DashboardPage = {
             </div>`;
         };
 
+        const periodButtons = ['anual', 'Q1', 'Q2', 'Q3', 'Q4'].map(p =>
+            `<button class="period-btn${period === p ? ' active' : ''}" onclick="DashboardPage.renderRanking('${p}')">${p === 'anual' ? 'Anual' : p}</button>`
+        ).join('');
+
         let html = `
             <div class="widget">
                 <div class="widget-header">
@@ -154,6 +188,7 @@ const DashboardPage = {
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                     </svg>
                     Ranking de Departamentos
+                    <div class="ranking-period-selector">${periodButtons}</div>
                 </div>
                 <div class="widget-body">
         `;
@@ -650,6 +685,38 @@ const DashboardPage = {
 
             .btn-link-dash:hover {
                 color: #1e6076;
+            }
+
+            /* ===== RANKING PERIOD SELECTOR ===== */
+            .ranking-period-selector {
+                margin-left: auto;
+                display: flex;
+                gap: 3px;
+            }
+
+            .period-btn {
+                background: rgba(255,255,255,0.15);
+                border: 1px solid rgba(255,255,255,0.25);
+                color: rgba(255,255,255,0.8);
+                font-size: 10px;
+                font-weight: 600;
+                padding: 3px 7px;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                letter-spacing: 0.3px;
+                line-height: 1.4;
+            }
+
+            .period-btn:hover {
+                background: rgba(255,255,255,0.25);
+                color: white;
+            }
+
+            .period-btn.active {
+                background: rgba(255,255,255,0.9);
+                color: #1e6076;
+                border-color: transparent;
             }
 
             /* ===== RANKING STYLES GIO ===== */

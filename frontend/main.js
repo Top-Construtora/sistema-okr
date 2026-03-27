@@ -48,6 +48,7 @@ import { MyOKRsPage } from './Pages/OKRs/MyOKRs.js'
 import { OKRsPage } from './Pages/OKRs/OKRs.js'
 import { ApprovalPage } from './Pages/ApprovalCommittee/ApprovalCommittee.js'
 import { CompanyPolicyPage } from './Pages/CompanyPolicy/CompanyPolicy.js'
+import { CompanyIdentityPage } from './Pages/CompanyIdentity/CompanyIdentity.js'
 import { KPIsPage } from './Pages/KPIs/KPIs.js'
 import { SettingsPage } from './Pages/Settings/Settings.js'
 import ForgotPasswordPage from './Pages/PasswordRecovery/ForgotPassword.js'
@@ -93,6 +94,7 @@ window.MyOKRsPage = MyOKRsPage;
 window.OKRsPage = OKRsPage;
 window.ApprovalPage = ApprovalPage;
 window.CompanyPolicyPage = CompanyPolicyPage;
+window.CompanyIdentityPage = CompanyIdentityPage;
 window.KPIsPage = KPIsPage;
 window.SettingsPage = SettingsPage;
 window.ForgotPasswordPage = ForgotPasswordPage;

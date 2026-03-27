@@ -81,6 +81,7 @@ const Layout = {
             '/departamentos': 'departments',
             '/departments': 'departments',
             '/politica-empresa': 'company-policy',
+            '/identidade': 'company-identity',
             '/configuracoes': 'settings',
             '/settings': 'settings',
             '/esqueci-senha': 'forgot-password',
@@ -113,6 +114,7 @@ const Layout = {
             'strategic-objectives': '/objetivos-estrategicos',
             'kpis': '/kpis',
             'company-policy': '/politica-empresa',
+            'company-identity': '/identidade',
             'objectives': '/objetivos',
             'approval': '/approval',
             'users': '/usuarios',
@@ -311,6 +313,12 @@ const Layout = {
                             </svg>
                             <span>Política da Empresa</span>
                         </a>
+                        <a class="nav-item" data-page="company-identity" title="Identidade Organizacional">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                            </svg>
+                            <span>Identidade Organizacional</span>
+                        </a>
                     </div>
                     ` : ''}
                 </nav>
@@ -441,6 +449,7 @@ const Layout = {
             users: 'Gestão de Usuários',
             departments: 'Gestão de Departamentos',
             'company-policy': 'Política da Empresa',
+            'company-identity': 'Identidade Organizacional',
             settings: 'Configurações',
             'problem-tree': 'Árvore de Problemas',
             'swot-matrix': 'Matriz SWOT',
@@ -467,6 +476,7 @@ const Layout = {
             users: 'Gerencie os usuários do sistema',
             departments: 'Gerencie os departamentos da empresa',
             'company-policy': 'Defina a política de gestão de resultados da empresa',
+            'company-identity': 'Missão, visão e valores da empresa',
             settings: 'Altere sua senha de acesso ao sistema',
             'problem-tree': 'Análise sistêmica de problemas com post-its',
             'swot-matrix': 'Forças, fraquezas, oportunidades e ameaças',
@@ -621,6 +631,9 @@ const Layout = {
                     break;
                 case 'company-policy':
                     CompanyPolicyPage.render();
+                    break;
+                case 'company-identity':
+                    CompanyIdentityPage.render();
                     break;
                 case 'settings':
                     SettingsPage.render();

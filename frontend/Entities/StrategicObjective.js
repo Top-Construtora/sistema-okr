@@ -12,8 +12,12 @@ class StrategicObjective {
         this.fonte_coleta = data.fonte_coleta || null;
         this.frequencia_medicao = data.frequencia_medicao || null;
         this.responsavel_departamento_ids = data.responsavel_departamento_ids || [];
+        this.responsavel_usuario_id = data.responsavel_usuario_id || null;
+        this.politica_qualidade_ids = data.politica_qualidade_ids || [];
         this.cycles = data.cycles || null;
         this.sub_metrics = data.sub_metrics || [];
+        this.satisfaction_external = data.satisfaction_external || [];
+        this.satisfaction_internal = data.satisfaction_internal || [];
         this.created_at = data.created_at || null;
         this.updated_at = data.updated_at || null;
     }
@@ -60,8 +64,14 @@ class StrategicObjective {
             if (error) throw error;
             if (!data) return null;
 
-            const subMetrics = await StrategicSubMetric.getByObjectiveId(id);
+            const [subMetrics, satisfactionExternal, satisfactionInternal] = await Promise.all([
+                StrategicSubMetric.getByObjectiveId(id),
+                StrategicSubMetric.getByObjectiveIdAndType(id, 'satisfaction_external'),
+                StrategicSubMetric.getByObjectiveIdAndType(id, 'satisfaction_internal')
+            ]);
             data.sub_metrics = subMetrics;
+            data.satisfaction_external = satisfactionExternal;
+            data.satisfaction_internal = satisfactionInternal;
             return new StrategicObjective(data);
         } catch (error) {
             console.error('Erro ao buscar objetivo com sub-métricas:', error);

@@ -20,15 +20,41 @@ class StrategicSubMetric {
         this.unit = data.unit || 'R$';
         this.metric_mode = data.metric_mode || 'normal';
         this.position = data.position || 0;
+        this.indicadores = data.indicadores || null;
+        this.fonte_coleta = data.fonte_coleta || null;
+        this.responsavel_ids = data.responsavel_ids || [];
+        this.frequencia = data.frequencia || null;
+        this.meta_texto = data.meta_texto || null;
+        this.target_date = data.target_date || null;
+        this.conclusion_date = data.conclusion_date || null;
         this.created_at = data.created_at || null;
         this.updated_at = data.updated_at || null;
         // Propriedades para métricas auto-calculadas
         this._okr_count = data._okr_count || 0;
         this._is_auto = data._is_auto || false;
+        this.sub_metric_type = data.sub_metric_type || null;
+    }
+
+    get dateStatus() {
+        if (this.unit !== 'data') return null;
+        const today = new Date().toISOString().split('T')[0];
+        if (!this.target_date) return { label: 'Sem prazo', color: '#6b7280' };
+        if (this.conclusion_date) {
+            if (this.conclusion_date <= this.target_date) return { label: 'Concluído no prazo', color: '#10b981' };
+            return { label: 'Concluído com atraso', color: '#ef4444' };
+        }
+        if (today <= this.target_date) return { label: 'Pendente', color: '#f59e0b' };
+        return { label: 'Atrasado', color: '#ef4444' };
+    }
+
+    static formatDate(dateStr) {
+        if (!dateStr) return '—';
+        const [year, month, day] = dateStr.split('-');
+        return `${day}/${month}/${year}`;
     }
 
     get progress() {
-        if (this.unit === 'texto') return null;
+        if (this.unit === 'texto' || this.unit === 'data') return null;
         if (!this.target_value || this.target_value === 0) return 0;
 
         // Modo inverso: 100% quando current = 0, 0% quando current >= target
@@ -72,6 +98,24 @@ class StrategicSubMetric {
         return String(Number(value || 0));
     }
 
+    static async getAllOperationalKpis() {
+        try {
+            const { data, error } = await supabaseClient
+                .from('strategic_sub_metrics')
+                .select('*, strategic_objectives(id, text, category)')
+                .eq('sub_metric_type', 'operational_kpi')
+                .order('objective_id', { ascending: true })
+                .order('position', { ascending: true })
+                .order('id', { ascending: true });
+
+            if (error) throw error;
+            return (data || []).map(d => new StrategicSubMetric(d));
+        } catch (error) {
+            console.error('Erro ao buscar KPIs operacionais:', error);
+            return [];
+        }
+    }
+
     static async getByObjectiveId(objectiveId) {
         try {
             const { data, error } = await supabaseClient
@@ -89,6 +133,24 @@ class StrategicSubMetric {
         }
     }
 
+    static async getByObjectiveIdAndType(objectiveId, type) {
+        try {
+            const { data, error } = await supabaseClient
+                .from('strategic_sub_metrics')
+                .select('*')
+                .eq('objective_id', objectiveId)
+                .eq('sub_metric_type', type)
+                .order('position', { ascending: true })
+                .order('id', { ascending: true });
+
+            if (error) throw error;
+            return (data || []).map(d => new StrategicSubMetric(d));
+        } catch (error) {
+            console.error('Erro ao buscar sub-métricas por tipo:', error);
+            return [];
+        }
+    }
+
     static async create(data) {
         try {
             const { data: created, error } = await supabaseClient
@@ -99,7 +161,15 @@ class StrategicSubMetric {
                     target_value: data.target_value || 0,
                     current_value: data.current_value || 0,
                     unit: data.unit || 'R$',
-                    position: data.position || 0
+                    position: data.position || 0,
+                    indicadores: data.indicadores || null,
+                    fonte_coleta: data.fonte_coleta || null,
+                    responsavel_ids: data.responsavel_ids || [],
+                    frequencia: data.frequencia || null,
+                    meta_texto: data.meta_texto || null,
+                    sub_metric_type: data.sub_metric_type || null,
+                    target_date: data.target_date || null,
+                    conclusion_date: data.conclusion_date || null
                 }])
                 .select()
                 .single();
@@ -120,6 +190,14 @@ class StrategicSubMetric {
             if (data.current_value !== undefined) updateData.current_value = data.current_value;
             if (data.unit !== undefined) updateData.unit = data.unit;
             if (data.position !== undefined) updateData.position = data.position;
+            if (data.indicadores !== undefined) updateData.indicadores = data.indicadores;
+            if (data.fonte_coleta !== undefined) updateData.fonte_coleta = data.fonte_coleta;
+            if (data.responsavel_ids !== undefined) updateData.responsavel_ids = data.responsavel_ids;
+            if (data.frequencia !== undefined) updateData.frequencia = data.frequencia || null;
+            if (data.meta_texto !== undefined) updateData.meta_texto = data.meta_texto || null;
+            if (data.sub_metric_type !== undefined) updateData.sub_metric_type = data.sub_metric_type;
+            if (data.target_date !== undefined) updateData.target_date = data.target_date || null;
+            if (data.conclusion_date !== undefined) updateData.conclusion_date = data.conclusion_date || null;
 
             const { data: updated, error } = await supabaseClient
                 .from('strategic_sub_metrics')

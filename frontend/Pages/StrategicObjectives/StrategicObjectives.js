@@ -275,7 +275,7 @@ const StrategicObjectivesPage = {
 
         modal.innerHTML = `
             <div class="modal-overlay-gio" onclick="StrategicObjectivesPage.closeModal()"></div>
-            <div class="modal-content-gio" style="max-width:600px;">
+            <div class="modal-content-gio" style="max-width:96vw;width:1100px;">
                 <div class="modal-header-gio">
                     <div>
                         <h3>${this.currentObjective ? 'Editar' : 'Novo'} Objetivo Estratégico</h3>
@@ -287,52 +287,32 @@ const StrategicObjectivesPage = {
                         </svg>
                     </button>
                 </div>
-                <div class="modal-body-gio">
-                    <div class="form-group-gio">
-                        <label class="form-label-gio">Ciclo *</label>
-                        <select id="strat-obj-cycle" class="form-control-gio">
-                            <option value="">Selecione um ciclo</option>
-                            ${this.cycles.map(c => `
-                                <option value="${c.id}" ${currentCycleId == c.id ? 'selected' : ''}>
-                                    ${c.nome}${c.isCurrentlyActive() ? ' (Atual)' : ''}${!c.ativo ? ' (Inativo)' : ''}
-                                </option>
-                            `).join('')}
-                        </select>
-                    </div>
-                    <div class="form-group-gio">
-                        <label class="form-label-gio">Categoria *</label>
-                        <select id="strat-obj-category" class="form-control-gio">
-                            <option value="">Selecione uma categoria</option>
-                            <option value="Construtora" ${this.currentObjective?.category === 'Construtora' ? 'selected' : ''}>Construtora</option>
-                            <option value="Incorporadora" ${this.currentObjective?.category === 'Incorporadora' ? 'selected' : ''}>Incorporadora</option>
-                            <option value="Melhoria Contínua" ${this.currentObjective?.category === 'Melhoria Contínua' ? 'selected' : ''}>Melhoria Contínua</option>
-                            <option value="Obra" ${this.currentObjective?.category === 'Obra' ? 'selected' : ''}>Obra</option>
-                            <option value="Empreendimento Econômico" ${this.currentObjective?.category === 'Empreendimento Econômico' ? 'selected' : ''}>Empreendimento Econômico</option>
-                        </select>
-                    </div>
-                    <div class="form-group-gio">
-                        <label class="form-label-gio">Texto do Objetivo *</label>
-                        <textarea id="strat-obj-text" class="form-control-gio" rows="3"
-                            placeholder="Ex: Executar R$ 120M em obras residenciais">${this.currentObjective ? this.currentObjective.text : ''}</textarea>
-                    </div>
-                    <div class="form-group-gio">
-                        <label class="form-label-gio">Meta</label>
-                        <textarea id="strat-obj-meta" class="form-control-gio" rows="2"
-                            placeholder="Ex: < 5%, 75%, > 10%, etc.">${this.currentObjective ? this.currentObjective.meta || '' : ''}</textarea>
-                    </div>
-                    <hr style="border:none;border-top:1px solid #E5E7EB;margin:8px 0;">
-                    <div class="form-group-gio">
-                        <label class="form-label-gio">Indicadores</label>
-                        <textarea id="strat-obj-indicadores" class="form-control-gio" rows="2"
-                            placeholder="Ex: Faturamento mensal, NPS, Taxa de conversão...">${this.currentObjective?.indicadores || ''}</textarea>
-                    </div>
-                    <div class="form-group-gio">
-                        <label class="form-label-gio">Fonte de Coleta</label>
-                        <textarea id="strat-obj-fonte" class="form-control-gio" rows="2"
-                            placeholder="Ex: Sistema ERP, Planilha de controle...">${this.currentObjective?.fonte_coleta || ''}</textarea>
-                    </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                        <div class="form-group-gio">
+                <div class="modal-body-gio" style="display:flex;flex-direction:column;gap:16px;">
+                    <!-- Linha 1: Ciclo | Categoria | Frequência -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+                        <div class="form-group-gio" style="margin:0;">
+                            <label class="form-label-gio">Ciclo *</label>
+                            <select id="strat-obj-cycle" class="form-control-gio">
+                                <option value="">Selecione um ciclo</option>
+                                ${this.cycles.map(c => `
+                                    <option value="${c.id}" ${currentCycleId == c.id ? 'selected' : ''}>
+                                        ${c.nome}${c.isCurrentlyActive() ? ' (Atual)' : ''}${!c.ativo ? ' (Inativo)' : ''}
+                                    </option>
+                                `).join('')}
+                            </select>
+                        </div>
+                        <div class="form-group-gio" style="margin:0;">
+                            <label class="form-label-gio">Categoria *</label>
+                            <select id="strat-obj-category" class="form-control-gio">
+                                <option value="">Selecione uma categoria</option>
+                                <option value="Construtora" ${this.currentObjective?.category === 'Construtora' ? 'selected' : ''}>Construtora</option>
+                                <option value="Incorporadora" ${this.currentObjective?.category === 'Incorporadora' ? 'selected' : ''}>Incorporadora</option>
+                                <option value="Melhoria Contínua" ${this.currentObjective?.category === 'Melhoria Contínua' ? 'selected' : ''}>Melhoria Contínua</option>
+                                <option value="Obra" ${this.currentObjective?.category === 'Obra' ? 'selected' : ''}>Obra</option>
+                                <option value="Empreendimento Econômico" ${this.currentObjective?.category === 'Empreendimento Econômico' ? 'selected' : ''}>Empreendimento Econômico</option>
+                            </select>
+                        </div>
+                        <div class="form-group-gio" style="margin:0;">
                             <label class="form-label-gio">Frequência de Medição</label>
                             <select id="strat-obj-frequencia" class="form-control-gio">
                                 <option value="">Selecione</option>
@@ -343,17 +323,48 @@ const StrategicObjectivesPage = {
                                 <option value="anual" ${this.currentObjective?.frequencia_medicao === 'anual' ? 'selected' : ''}>Anual</option>
                             </select>
                         </div>
-                        <div class="form-group-gio">
-                            <label class="form-label-gio">Responsáveis</label>
-                            <div class="sod-dept-checklist">
-                                ${departments.map(d => `
-                                    <label class="sod-dept-check-item">
-                                        <input type="checkbox" name="strat-obj-depts" value="${d.id}" ${(this.currentObjective?.responsavel_departamento_ids || []).includes(d.id) ? 'checked' : ''}>
-                                        <span class="sod-dept-check-label">${d.nome}</span>
-                                    </label>
-                                `).join('')}
-                                ${departments.length === 0 ? '<span style="color:#9ca3af;font-size:13px;">Nenhum departamento cadastrado</span>' : ''}
-                            </div>
+                    </div>
+                    <!-- Linha 2: Texto do Objetivo | Meta -->
+                    <div style="display:grid;grid-template-columns:3fr 2fr;gap:16px;">
+                        <div class="form-group-gio" style="margin:0;">
+                            <label class="form-label-gio">Texto do Objetivo *</label>
+                            <textarea id="strat-obj-text" class="form-control-gio" rows="4"
+                                placeholder="Ex: Executar R$ 120M em obras residenciais">${this.currentObjective ? this.currentObjective.text : ''}</textarea>
+                        </div>
+                        <div class="form-group-gio" style="margin:0;">
+                            <label class="form-label-gio">Meta</label>
+                            <textarea id="strat-obj-meta" class="form-control-gio" rows="4"
+                                placeholder="Ex: < 5%, 75%, > 10%, etc.">${this.currentObjective ? this.currentObjective.meta || '' : ''}</textarea>
+                        </div>
+                    </div>
+                    <!-- Linha 3: Indicadores | Fonte de Coleta -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                        <div class="form-group-gio" style="margin:0;">
+                            <label class="form-label-gio">Indicadores</label>
+                            <textarea id="strat-obj-indicadores" class="form-control-gio" rows="3"
+                                placeholder="Ex: Faturamento mensal, NPS, Taxa de conversão...">${this.currentObjective?.indicadores || ''}</textarea>
+                        </div>
+                        <div class="form-group-gio" style="margin:0;">
+                            <label class="form-label-gio">Fonte de Coleta</label>
+                            <textarea id="strat-obj-fonte" class="form-control-gio" rows="3"
+                                placeholder="Ex: Sistema ERP, Planilha de controle...">${this.currentObjective?.fonte_coleta || ''}</textarea>
+                        </div>
+                    </div>
+                    <!-- Linha 4: Responsáveis -->
+                    <div class="form-group-gio" style="margin:0;">
+                        <label class="form-label-gio">Responsáveis</label>
+                        <div class="so-modal-dept-grid">
+                            ${departments.map(d => {
+                                const checked = (this.currentObjective?.responsavel_departamento_ids || []).includes(d.id);
+                                return `
+                                <label class="so-modal-dept-chip${checked ? ' active' : ''}">
+                                    <input type="checkbox" name="strat-obj-depts" value="${d.id}" ${checked ? 'checked' : ''}
+                                        onchange="this.closest('label').classList.toggle('active', this.checked)">
+                                    <svg class="so-modal-dept-chip-check" width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                    ${d.nome}
+                                </label>`;
+                            }).join('')}
+                            ${departments.length === 0 ? '<span style="color:#9ca3af;font-size:13px;">Nenhum departamento cadastrado</span>' : ''}
                         </div>
                     </div>
                     <div id="strat-obj-error" class="error-message-gio" style="display:none;"></div>
@@ -713,6 +724,48 @@ const StrategicObjectivesPage = {
                 .so-obj-card-actions { opacity: 1; }
                 .so-obj-card { border-radius: 18px; }
             }
+
+            /* Chips de departamento no modal */
+            .so-modal-dept-grid {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                padding: 12px;
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                background: #f9fafb;
+            }
+            .so-modal-dept-chip {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 6px 12px;
+                border: 1.5px solid #e2e8f0;
+                border-radius: 20px;
+                background: white;
+                font-size: 13px;
+                font-weight: 500;
+                color: #475569;
+                cursor: pointer;
+                user-select: none;
+                transition: all 0.15s;
+            }
+            .so-modal-dept-chip:hover {
+                border-color: #94a3b8;
+                background: #f8fafc;
+            }
+            .so-modal-dept-chip input[type="checkbox"] { display: none; }
+            .so-modal-dept-chip-check {
+                display: none;
+                color: #1e3a5f;
+            }
+            .so-modal-dept-chip.active {
+                border-color: #1e3a5f;
+                background: rgba(30,58,95,0.06);
+                color: #1e3a5f;
+                font-weight: 600;
+            }
+            .so-modal-dept-chip.active .so-modal-dept-chip-check { display: block; }
         `;
         document.head.appendChild(style);
     }
