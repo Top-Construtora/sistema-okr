@@ -160,7 +160,7 @@ const StrategicObjectivesPage = {
                     const avgProgress = metricsWithOkrs.length > 0
                         ? Math.round(metricsWithOkrs.reduce((sum, m) => sum + m.current_value, 0) / metricsWithOkrs.length)
                         : 0;
-                    const barColor = avgProgress >= 70 ? '#10b981' : (avgProgress >= 40 ? '#f59e0b' : '#ef4444');
+                    const barColor = avgProgress >= 70 ? '#1e6076' : (avgProgress >= 40 ? '#2a8fad' : '#5bb8ce');
 
                     metricsHTML = `
                         <div class="so-card-metrics">
@@ -195,9 +195,9 @@ const StrategicObjectivesPage = {
                                 if (metricMode === 'inverse') {
                                     const current = m.current_value;
                                     const target = m.target_value;
-                                    barColor = current <= target * 0.7 ? '#10b981' : (current <= target ? '#f59e0b' : '#ef4444');
+                                    barColor = current <= target * 0.7 ? '#1e6076' : (current <= target ? '#2a8fad' : '#5bb8ce');
                                 } else {
-                                    barColor = progress >= 70 ? '#10b981' : (progress >= 40 ? '#f59e0b' : '#ef4444');
+                                    barColor = progress >= 70 ? '#1e6076' : (progress >= 40 ? '#2a8fad' : '#5bb8ce');
                                 }
 
                                 const valueLabel = `${StrategicSubMetric.formatValue(m.current_value, m.unit)} / ${StrategicSubMetric.formatValue(m.target_value, m.unit)}`;

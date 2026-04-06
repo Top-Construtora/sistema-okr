@@ -473,7 +473,7 @@ const StrategicObjectiveDetailPage = {
         // Auto OKR mode - departamento com média de progresso
         if (isAuto) {
             const okrCount = metric._okr_count || 0;
-            const barColor = progress >= 70 ? '#10b981' : (progress >= 40 ? '#f59e0b' : '#ef4444');
+            const barColor = progress >= 70 ? '#1e6076' : (progress >= 40 ? '#2a8fad' : '#5bb8ce');
 
             return `
                 <div class="sod-metric-row">
@@ -501,7 +501,7 @@ const StrategicObjectiveDetailPage = {
             const current = metric.current_value;
             const target = metric.target_value;
             // Cor: verde se abaixo de 70% da meta, amarelo se entre 70-100%, vermelho se acima
-            const barColor = current <= target * 0.7 ? '#10b981' : (current <= target ? '#f59e0b' : '#ef4444');
+            const barColor = current <= target * 0.7 ? '#1e6076' : (current <= target ? '#2a8fad' : '#5bb8ce');
             const inverseProgress = target > 0 ? Math.max(0, (1 - current / target) * 100) : 0;
 
             return `
@@ -578,7 +578,7 @@ const StrategicObjectiveDetailPage = {
 
         const rowsHTML = metrics.map(m => {
             const progress = m.target_value > 0 ? Math.min((m.current_value / m.target_value) * 100, 100) : 0;
-            const barColor = progress >= 70 ? '#10b981' : (progress >= 40 ? '#f59e0b' : '#ef4444');
+            const barColor = progress >= 70 ? '#1e6076' : (progress >= 40 ? '#2a8fad' : '#5bb8ce');
             return `
                 <div class="sod-metric-row">
                     <div class="sod-metric-info">
