@@ -17,7 +17,6 @@ const CATEGORY_COLORS = {
     'Incorporadora':           { bg: 'rgba(16,185,129,0.1)',   color: '#10b981' },
     'Melhoria Contínua':       { bg: 'rgba(245,158,11,0.1)',   color: '#f59e0b' },
     'Obra':                    { bg: 'rgba(139,92,246,0.1)',   color: '#8b5cf6' },
-    'Empreendimento Econômico':{ bg: 'rgba(239,68,68,0.1)',    color: '#ef4444' }
 };
 
 const KPIsPage = {
@@ -38,13 +37,16 @@ const KPIsPage = {
 
         this.addStyles();
 
-        const [kpis, objectives, departments] = await Promise.all([
+        const [kpis, allObjectives, departments] = await Promise.all([
             StrategicSubMetric.getAllOperationalKpis(),
             StrategicObjective.getAll(),
             Department.getActive()
         ]);
 
-        this.kpis = kpis;
+        const objectives = StrategicObjective.filterByVisibility(allObjectives);
+        const visibleObjIds = new Set(objectives.map(o => o.id));
+
+        this.kpis = kpis.filter(k => visibleObjIds.has(k.objective_id));
         this.objectives = objectives;
         this.departments = departments;
 

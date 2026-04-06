@@ -38,6 +38,10 @@ const StrategicObjectiveDetailPage = {
 
         this.objective = await StrategicObjective.getByIdWithSubMetrics(objectiveId);
 
+        if (this.objective && !StrategicObjective.isVisibleToCurrentUser(this.objective)) {
+            this.objective = null;
+        }
+
         if (!this.objective) {
             content.innerHTML = `
                 <div class="dashboard-gio">

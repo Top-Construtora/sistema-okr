@@ -1,5 +1,15 @@
 import { supabaseClient } from '../services/supabase.js';
 import { StrategicSubMetric } from './StrategicSubMetric.js';
+import { AuthService } from '../services/auth.js';
+
+// Regras de visibilidade por categoria de objetivo estratégico
+const CATEGORY_VISIBILITY = {
+    'Empreendimento Econômico': { hidden: true },
+    'Melhoria Contínua':       { visibleToAll: true },
+    'Construtora':             { departments: ['Planejamento e Controle'] },
+    'Obra':                    { departments: ['Planejamento e Controle'] },
+    'Incorporadora':           { departments: ['Incorporação'] },
+};
 
 class StrategicObjective {
     constructor(data = {}) {
@@ -78,6 +88,43 @@ class StrategicObjective {
             return null;
         }
     }
+
+    /**
+     * Filtra objetivos de acordo com regras de visibilidade por departamento do usuário.
+     * Admins e consultores veem tudo (exceto categorias hidden).
+     */
+    static filterByVisibility(objectives) {
+        const user = AuthService.getCurrentUser();
+        const isPrivileged = user && (user.tipo === 'admin' || user.tipo === 'consultor');
+        const userDeptNames = (user?.departments || []).map(d => d.nome);
+
+        return objectives.filter(obj => {
+            const category = obj.category;
+            const rule = CATEGORY_VISIBILITY[category];
+
+            // Sem regra definida: visível para todos
+            if (!rule) return true;
+
+            // Categoria oculta para todos
+            if (rule.hidden) return false;
+
+            // Visível para todos
+            if (rule.visibleToAll) return true;
+
+            // Admins/consultores veem tudo (exceto hidden, já filtrado acima)
+            if (isPrivileged) return true;
+
+            // Verifica se o usuário pertence a algum departamento permitido
+            return rule.departments.some(dept => userDeptNames.includes(dept));
+        });
+    }
+
+    /**
+     * Verifica se um objetivo individual é visível para o usuário atual.
+     */
+    static isVisibleToCurrentUser(objective) {
+        return this.filterByVisibility([objective]).length > 0;
+    }
 }
 
-export { StrategicObjective };
+export { StrategicObjective, CATEGORY_VISIBILITY };

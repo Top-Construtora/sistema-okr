@@ -2,6 +2,7 @@ import { supabaseClient } from '../../services/supabase.js';
 import { AuthService } from '../../services/auth.js';
 import { Cycle } from '../../Entities/Cycle.js';
 import { Department } from '../../Entities/Department.js';
+import { StrategicObjective } from '../../Entities/StrategicObjective.js';
 import { StrategicSubMetric, CATEGORY_METRIC_CONFIG } from '../../Entities/StrategicSubMetric.js';
 
 // Página de Gestão de Objetivos Estratégicos (Alto Nível)
@@ -91,7 +92,7 @@ const StrategicObjectivesPage = {
     },
 
     applyFilters(objectives) {
-        let filtered = objectives;
+        let filtered = StrategicObjective.filterByVisibility(objectives);
         if (this.currentCycleFilter !== 'all') {
             filtered = filtered.filter(o => String(o.cycle_id) === this.currentCycleFilter);
         }
@@ -309,7 +310,6 @@ const StrategicObjectivesPage = {
                                 <option value="Incorporadora" ${this.currentObjective?.category === 'Incorporadora' ? 'selected' : ''}>Incorporadora</option>
                                 <option value="Melhoria Contínua" ${this.currentObjective?.category === 'Melhoria Contínua' ? 'selected' : ''}>Melhoria Contínua</option>
                                 <option value="Obra" ${this.currentObjective?.category === 'Obra' ? 'selected' : ''}>Obra</option>
-                                <option value="Empreendimento Econômico" ${this.currentObjective?.category === 'Empreendimento Econômico' ? 'selected' : ''}>Empreendimento Econômico</option>
                             </select>
                         </div>
                         <div class="form-group-gio" style="margin:0;">

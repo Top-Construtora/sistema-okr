@@ -14,11 +14,12 @@ const HomePage = {
         const user = AuthService.getCurrentUser();
         const isAdmin = AuthService.isAdmin();
 
-        const [strategicObjs, cycles, policies] = await Promise.all([
+        const [allStrategicObjs, cycles, policies] = await Promise.all([
             StrategicObjective.getAll(),
             Cycle.getAll(),
             CompanyPolicy.getAll()
         ]);
+        const strategicObjs = StrategicObjective.filterByVisibility(allStrategicObjs);
 
         const activeCycle = cycles.find(c => c.ativo);
 
