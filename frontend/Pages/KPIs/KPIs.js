@@ -27,8 +27,6 @@ const KPIsPage = {
 
     async render() {
         const content = document.getElementById('content');
-        const isAdmin = AuthService.isAdmin();
-
         content.innerHTML = `
             <div class="dashboard-gio">
                 <div class="widget-skeleton" style="height:200px;"></div>
@@ -50,7 +48,7 @@ const KPIsPage = {
         this.objectives = objectives;
         this.departments = departments;
 
-        this.renderPage(isAdmin);
+        this.renderPage(true);
     },
 
     renderPage(isAdmin) {
