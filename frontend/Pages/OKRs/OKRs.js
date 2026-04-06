@@ -1030,11 +1030,11 @@ const OKRsPage = {
 
             modal.innerHTML = `
                 <div class="modal-overlay" onclick="OKRsPage.closeModal()"></div>
-                <div class="modal-content" style="max-width:600px;">
+                <div class="modal-content">
                     <div class="modal-header">
                         <div>
-                            <h3 style="margin:0;color:var(--top-blue);font-size:20px;">${this.currentOKR ? 'Editar' : 'Novo'} OKR</h3>
-                            <p style="margin:4px 0 0;color:var(--text-muted);font-size:13px;">
+                            <h3>${this.currentOKR ? 'Editar' : 'Novo'} OKR</h3>
+                            <p>
                                 ${this.currentOKR ? 'Atualize as informações do OKR' : 'Defina um novo OKR. Você poderá adicionar Key Results depois.'}
                             </p>
                         </div>
@@ -1378,7 +1378,7 @@ const OKRsPage = {
 
             modal.innerHTML = `
                 <div class="modal-overlay" onclick="OKRsPage.closeKRModal()"></div>
-                <div class="modal-content" style="max-width:700px;">
+                <div class="modal-content">
                     <div class="modal-header">
                         <h3>Novo Key Result</h3>
                         <button class="modal-close" onclick="OKRsPage.closeKRModal()">&times;</button>
@@ -1455,7 +1455,7 @@ const OKRsPage = {
 
         modal.innerHTML = `
             <div class="modal-overlay" onclick="OKRsPage.closeKRModal()"></div>
-            <div class="modal-content" style="max-width:700px;">
+            <div class="modal-content">
                 <div class="modal-header">
                     <h3>Editar Key Result</h3>
                     <button class="modal-close" onclick="OKRsPage.closeKRModal()">&times;</button>
@@ -2122,7 +2122,7 @@ const OKRsPage = {
 
         modal.innerHTML = `
             <div class="modal-overlay" onclick="OKRsPage.closeInitiativeNoteModal()"></div>
-            <div class="modal-content" style="max-width:500px;">
+            <div class="modal-content">
                 <div class="modal-header">
                     <h3>Adicionar Nota</h3>
                     <button class="modal-close" onclick="OKRsPage.closeInitiativeNoteModal()">&times;</button>
@@ -2224,7 +2224,7 @@ const OKRsPage = {
 
         modal.innerHTML = `
             <div class="modal-overlay" onclick="OKRsPage.closeInitiativeModal()"></div>
-            <div class="modal-content" style="max-width:600px;">
+            <div class="modal-content">
                 <div class="modal-header">
                     <h3>${initiativeId ? 'Editar' : 'Nova'} Iniciativa</h3>
                     <button class="modal-close" onclick="OKRsPage.closeInitiativeModal()">&times;</button>

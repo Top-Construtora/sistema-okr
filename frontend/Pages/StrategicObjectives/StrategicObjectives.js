@@ -276,7 +276,7 @@ const StrategicObjectivesPage = {
 
         modal.innerHTML = `
             <div class="modal-overlay-gio" onclick="StrategicObjectivesPage.closeModal()"></div>
-            <div class="modal-content-gio" style="max-width:96vw;width:1100px;">
+            <div class="modal-content-gio">
                 <div class="modal-header-gio">
                     <div>
                         <h3>${this.currentObjective ? 'Editar' : 'Novo'} Objetivo Estratégico</h3>

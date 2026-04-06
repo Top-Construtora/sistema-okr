@@ -90,6 +90,10 @@ class StrategicSubMetric {
             }
             return `R$ ${num.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
         }
+        if (unit === 'un') {
+            const num = Number(value || 0);
+            return `${num.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} un`;
+        }
         return String(value || 0);
     }
 

@@ -81,6 +81,8 @@ const StrategicObjectiveDetailPage = {
         const content = document.getElementById('content');
         const obj = this.objective;
         const isAdmin = AuthService.isAdmin();
+        // canEdit: admins always can; non-admins can edit objectives visible to their department
+        const canEdit = isAdmin || StrategicObjective.isVisibleToCurrentUser(obj);
         const categoryConfig = CATEGORY_METRIC_CONFIG[obj.category] || { unit: 'R$', format: 'currency', metric_mode: 'normal' };
         const metricMode = categoryConfig.metric_mode || 'normal';
         const cycleName = obj.cycles ? obj.cycles.nome : 'Sem ciclo';
@@ -172,7 +174,7 @@ const StrategicObjectiveDetailPage = {
             }
         }
 
-        const metricsHTML = subMetrics.map(m => this.renderMetricRow(m, categoryConfig, colors, isAdmin, metricMode)).join('');
+        const metricsHTML = subMetrics.map(m => this.renderMetricRow(m, categoryConfig, colors, canEdit, metricMode)).join('');
 
         // Satisfaction sections (only for Melhoria Contínua)
         let satisfactionHTML = '';
@@ -180,13 +182,13 @@ const StrategicObjectiveDetailPage = {
             const satExt = obj.satisfaction_external || [];
             const satInt = obj.satisfaction_internal || [];
             satisfactionHTML = `
-                ${this.renderSatisfactionSection('satisfaction_external', satExt, isAdmin, '#3b82f6', 'Satisfação de Clientes Externos')}
-                ${this.renderSatisfactionSection('satisfaction_internal', satInt, isAdmin, '#10b981', 'Satisfação de Clientes Internos')}
+                ${this.renderSatisfactionSection('satisfaction_external', satExt, canEdit, '#3b82f6', 'Satisfação de Clientes Externos')}
+                ${this.renderSatisfactionSection('satisfaction_internal', satInt, canEdit, '#10b981', 'Satisfação de Clientes Internos')}
             `;
         }
 
         // Determina se mostra botão de nova sub-métrica (não para auto_okr)
-        const showAddMetricBtn = isAdmin && metricMode !== 'auto_okr';
+        const showAddMetricBtn = canEdit && metricMode !== 'auto_okr';
 
         // Determina título da seção de métricas
         const metricsSectionTitle = metricMode === 'auto_okr' ? 'Progresso por Departamento' : 'Sub-Métricas';
@@ -200,10 +202,10 @@ const StrategicObjectiveDetailPage = {
             : 'Adicione sub-métricas para acompanhar o progresso deste objetivo';
 
         // KPI Operacionais section
-        const kpiSectionHTML = this.renderKpiSection(kpiMetrics, isAdmin);
+        const kpiSectionHTML = this.renderKpiSection(kpiMetrics, canEdit);
 
         // Timeline HTML
-        const timelineHTML = this.renderTimeline(isAdmin);
+        const timelineHTML = this.renderTimeline(canEdit);
 
         // Política da Qualidade section
         const politicaHTML = this.renderPoliticaSection(obj, isAdmin);
@@ -1060,7 +1062,7 @@ const StrategicObjectiveDetailPage = {
 
         modal.innerHTML = `
             <div class="modal-overlay-gio" onclick="StrategicObjectiveDetailPage.closeTimelineModal()"></div>
-            <div class="modal-content-gio" style="max-width:520px;">
+            <div class="modal-content-gio">
                 <div class="modal-header-gio">
                     <div>
                         <h3>Novo Registro na Timeline</h3>
@@ -1329,7 +1331,7 @@ const StrategicObjectiveDetailPage = {
 
         modal.innerHTML = `
             <div class="modal-overlay-gio" onclick="StrategicObjectiveDetailPage.closeTimelineModal()"></div>
-            <div class="modal-content-gio" style="max-width:520px;">
+            <div class="modal-content-gio">
                 <div class="modal-header-gio">
                     <div>
                         <h3>Editar Registro</h3>
@@ -1488,8 +1490,8 @@ const StrategicObjectiveDetailPage = {
     // =====================================================
 
     _getMetricUnitOptions(categoryUnit, selectedUnit) {
-        const unitLabels = { 'R$': 'R$ (Monetário)', '%': '% (Percentual)', 'texto': 'Texto (Qualitativo)', 'data': 'Data (Prazo)' };
-        const options = [categoryUnit, 'data'].filter((v, i, a) => a.indexOf(v) === i);
+        const unitLabels = { 'R$': 'R$ (Monetário)', '%': '% (Percentual)', 'texto': 'Texto (Qualitativo)', 'data': 'Data (Prazo)', 'un': 'Unidade (Quantidade)' };
+        const options = [categoryUnit, 'un', 'data'].filter((v, i, a) => a.indexOf(v) === i);
         return options.map(u => `<option value="${u}"${u === selectedUnit ? ' selected' : ''}>${unitLabels[u] || u}</option>`).join('');
     },
 
@@ -1504,39 +1506,45 @@ const StrategicObjectiveDetailPage = {
             const targetVal = metric?.target_date || '';
             const currentVal = metric?.conclusion_date || '';
             return `
-                <div class="form-group-gio">
-                    <label class="form-label-gio">Data Limite (Prazo) *</label>
-                    <input type="date" id="sod-metric-target-date" class="form-control-gio" value="${targetVal}">
-                </div>
-                <div class="form-group-gio">
-                    <label class="form-label-gio">Data de Conclusão</label>
-                    <small style="color:#6b7280;font-size:11px;display:block;margin-bottom:6px;">Preencha quando a atividade for concluída</small>
-                    <input type="date" id="sod-metric-conclusion-date" class="form-control-gio" value="${currentVal}">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 20px;">
+                    <div class="form-group-gio">
+                        <label class="form-label-gio">Data Limite (Prazo) *</label>
+                        <input type="date" id="sod-metric-target-date" class="form-control-gio" value="${targetVal}">
+                    </div>
+                    <div class="form-group-gio">
+                        <label class="form-label-gio">Data de Conclusão</label>
+                        <small style="color:#6b7280;font-size:11px;display:block;margin-bottom:6px;">Preencha quando a atividade for concluída</small>
+                        <input type="date" id="sod-metric-conclusion-date" class="form-control-gio" value="${currentVal}">
+                    </div>
                 </div>
             `;
         }
 
-        const unitLabel = isText ? '' : selectedUnit;
+        const unitDisplayNames = { 'R$': 'R$', '%': '%', 'un': 'Unidades' };
+        const unitLabel = isText ? '' : (unitDisplayNames[selectedUnit] || selectedUnit);
         const targetLabel = isText ? 'Descrição da Meta' : (isInverse ? `Meta Máxima (${unitLabel})` : `Meta (${unitLabel})`);
         const currentLabel = isText ? 'Evidência / Registro' : `Valor Atual (${unitLabel})`;
         const targetVal = metric ? (isText ? (metric.target_value || '') : metric.target_value) : '';
+        const step = selectedUnit === 'un' ? '1' : 'any';
 
         return `
-            <div class="form-group-gio">
-                <label class="form-label-gio">${targetLabel}</label>
-                ${isInverse ? '<small style="color:#6b7280;font-size:11px;display:block;margin-bottom:6px;">O valor atual deve ficar ABAIXO desta meta</small>' : ''}
-                <input type="${isText ? 'text' : 'number'}" id="sod-metric-target" class="form-control-gio"
-                    placeholder="${isText ? 'Descreva a meta qualitativa' : '0'}"
-                    ${!isText ? 'min="0" step="any"' : ''}
-                    value="${targetVal}">
+            <div style="display:grid;grid-template-columns:1fr ${!metric && !isText ? '1fr' : ''};gap:0 20px;">
+                <div class="form-group-gio">
+                    <label class="form-label-gio">${targetLabel}</label>
+                    ${isInverse ? '<small style="color:#6b7280;font-size:11px;display:block;margin-bottom:6px;">O valor atual deve ficar ABAIXO desta meta</small>' : ''}
+                    <input type="${isText ? 'text' : 'number'}" id="sod-metric-target" class="form-control-gio"
+                        placeholder="${isText ? 'Descreva a meta qualitativa' : '0'}"
+                        ${!isText ? `min="0" step="${step}"` : ''}
+                        value="${targetVal}">
+                </div>
+                ${!metric ? `<div class="form-group-gio">
+                    <label class="form-label-gio">${currentLabel}</label>
+                    <input type="${isText ? 'text' : 'number'}" id="sod-metric-current" class="form-control-gio"
+                        placeholder="${isText ? 'Registre evidências ou observações' : '0'}"
+                        ${!isText ? `min="0" step="${step}"` : ''}
+                        value="">
+                </div>` : ''}
             </div>
-            ${!metric ? `<div class="form-group-gio">
-                <label class="form-label-gio">${currentLabel}</label>
-                <input type="${isText ? 'text' : 'number'}" id="sod-metric-current" class="form-control-gio"
-                    placeholder="${isText ? 'Registre evidências ou observações' : '0'}"
-                    ${!isText ? 'min="0" step="any"' : ''}
-                    value="">
-            </div>` : ''}
         `;
     },
 
@@ -1565,11 +1573,11 @@ const StrategicObjectiveDetailPage = {
 
         modal.innerHTML = `
             <div class="modal-overlay-gio" onclick="StrategicObjectiveDetailPage.closeMetricModal()"></div>
-            <div class="modal-content-gio" style="max-width:600px;">
+            <div class="modal-content-gio">
                 <div class="modal-header-gio">
                     <div>
                         <h3>${this.currentMetric ? 'Editar' : 'Nova'} Sub-Métrica</h3>
-                        <p>Objetivo: ${obj.text.substring(0, 60)}${obj.text.length > 60 ? '...' : ''}</p>
+                        <p>Objetivo: ${obj.text.substring(0, 90)}${obj.text.length > 90 ? '...' : ''}</p>
                     </div>
                     <button class="modal-close-gio" onclick="StrategicObjectiveDetailPage.closeMetricModal()">
                         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1578,29 +1586,31 @@ const StrategicObjectiveDetailPage = {
                     </button>
                 </div>
                 <div class="modal-body-gio">
-                    <div class="form-group-gio">
-                        <label class="form-label-gio">Nome *</label>
-                        <input type="text" id="sod-metric-name" class="form-control-gio"
-                            placeholder="Ex: Obras Residenciais"
-                            value="${this.currentMetric ? this.currentMetric.name : ''}">
-                    </div>
-                    <div class="form-group-gio">
-                        <label class="form-label-gio">Tipo de Medição</label>
-                        <select id="sod-metric-unit" class="form-control-gio"
-                            onchange="StrategicObjectiveDetailPage.onMetricUnitChange(this.value)">
-                            ${this._getMetricUnitOptions(categoryUnit, selectedUnit)}
-                        </select>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 20px;">
+                        <div class="form-group-gio">
+                            <label class="form-label-gio">Nome *</label>
+                            <input type="text" id="sod-metric-name" class="form-control-gio"
+                                placeholder="Ex: Obras Residenciais"
+                                value="${this.currentMetric ? this.currentMetric.name : ''}">
+                        </div>
+                        <div class="form-group-gio">
+                            <label class="form-label-gio">Tipo de Medição</label>
+                            <select id="sod-metric-unit" class="form-control-gio"
+                                onchange="StrategicObjectiveDetailPage.onMetricUnitChange(this.value)">
+                                ${this._getMetricUnitOptions(categoryUnit, selectedUnit)}
+                            </select>
+                        </div>
                     </div>
                     <div id="sod-metric-fields">
                         ${this._renderMetricFields(selectedUnit)}
                     </div>
-                    <div class="sod-ind-row">
-                        <div class="form-group-gio" style="flex:1;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 20px;">
+                        <div class="form-group-gio">
                             <label class="form-label-gio">Indicadores</label>
                             <textarea id="sod-metric-indicadores" class="form-control-gio" rows="2"
                                 placeholder="Ex: % obras no prazo...">${this.currentMetric ? (this.currentMetric.indicadores || '') : ''}</textarea>
                         </div>
-                        <div class="form-group-gio" style="flex:1;">
+                        <div class="form-group-gio">
                             <label class="form-label-gio">Fonte de Coleta</label>
                             <textarea id="sod-metric-fonte" class="form-control-gio" rows="2"
                                 placeholder="Ex: Sienge, Planilha...">${this.currentMetric ? (this.currentMetric.fonte_coleta || '') : ''}</textarea>
@@ -1767,7 +1777,7 @@ const StrategicObjectiveDetailPage = {
 
         modal.innerHTML = `
             <div class="modal-overlay-gio" onclick="StrategicObjectiveDetailPage.closeSatisfactionModal()"></div>
-            <div class="modal-content-gio" style="max-width:480px;">
+            <div class="modal-content-gio">
                 <div class="modal-header-gio">
                     <div>
                         <h3>${existingMetric ? 'Editar' : 'Novo'} Registro — ${typeLabel}</h3>
@@ -1972,7 +1982,7 @@ const StrategicObjectiveDetailPage = {
 
         modal.innerHTML = `
             <div class="modal-overlay-gio" onclick="StrategicObjectiveDetailPage.closePoliticaModal()"></div>
-            <div class="modal-content-gio" style="max-width:560px;">
+            <div class="modal-content-gio">
                 <div class="modal-header-gio">
                     <div>
                         <h3>Política da Qualidade</h3>
@@ -2167,7 +2177,7 @@ const StrategicObjectiveDetailPage = {
 
         modal.innerHTML = `
             <div class="modal-overlay-gio" onclick="StrategicObjectiveDetailPage.closeKpiModal()"></div>
-            <div class="modal-content-gio" style="max-width:620px;">
+            <div class="modal-content-gio">
                 <div class="modal-header-gio">
                     <div>
                         <h3>${kpi ? 'Editar' : 'Novo'} KPI Operacional</h3>
@@ -2361,7 +2371,7 @@ const StrategicObjectiveDetailPage = {
 
         modal.innerHTML = `
             <div class="modal-overlay-gio" onclick="StrategicObjectiveDetailPage.closeIndicadoresModal()"></div>
-            <div class="modal-content-gio" style="max-width:640px;">
+            <div class="modal-content-gio">
                 <div class="modal-header-gio">
                     <div>
                         <h3>Editar Indicadores</h3>

@@ -30,8 +30,8 @@ const KPIsPage = {
         const isAdmin = AuthService.isAdmin();
 
         content.innerHTML = `
-            <div class="kpi-page-wrapper">
-                <div class="kpi-skeleton"></div>
+            <div class="dashboard-gio">
+                <div class="widget-skeleton" style="height:200px;"></div>
             </div>
         `;
 
@@ -98,14 +98,15 @@ const KPIsPage = {
         }).join('');
 
         content.innerHTML = `
-            <div class="kpi-page-wrapper">
-                <div class="kpi-page-header">
-                    <div>
-                        <h2 class="kpi-page-title">Objetivos Operacionais</h2>
-                        <p class="kpi-page-sub">${totalKpis} KPI${totalKpis !== 1 ? 's' : ''} em ${totalObjs} objetivo${totalObjs !== 1 ? 's' : ''}</p>
+            <div class="dashboard-gio">
+                <div class="so-page-bar">
+                    <div class="so-page-bar-left">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                        <span class="so-page-bar-title">Objetivos Operacionais</span>
+                        <span class="so-list-count">${totalKpis} KPI${totalKpis !== 1 ? 's' : ''} em ${totalObjs} objetivo${totalObjs !== 1 ? 's' : ''}</span>
                     </div>
                     ${isAdmin ? `
-                        <button class="kpi-new-btn" onclick="KPIsPage.openModal()">
+                        <button class="so-page-bar-btn" onclick="KPIsPage.openModal()">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                             </svg>
@@ -115,14 +116,16 @@ const KPIsPage = {
                 </div>
 
                 ${totalKpis === 0 ? `
-                    <div class="kpi-empty-state">
-                        <div class="kpi-empty-icon">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="36" height="36">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                            </svg>
+                    <div class="widget" style="margin-top:16px;">
+                        <div class="widget-body" style="text-align:center;padding:60px 20px;">
+                            <div style="width:64px;height:64px;border-radius:16px;background:rgba(18,176,160,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+                                <svg width="28" height="28" fill="none" stroke="#12b0a0" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                                </svg>
+                            </div>
+                            <h3 style="font-size:16px;font-weight:700;color:#1f2937;margin:0 0 8px;">Nenhum KPI cadastrado</h3>
+                            <p style="font-size:13px;color:#6b7280;margin:0;max-width:400px;margin:0 auto;">Os objetivos operacionais aparecerão aqui após serem criados nos objetivos estratégicos${isAdmin ? ' ou clicando em "Novo KPI" acima' : ''}.</p>
                         </div>
-                        <h3>Nenhum KPI cadastrado</h3>
-                        <p>Os objetivos operacionais aparecerão aqui após serem criados nos objetivos estratégicos${isAdmin ? ' ou clicando em "Novo KPI" acima' : ''}.</p>
                     </div>
                 ` : groupsHTML}
 
@@ -217,7 +220,7 @@ const KPIsPage = {
 
         modal.innerHTML = `
             <div class="modal-overlay-gio" onclick="KPIsPage.closeModal()"></div>
-            <div class="modal-content-gio" style="max-width:620px;">
+            <div class="modal-content-gio">
                 <div class="modal-header-gio">
                     <div>
                         <h3>${kpi ? 'Editar' : 'Novo'} KPI Operacional</h3>
@@ -437,12 +440,6 @@ const KPIsPage = {
         const style = document.createElement('style');
         style.id = 'kpi-page-styles';
         style.textContent = `
-            .kpi-page-wrapper {
-                background: #f5f9ff;
-                margin: -24px;
-                padding: 24px;
-                min-height: calc(100vh - 140px);
-            }
             .kpi-skeleton {
                 background: #e2e8f0;
                 border-radius: 12px;
@@ -450,41 +447,6 @@ const KPIsPage = {
                 animation: pulse 1.5s ease-in-out infinite;
             }
             @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
-
-            .kpi-page-header {
-                display: flex;
-                align-items: flex-start;
-                justify-content: space-between;
-                margin-bottom: 24px;
-                gap: 16px;
-            }
-            .kpi-page-title {
-                font-size: 22px;
-                font-weight: 700;
-                color: #1e293b;
-                margin: 0 0 4px 0;
-            }
-            .kpi-page-sub {
-                font-size: 13px;
-                color: #64748b;
-                margin: 0;
-            }
-            .kpi-new-btn {
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                padding: 8px 16px;
-                background: #1e3a5f;
-                color: white;
-                border: none;
-                border-radius: 8px;
-                font-size: 13px;
-                font-weight: 600;
-                cursor: pointer;
-                white-space: nowrap;
-                transition: background 0.15s;
-            }
-            .kpi-new-btn:hover { background: #162d4a; }
 
             .kpi-group {
                 background: white;
@@ -523,21 +485,21 @@ const KPIsPage = {
                 flex-shrink: 0;
             }
             .kpi-add-btn {
-                display: flex;
+                display: inline-flex;
                 align-items: center;
                 gap: 4px;
-                padding: 5px 10px;
-                background: #f1f5f9;
-                border: 1px solid #e2e8f0;
-                border-radius: 6px;
+                padding: 5px 12px;
+                background: rgba(18, 176, 160, 0.1);
+                border: 1px solid rgba(18, 176, 160, 0.25);
+                border-radius: 8px;
                 font-size: 12px;
                 font-weight: 600;
-                color: #475569;
+                color: #12b0a0;
                 cursor: pointer;
                 flex-shrink: 0;
-                transition: background 0.15s;
+                transition: all 0.15s;
             }
-            .kpi-add-btn:hover { background: #e2e8f0; }
+            .kpi-add-btn:hover { background: rgba(18, 176, 160, 0.18); border-color: #12b0a0; }
 
             .kpi-list { padding: 4px 0; }
 
@@ -647,37 +609,6 @@ const KPIsPage = {
             .so-modal-dept-chip.active .so-modal-dept-chip-check { display:block; }
 
 
-            .kpi-empty-state {
-                background: white;
-                border-radius: 12px;
-                padding: 60px 20px;
-                text-align: center;
-                box-shadow: 0 1px 6px rgba(0,0,0,0.06);
-            }
-            .kpi-empty-icon {
-                width: 72px;
-                height: 72px;
-                border-radius: 20px;
-                background: rgba(30,58,95,0.06);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                margin: 0 auto 20px;
-                color: #94a3b8;
-            }
-            .kpi-empty-state h3 {
-                font-size: 17px;
-                font-weight: 700;
-                color: #1e293b;
-                margin: 0 0 8px 0;
-            }
-            .kpi-empty-state p {
-                font-size: 13px;
-                color: #64748b;
-                margin: 0;
-                max-width: 400px;
-                margin: 0 auto;
-            }
         `;
         document.head.appendChild(style);
     }

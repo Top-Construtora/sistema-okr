@@ -116,7 +116,7 @@ const CompanyPolicyPage = {
 
         modal.innerHTML = `
             <div class="modal-overlay" onclick="CompanyPolicyPage.closeModal()"></div>
-            <div class="modal-content" style="max-width:600px;">
+            <div class="modal-content">
                 <div class="modal-header">
                     <h3>${this.currentPolicy ? 'Editar' : 'Nova'} Política</h3>
                     <button class="modal-close" onclick="CompanyPolicyPage.closeModal()">&times;</button>

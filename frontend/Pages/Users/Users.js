@@ -137,11 +137,11 @@ const UsersPage = {
 
         modal.innerHTML = `
             <div class="modal-overlay" onclick="UsersPage.closeModal()"></div>
-            <div class="modal-content" style="max-width:650px;">
+            <div class="modal-content">
                 <div class="modal-header">
                     <div>
-                        <h3 style="margin:0;color:var(--top-blue);font-size:20px;">${this.currentUser ? 'Editar' : 'Novo'} Usuário</h3>
-                        <p style="margin:4px 0 0;color:var(--text-muted);font-size:13px;">
+                        <h3>${this.currentUser ? 'Editar' : 'Novo'} Usuário</h3>
+                        <p>
                             ${this.currentUser ? 'Atualize as informações do usuário' : 'Preencha os dados do novo usuário'}
                         </p>
                     </div>

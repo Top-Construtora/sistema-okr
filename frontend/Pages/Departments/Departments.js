@@ -512,27 +512,30 @@ const DepartmentsPage = {
 
             .modal-header {
                 padding: 20px 24px;
-                border-bottom: 1px solid #e2e8f0;
+                border-bottom: 1px solid #E5E7EB;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                background: linear-gradient(135deg, #1e6076 0%, #154555 100%);
+                color: white;
             }
 
             .modal-header h3 {
                 font-size: 18px;
                 font-weight: 700;
-                color: #1e6076;
+                color: white;
                 margin: 0;
             }
 
             .modal-close {
-                background: none;
+                background: rgba(255, 255, 255, 0.15);
                 border: none;
                 font-size: 24px;
                 cursor: pointer;
-                color: #94a3b8;
+                color: white;
                 width: 36px;
                 height: 36px;
+                border-radius: 8px;
                 display: flex;
                 align-items: center;
                 justify-content: center;

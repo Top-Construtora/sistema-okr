@@ -194,7 +194,7 @@ const ObjectivesPage = {
 
         modal.innerHTML = `
             <div class="modal-overlay-gio" onclick="ObjectivesPage.closeModal()"></div>
-            <div class="modal-content-gio" style="max-width:600px;">
+            <div class="modal-content-gio">
                 <div class="modal-header-gio">
                     <div>
                         <h3>${this.currentObjective ? 'Editar' : 'Novo'} Objetivo de OKR</h3>

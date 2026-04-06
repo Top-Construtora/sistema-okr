@@ -238,7 +238,7 @@ const CyclesPage = {
 
         modal.innerHTML = `
             <div class="modal-overlay-gio" onclick="CyclesPage.closeCycleModal()"></div>
-            <div class="modal-content-gio" style="max-width:500px;">
+            <div class="modal-content-gio">
                 <div class="modal-header-gio">
                     <div>
                         <h3>${this.currentCycle ? 'Editar' : 'Novo'} Ciclo</h3>
@@ -325,7 +325,7 @@ const CyclesPage = {
 
         modal.innerHTML = `
             <div class="modal-overlay-gio" onclick="CyclesPage.closeMiniCycleModal()"></div>
-            <div class="modal-content-gio" style="max-width:500px;">
+            <div class="modal-content-gio">
                 <div class="modal-header-gio">
                     <div>
                         <h3>${this.currentMiniCycle ? 'Editar' : 'Novo'} Miniciclo</h3>
