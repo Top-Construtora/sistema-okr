@@ -6,7 +6,7 @@ import { AuthService } from '../services/auth.js';
 const CATEGORY_VISIBILITY = {
     'Empreendimento Econômico': { hidden: true },
     'Melhoria Contínua':       { visibleToAll: true },
-    'Construtora':             { hidden: true },
+    'Construtora':             { visibleToAll: true },
     'Obra':                    { departments: ['Planejamento e Controle'] },
     'Incorporadora':           { departments: ['Incorporação'] },
 };
