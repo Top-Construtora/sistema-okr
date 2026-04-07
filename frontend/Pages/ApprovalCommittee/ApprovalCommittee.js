@@ -1,7 +1,6 @@
 import { AuthService } from '../../services/auth.js';
 import { OKR } from '../../Entities/OKR.js';
 import { Department } from '../../Entities/Department.js';
-import { Cycle } from '../../Entities/Cycle.js';
 import { MiniCycle } from '../../Entities/MiniCycle.js';
 import { Modal } from '../../Components/Modal.js';
 
@@ -41,15 +40,24 @@ const ApprovalPage = {
         const isAdmin = currentUser && (currentUser.tipo === 'admin' || currentUser.tipo === 'consultor');
         const userDepartmentNames = this.getUserDepartmentNames(currentUser);
 
-        let okrs = await OKR.getAll();
+        const [okrs, departments, miniCycles] = await Promise.all([
+            OKR.getAll(),
+            Department.getActive(),
+            MiniCycle.getActive()
+        ]);
+
+        this.departments = departments;
+        this.miniCycles = miniCycles;
+
         if (!isAdmin && userDepartmentNames.length > 0) {
-            okrs = okrs.filter(o => userDepartmentNames.includes(o.department));
+            this.okrs = okrs.filter(o => userDepartmentNames.includes(o.department));
+        } else {
+            this.okrs = okrs;
         }
-        this.okrs = okrs;
 
         // Pre-fetch objectives
         this.objectivesCache = {};
-        await Promise.all(okrs.map(async (okr) => {
+        await Promise.all(this.okrs.map(async (okr) => {
             if (!this.objectivesCache[okr.id]) {
                 this.objectivesCache[okr.id] = await okr.getObjective();
             }
@@ -58,13 +66,107 @@ const ApprovalPage = {
         this.renderPage();
     },
 
+    getFilteredOkrs() {
+        let okrs = this.okrs;
+
+        if (this.currentDepartment !== 'all') {
+            okrs = okrs.filter(o => o.department === this.currentDepartment);
+        }
+
+        if (this.currentMiniCycle !== 'all') {
+            const selected = Array.isArray(this.currentMiniCycle) ? this.currentMiniCycle : [this.currentMiniCycle];
+            okrs = okrs.filter(o => selected.includes(o.mini_cycle_id));
+        }
+
+        return okrs;
+    },
+
+    getMiniCycleFilterLabel() {
+        if (this.currentMiniCycle === 'all') return 'Todos os Miniciclos';
+        const selected = Array.isArray(this.currentMiniCycle) ? this.currentMiniCycle : [this.currentMiniCycle];
+        if (selected.length === 1) {
+            const mc = this.miniCycles.find(m => m.id === selected[0]);
+            return mc ? mc.nome : 'Miniciclo';
+        }
+        return `${selected.length} miniciclos`;
+    },
+
+    filterByDepartment(value) {
+        this.currentDepartment = value;
+        this.renderPage();
+    },
+
+    toggleMiniCycleDropdown() {
+        const dropdown = document.getElementById('ap-minicycle-dropdown');
+        if (dropdown) dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+    },
+
+    toggleAllMiniCycles(checked) {
+        if (checked) {
+            this.currentMiniCycle = 'all';
+        } else {
+            this.currentMiniCycle = [];
+        }
+        this.renderPage();
+    },
+
+    toggleMiniCycleCheck(id, checked) {
+        let selected = this.currentMiniCycle === 'all'
+            ? this.miniCycles.map(m => m.id)
+            : (Array.isArray(this.currentMiniCycle) ? [...this.currentMiniCycle] : [this.currentMiniCycle]);
+
+        if (checked) {
+            if (!selected.includes(id)) selected.push(id);
+        } else {
+            selected = selected.filter(s => s !== id);
+        }
+
+        this.currentMiniCycle = selected.length === this.miniCycles.length ? 'all' : selected;
+        this.renderPage();
+    },
+
     renderPage() {
         const content = document.getElementById('content');
+        const filtered = this.getFilteredOkrs();
         const counts = {};
-        this.columns.forEach(c => { counts[c.key] = this.okrs.filter(o => o.status === c.key).length; });
+        this.columns.forEach(c => { counts[c.key] = filtered.filter(o => o.status === c.key).length; });
 
         content.innerHTML = `
             <div class="dashboard-gio">
+                <div class="ap-filters">
+                    <div class="ap-filter-group">
+                        <div class="minicycle-multiselect" id="ap-minicycle-container">
+                            <div class="multiselect-toggle" onclick="ApprovalPage.toggleMiniCycleDropdown()">
+                                <span>${this.getMiniCycleFilterLabel()}</span>
+                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
+                            <div class="multiselect-options" id="ap-minicycle-dropdown" style="display:none;">
+                                <label class="multiselect-option">
+                                    <input type="checkbox" value="all" onchange="ApprovalPage.toggleAllMiniCycles(this.checked)" ${this.currentMiniCycle === 'all' ? 'checked' : ''}>
+                                    <span>Todos os Miniciclos</span>
+                                </label>
+                                ${this.miniCycles.map(mc => {
+                                    const isChecked = this.currentMiniCycle === 'all' || (Array.isArray(this.currentMiniCycle) && this.currentMiniCycle.includes(mc.id));
+                                    return `
+                                    <label class="multiselect-option">
+                                        <input type="checkbox" value="${mc.id}" onchange="ApprovalPage.toggleMiniCycleCheck('${mc.id}', this.checked)" ${isChecked ? 'checked' : ''}>
+                                        <span>${mc.nome}</span>
+                                    </label>`;
+                                }).join('')}
+                            </div>
+                        </div>
+                        <select class="form-control ap-dept-select" onchange="ApprovalPage.filterByDepartment(this.value)">
+                            <option value="all" ${this.currentDepartment === 'all' ? 'selected' : ''}>Todos os Departamentos</option>
+                            ${this.departments.map(dept => `
+                                <option value="${dept.nome}" ${this.currentDepartment === dept.nome ? 'selected' : ''}>
+                                    ${dept.nome}
+                                </option>
+                            `).join('')}
+                        </select>
+                    </div>
+                </div>
                 <div class="ap-tabs">
                     ${this.columns.map(col => `
                         <button class="ap-tab ${this.activeTab === col.key ? 'ap-tab-active' : ''}"
@@ -81,6 +183,14 @@ const ApprovalPage = {
             </div>
         `;
 
+        // Close dropdown on outside click
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#ap-minicycle-container')) {
+                const dropdown = document.getElementById('ap-minicycle-dropdown');
+                if (dropdown) dropdown.style.display = 'none';
+            }
+        });
+
         this.renderTable();
     },
 
@@ -89,7 +199,8 @@ const ApprovalPage = {
         if (!area) return;
 
         const col = this.columns.find(c => c.key === this.activeTab);
-        const items = this.okrs.filter(o => o.status === this.activeTab);
+        const filtered = this.getFilteredOkrs();
+        const items = filtered.filter(o => o.status === this.activeTab);
         const currentUser = AuthService.getCurrentUser();
         const isConsultor = currentUser && currentUser.tipo === 'consultor';
 
@@ -255,6 +366,107 @@ const ApprovalPage = {
         const style = document.createElement('style');
         style.id = 'approval-styles-v3';
         style.textContent = `
+            /* === FILTERS === */
+            .ap-filters {
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                margin-bottom: 16px;
+                gap: 12px;
+            }
+            .ap-filter-group {
+                display: flex;
+                gap: 12px;
+                align-items: center;
+                flex-wrap: wrap;
+            }
+            .ap-dept-select {
+                min-width: 200px;
+                padding: 8px 12px;
+                border: 1.5px solid #e5e7eb;
+                border-radius: 10px;
+                font-size: 13px;
+                color: #374151;
+                background: white;
+                cursor: pointer;
+            }
+            .ap-dept-select:focus {
+                outline: none;
+                border-color: #12b0a0;
+            }
+            .ap-filters .minicycle-multiselect {
+                position: relative;
+                min-width: 200px;
+            }
+            .ap-filters .multiselect-toggle {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                padding: 8px 12px;
+                background: white;
+                border: 1.5px solid #e5e7eb;
+                border-radius: 10px;
+                cursor: pointer;
+                font-size: 13px;
+                font-weight: 500;
+                color: #6b7280;
+                min-height: 38px;
+                white-space: nowrap;
+                transition: border-color 0.15s;
+            }
+            .ap-filters .multiselect-toggle:hover {
+                border-color: #12b0a0;
+            }
+            .ap-filters .multiselect-options {
+                position: absolute;
+                top: calc(100% + 4px);
+                left: 0;
+                right: 0;
+                min-width: 220px;
+                background: white;
+                border: 1px solid #e5e7eb;
+                border-radius: 10px;
+                box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+                z-index: 100;
+                max-height: 260px;
+                overflow-y: auto;
+                padding: 4px 0;
+            }
+            .ap-filters .multiselect-option {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 9px 14px;
+                cursor: pointer;
+                font-size: 13px;
+                color: #374151;
+                transition: background 0.15s;
+                user-select: none;
+            }
+            .ap-filters .multiselect-option:hover {
+                background: #f3f4f6;
+            }
+            .ap-filters .multiselect-option input[type="checkbox"] {
+                width: 16px;
+                height: 16px;
+                accent-color: #12b0a0;
+                cursor: pointer;
+                flex-shrink: 0;
+            }
+            .ap-filters .multiselect-option span {
+                flex: 1;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .ap-filters .multiselect-option:first-child {
+                border-bottom: 1px solid #e5e7eb;
+                margin-bottom: 2px;
+                padding-bottom: 10px;
+                font-weight: 600;
+            }
+
             /* === TABS === */
             .ap-tabs {
                 display: flex;
@@ -441,6 +653,9 @@ const ApprovalPage = {
                 .ap-tab-label { display: none; }
                 .ap-action span { display: none; }
                 .ap-action { padding: 7px 9px; }
+                .ap-filters { justify-content: stretch; }
+                .ap-filter-group { width: 100%; }
+                .ap-dept-select, .ap-filters .minicycle-multiselect { min-width: 0; flex: 1; }
             }
         `;
         document.head.appendChild(style);
