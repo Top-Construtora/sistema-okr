@@ -1,0 +1,301 @@
+# Codebase Structure
+
+**Analysis Date:** 2026-04-07
+
+## Directory Layout
+
+```
+sistema-okr/
+├── frontend/                    # Vite SPA application
+│   ├── index.html              # HTML entry point (DOM root #app)
+│   ├── main.js                 # Module imports + global exposure
+│   ├── app.js                  # App initialization & login/SSO logic
+│   ├── Layout.js               # Router & sidebar/header layout
+│   ├── globals.js              # Global window exposure for onclick handlers
+│   ├── styles.css              # Global styles
+│   ├── vite.config.js          # Vite build configuration
+│   ├── Entities/               # Domain models with CRUD logic
+│   │   ├── OKR.js
+│   │   ├── KeyResult.js
+│   │   ├── Department.js
+│   │   ├── User.js
+│   │   ├── Cycle.js
+│   │   ├── MiniCycle.js
+│   │   ├── Initiative.js
+│   │   ├── Reminder.js
+│   │   ├── StrategicObjective.js
+│   │   ├── StrategicSubMetric.js
+│   │   ├── CompanyPolicy.js
+│   │   ├── ProblemTree.js
+│   │   ├── SwotItem.js
+│   │   ├── SwotCrossing.js
+│   │   └── [other entities]
+│   ├── services/               # Business logic & data access layer
+│   │   ├── supabase.js         # Supabase client initialization + error handler
+│   │   ├── storage.js          # Generic CRUD wrapper over Supabase
+│   │   ├── auth.js             # Authentication service
+│   │   └── export.js           # Data export utilities
+│   ├── Components/             # Reusable UI components
+│   │   ├── Modal.js            # Reusable modal dialog wrapper
+│   │   ├── SkeletonLoader.js   # Loading skeleton templates
+│   │   ├── InitiativeManager.js # Initiative management component
+│   │   ├── dashboard/          # Dashboard-specific components
+│   │   │   ├── DepartmentProgress.js
+│   │   │   ├── MetricCard.js
+│   │   │   └── ProgressRing.js
+│   │   └── okrs/               # OKR-specific components
+│   │       ├── OKRCard.js
+│   │       ├── OKRForm.js
+│   │       └── OkRDetail.js
+│   ├── Pages/                  # Full-page components (routable)
+│   │   ├── Home/               # Home / initial page
+│   │   │   └── Home.js
+│   │   ├── Dashboard/          # Dashboard with ranking & metrics
+│   │   │   └── Dashboard.js
+│   │   ├── OKRs/               # OKR management pages
+│   │   │   ├── OKRs.js         # All OKRs (filterable)
+│   │   │   └── MyOKRs.js       # User's own OKRs
+│   │   ├── ApprovalCommittee/  # Kanban board for OKR approval workflow
+│   │   │   └── ApprovalCommittee.js
+│   │   ├── Objectives/         # Objectives overview
+│   │   │   └── Objectives.js
+│   │   ├── StrategicObjectives/ # Strategic objectives CRUD
+│   │   │   ├── StrategicObjectives.js
+│   │   │   └── StrategicObjectiveDetail.js
+│   │   ├── StrategicPlanning/  # Strategic planning modules
+│   │   │   ├── ProblemTree.js  # Problem tree analysis
+│   │   │   ├── SwotMatrix.js   # SWOT analysis
+│   │   │   ├── ImpactDefinition.js
+│   │   │   └── ScenarioAnalysis.js
+│   │   ├── Departments/        # Department CRUD (admin)
+│   │   │   └── Departments.js
+│   │   ├── Users/              # User CRUD (admin)
+│   │   │   └── Users.js
+│   │   ├── Cycles/             # OKR cycle management
+│   │   │   └── Cycles.js
+│   │   ├── Calendar/           # Calendar/reminder management
+│   │   │   └── Calendar.js
+│   │   ├── KPIs/               # KPI dashboard
+│   │   │   └── KPIs.js
+│   │   ├── CompanyPolicy/      # Company policies management
+│   │   │   └── CompanyPolicy.js
+│   │   ├── CompanyIdentity/    # Company identity configuration
+│   │   │   └── CompanyIdentity.js
+│   │   ├── Settings/           # System settings
+│   │   │   └── Settings.js
+│   │   └── PasswordRecovery/   # Password reset flow
+│   │       ├── ForgotPassword.js
+│   │       ├── ResetPassword.js
+│   │       └── PasswordRecoveryCallback.js
+│   ├── public/                 # Static assets (logo, favicons)
+│   │   ├── logoGioWhite.png
+│   │   └── favicon.png
+│   ├── assets/                 # Images, fonts (inlined in build)
+│   │   └── fonts/
+│   ├── dist/                   # Build output (generated by Vite)
+│   ├── node_modules/           # Dependencies
+│   ├── package.json            # Dependencies: vite, @supabase/supabase-js, etc.
+│   ├── package-lock.json
+│   └── .env.example            # Environment template
+│
+├── backend/                     # Express API server (optional)
+│   ├── server.js               # Express app setup + middleware + route mounting
+│   ├── config/                 # Configuration files
+│   │   └── supabase.js         # Supabase client (anon + admin keys)
+│   ├── routes/                 # API endpoint handlers
+│   │   ├── auth.routes.js      # Auth endpoints (password-reset, sso-login, confirm-reset)
+│   │   ├── department.routes.js # Department endpoints (CRUD)
+│   │   ├── user.routes.js      # User endpoints (CRUD)
+│   │   ├── okr.routes.js       # OKR endpoints
+│   │   ├── objective.routes.js # Objective endpoints
+│   │   ├── stats.routes.js     # Statistics/dashboard data
+│   │   └── evidence.routes.js  # File upload/download proxy
+│   ├── database/               # Database management & SQL scripts
+│   │   ├── 01_schema.sql       # Table definitions + types + initial structure
+│   │   ├── 02_security_rls.sql # Row Level Security policies for all tables
+│   │   ├── 03_functions_triggers.sql # Database functions + update triggers
+│   │   ├── 04_seed_data.sql    # Test/demo data
+│   │   ├── sqls/               # Additional SQL scripts (patches, fixes)
+│   │   ├── README.md           # Database documentation
+│   │   ├── EXECUTAR_NO_SUPABASE.md # Step-by-step execution guide
+│   │   └── DIAGRAMA_ER.md      # Entity relationship diagram
+│   ├── node_modules/           # Dependencies
+│   ├── package.json            # Dependencies: express, cors, helmet, morgan, dotenv, @supabase/supabase-js
+│   ├── package-lock.json
+│   └── .env.example            # Environment template (PORT, FRONTEND_URL, SUPABASE_*, SSO_SECRET)
+│
+├── .git/                        # Git repository
+├── .planning/                   # Planning documentation
+│   └── codebase/               # Codebase analysis documents
+├── CLAUDE.md                   # Development guide & architecture overview
+├── README.md                   # Project overview & quick start
+└── package.json               # Root monorepo config (if any)
+```
+
+## Directory Purposes
+
+**frontend/**
+- Purpose: Vite-bundled SPA with all UI, routing, and direct Supabase access
+- Contains: Pages, components, entities, services, styles, assets
+- Key files: `index.html`, `main.js`, `app.js`, `Layout.js`
+- Build output: `dist/` (production bundle)
+
+**frontend/Entities/**
+- Purpose: Domain model classes with validation and CRUD methods
+- Contains: OKR, Department, User, KeyResult, Initiative, Cycle, MiniCycle, etc.
+- Pattern: Static `getAll()`, `getById()`, instance methods like `save()`, `delete()`
+- Exposes: Global via `window.OKR`, `window.Department`, etc. in `main.js`
+
+**frontend/services/**
+- Purpose: Reusable business logic and infrastructure
+- Contains: Supabase client, StorageService (generic CRUD), AuthService, export utilities
+- Key pattern: StorageService wraps all Supabase queries with error handling
+
+**frontend/Components/**
+- Purpose: Reusable UI components (not full pages)
+- Contains: Modal, SkeletonLoader, InitiativeManager, dashboard/okrs subdirectories
+- Usage: Imported by pages for common UI patterns
+
+**frontend/Pages/**
+- Purpose: Routable page components that fill the main content area
+- Contains: Object with async `render()` method; pages also have helper methods
+- Exposure: Global via `window.DashboardPage`, `window.OKRsPage`, etc.
+- Routing: Layout.js maps URL paths to page names; page instantiation happens in navigate()
+
+**backend/**
+- Purpose: Optional Express API for operations not suitable for client-side Supabase
+- Contains: Routes for auth (password reset, SSO), stats aggregation, file proxying
+- Deployment: Separate from frontend; can run on different port/server
+- CORS: Configured to allow requests only from FRONTEND_URL
+
+**backend/routes/**
+- Purpose: Express route handlers grouped by domain
+- File pattern: `[domain].routes.js` exports Express Router
+- Integration: Mounted in `server.js` as `/api/[domain]`
+
+**backend/database/**
+- Purpose: PostgreSQL schema and setup documentation
+- SQL files: Must execute in order (01 → 02 → 03 → 04)
+- RLS: Policies in `02_security_rls.sql` enforce row-level access control
+- Triggers: `03_functions_triggers.sql` handles `updated_at` timestamps and user creation
+
+## Key File Locations
+
+**Entry Points:**
+- `frontend/index.html` → `frontend/main.js` (module loader) → `frontend/app.js` (init) → `Layout.render()`
+- `backend/server.js` → Express app listening on PORT
+
+**Configuration:**
+- `frontend/.env` (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY)
+- `backend/.env` (PORT, FRONTEND_URL, SUPABASE_URL, SUPABASE_ANON_KEY, SSO_SECRET)
+- `frontend/vite.config.js` (dev server, build settings)
+
+**Core Logic:**
+- `frontend/Entities/OKR.js` → OKR data model + complex progress calculation
+- `frontend/Pages/ApprovalCommittee/ApprovalCommittee.js` → Kanban workflow for OKR approval
+- `frontend/services/storage.js` → Generic Supabase CRUD wrapper
+- `backend/routes/auth.routes.js` → Password reset, SSO login
+
+**Styling:**
+- `frontend/styles.css` → Global styles, CSS Grid layouts, GIO design system (teal/green theme)
+
+**Testing:**
+- Manual testing guide: `frontend/GUIA_DE_TESTES.md`
+- No automated test files currently
+
+## Naming Conventions
+
+**Files:**
+- PascalCase for class/component files: `OKR.js`, `Department.js`, `Dashboard.js`, `Layout.js`
+- kebab-case for directories containing multiple files: `strategic-planning/`, `password-recovery/`
+- SQL scripts: Sequential prefix: `01_schema.sql`, `02_security_rls.sql`
+- Route files: `[domain].routes.js` (auth.routes.js, department.routes.js)
+
+**Directories:**
+- PascalCase for feature directories: `Pages/`, `Components/`, `Entities/`
+- PascalCase for individual page directories: `Pages/Dashboard/`, `Pages/ApprovalCommittee/`
+- lowercase for utility directories: `services/`, `config/`, `routes/`, `public/`
+
+**Classes & Functions:**
+- PascalCase for class constructors: `class OKR { }`, `class Department { }`
+- camelCase for instance methods: `.validate()`, `.save()`, `.delete()`
+- camelCase for static methods: `.getAll()`, `.getById(id)`
+- camelCase for utility functions: `handleSupabaseError()`, `convertToProxyUrl()`
+
+**Database:**
+- snake_case for table names: `okrs`, `departments`, `users`, `key_results`, `mini_cycles`
+- snake_case for column names: `user_id`, `objective_id`, `created_at`, `updated_at`
+- UPPERCASE for enum values: `OKR_STATUS` constants in Entities
+
+## Where to Add New Code
+
+**New Feature (e.g., "add Risk Management"):**
+1. **Create Entity:** `frontend/Entities/Risk.js` with static CRUD + validation
+2. **Create Page:** `frontend/Pages/Risks/Risks.js` with render() and helper methods
+3. **Add Route:** Import page in `frontend/main.js` and add case in `Layout.js` router
+4. **Add Menu:** Update sidebar navigation in `Layout.js`
+5. **Add Table:** Define `risks` table in `backend/database/01_schema.sql`
+6. **Add RLS:** Security policies in `backend/database/02_security_rls.sql`
+7. **Add Backend Routes (if needed):** Create `backend/routes/risk.routes.js` and mount in `server.js`
+
+**New Component (e.g., "RiskCard"):**
+- Location: `frontend/Components/risks/RiskCard.js` (create subdirectory if category exists)
+- Usage: Import and instantiate in pages that display risks
+
+**New Utility/Service:**
+- Location: `frontend/services/[domain].js` (e.g., `services/export.js`)
+- Pattern: Export functions or objects with static methods
+- Example: `export const ExportService = { toCSV(), toJSON() }`
+
+**New Backend Route:**
+- Location: `backend/routes/[domain].routes.js`
+- Pattern: Create Express Router, define endpoints, export default
+- Mount: Add `app.use('/api/[domain]', [domain]Routes)` in `server.js`
+
+## Special Directories
+
+**frontend/dist/:**
+- Purpose: Production build output
+- Generated: `npm run build` in Vite
+- Committed: No (in .gitignore)
+- Contents: Minified JS, CSS, assets with cache-busting hashes
+
+**backend/database/sqls/:**
+- Purpose: Additional SQL migration/fix scripts beyond initial setup
+- Committed: Yes
+- Examples: Patches for schema changes, data migrations
+
+**.planning/codebase/:**
+- Purpose: Generated documentation from `/gsd-map-codebase` command
+- Contains: ARCHITECTURE.md, STRUCTURE.md, CONVENTIONS.md, TESTING.md, STACK.md, INTEGRATIONS.md, CONCERNS.md
+- Committed: Yes (guides future development)
+
+**node_modules/:**
+- Purpose: Installed npm dependencies
+- Committed: No (in .gitignore)
+- Location: Both `frontend/node_modules/` and `backend/node_modules/`
+
+## Monorepo Structure
+
+This is a **workspace monorepo** with separate frontend and backend:
+- Each has own `package.json` and `node_modules/`
+- Root `package.json` exists but is minimal
+- Development requires two terminals: `cd backend && npm run dev` and `cd frontend && npm run dev`
+- Build: `npm run build` in each directory independently
+- No workspace tool (yarn workspaces, pnpm) configured
+
+## Asset Management
+
+**Public Assets (copied to build root):**
+- Location: `frontend/public/`
+- Files: `logoGioWhite.png`, `favicon.png`
+- Access: `/logoGioWhite.png` in HTML/CSS
+
+**Source Assets (inlined or referenced):**
+- Location: `frontend/assets/`
+- Examples: `assets/fonts/` (custom fonts)
+- Processing: Vite bundles these into final output
+
+---
+
+*Structure analysis: 2026-04-07*
