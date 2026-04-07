@@ -100,7 +100,7 @@ const CalendarPage = {
                         <form id="reminder-form" onsubmit="CalendarPage.saveReminder(event); return false;">
                             <div class="form-group-gio">
                                 <label class="form-label-gio">Data *</label>
-                                <input type="date" name="reminder_date" id="reminder-date" required class="form-control-gio" />
+                                <input type="date" name="reminder_date" id="reminder-date" required class="form-control-gio" min="${new Date().toISOString().split('T')[0]}" />
                             </div>
 
                             <div class="form-row-gio">
