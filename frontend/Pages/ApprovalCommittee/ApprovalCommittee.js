@@ -1,11 +1,18 @@
 import { AuthService } from '../../services/auth.js';
 import { OKR } from '../../Entities/OKR.js';
+import { Department } from '../../Entities/Department.js';
+import { Cycle } from '../../Entities/Cycle.js';
+import { MiniCycle } from '../../Entities/MiniCycle.js';
 import { Modal } from '../../Components/Modal.js';
 
 const ApprovalPage = {
     activeTab: 'pending',
     okrs: [],
     objectivesCache: {},
+    currentDepartment: 'all',
+    currentMiniCycle: 'all',
+    departments: [],
+    miniCycles: [],
 
     getUserDepartmentNames(user) {
         if (!user) return [];

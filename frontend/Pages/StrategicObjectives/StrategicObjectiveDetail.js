@@ -201,8 +201,8 @@ const StrategicObjectiveDetailPage = {
             ? 'Os departamentos aparecerão automaticamente quando houver OKRs vinculados'
             : 'Adicione sub-métricas para acompanhar o progresso deste objetivo';
 
-        // KPI Operacionais section (hidden in detail page — managed via /kpis page)
-        const kpiSectionHTML = '';
+        // KPI Operacionais section
+        const kpiSectionHTML = this.renderKpiSection(kpiMetrics, isAdmin);
 
         // Timeline HTML
         const timelineHTML = this.renderTimeline(canEdit);
