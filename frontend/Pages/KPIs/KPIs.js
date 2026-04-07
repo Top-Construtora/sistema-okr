@@ -48,7 +48,8 @@ const KPIsPage = {
         this.objectives = objectives;
         this.departments = departments;
 
-        this.renderPage(true);
+        const isAdmin = AuthService.isAdmin();
+        this.renderPage(isAdmin);
     },
 
     renderPage(isAdmin) {
@@ -438,12 +439,140 @@ const KPIsPage = {
         const style = document.createElement('style');
         style.id = 'kpi-page-styles';
         style.textContent = `
-            .kpi-skeleton {
-                background: #e2e8f0;
-                border-radius: 12px;
-                height: 200px;
-                animation: pulse 1.5s ease-in-out infinite;
+            /* Shared layout styles (self-contained) */
+            .dashboard-gio {
+                background: #f5f9ff;
+                margin: -24px;
+                padding: 24px;
+                min-height: calc(100vh - 140px);
             }
+            .widget-skeleton {
+                background: white;
+                border-radius: 24px;
+                height: 300px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+                position: relative;
+                overflow: hidden;
+            }
+            .so-page-bar {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 16px;
+                padding: 0 0 20px;
+                flex-wrap: wrap;
+            }
+            .so-page-bar-left {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                flex-wrap: wrap;
+            }
+            .so-page-bar-left > svg { color: #1e6076; opacity: 0.6; flex-shrink: 0; }
+            .so-page-bar-title {
+                font-size: 18px;
+                font-weight: 700;
+                color: #1f2937;
+                font-family: 'Lemon Milk', 'Inter', sans-serif;
+            }
+            .so-list-count {
+                font-size: 12px;
+                color: #9ca3af;
+                font-weight: 500;
+            }
+            .so-page-bar-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 9px 20px;
+                background: #12b0a0;
+                color: #fff;
+                border: none;
+                border-radius: 12px;
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                white-space: nowrap;
+                box-shadow: 0 4px 12px rgba(18, 176, 160, 0.3);
+                transition: all 0.2s;
+                font-family: 'Lemon Milk', 'Inter', sans-serif;
+                letter-spacing: 0.5px;
+            }
+            .so-page-bar-btn:hover {
+                background: #0e8f82;
+                box-shadow: 0 6px 16px rgba(18, 176, 160, 0.4);
+                transform: translateY(-1px);
+            }
+
+            /* Modal shared styles */
+            .sod-ind-row {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 14px;
+            }
+            .sod-freq-options {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            .sod-freq-chip {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                padding: 7px 14px;
+                border: 1.5px solid #E5E7EB;
+                border-radius: 10px;
+                font-size: 13px;
+                font-weight: 500;
+                color: #6b7280;
+                cursor: pointer;
+                transition: all 0.15s;
+                background: #fff;
+            }
+            .sod-freq-chip:hover {
+                border-color: #12b0a0;
+                background: rgba(18, 176, 160, 0.04);
+            }
+            .sod-freq-chip-active {
+                border-color: #12b0a0;
+                background: rgba(18, 176, 160, 0.08);
+                color: #0e8f82;
+                font-weight: 600;
+            }
+            .sod-freq-chip input { display: none; }
+            .sod-freq-chip-icon {
+                font-size: 10px;
+                font-weight: 700;
+                background: rgba(18, 176, 160, 0.12);
+                color: #12b0a0;
+                padding: 2px 6px;
+                border-radius: 6px;
+                letter-spacing: 0.3px;
+            }
+            .sod-freq-chip-none {
+                color: #9ca3af;
+                border-style: dashed;
+            }
+            .sod-freq-chip-none.sod-freq-chip-active {
+                border-color: #9ca3af;
+                background: #f9fafb;
+                color: #6b7280;
+            }
+            .sod-freq-chip-none svg { opacity: 0.6; }
+
+            /* Spinner */
+            .spinner-gio {
+                display: inline-block;
+                width: 14px;
+                height: 14px;
+                border: 2px solid rgba(255,255,255,0.3);
+                border-top-color: #fff;
+                border-radius: 50%;
+                animation: spin-gio 0.6s linear infinite;
+            }
+            @keyframes spin-gio { to { transform: rotate(360deg); } }
+
+            /* KPI page styles */
             @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
 
             .kpi-group {
