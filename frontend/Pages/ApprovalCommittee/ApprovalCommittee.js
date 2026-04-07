@@ -84,6 +84,7 @@ const ApprovalPage = {
     getMiniCycleFilterLabel() {
         if (this.currentMiniCycle === 'all') return 'Todos os Miniciclos';
         const selected = Array.isArray(this.currentMiniCycle) ? this.currentMiniCycle : [this.currentMiniCycle];
+        if (selected.length === 0) return 'Selecione...';
         if (selected.length === 1) {
             const mc = this.miniCycles.find(m => m.id === selected[0]);
             return mc ? mc.nome : 'Miniciclo';
@@ -408,32 +409,32 @@ const ApprovalPage = {
             .ap-toolbar {
                 display: flex;
                 align-items: center;
-                justify-content: space-between;
-                gap: 16px;
+                gap: 12px;
                 margin-bottom: 20px;
-                flex-wrap: wrap;
             }
             .ap-tabs {
                 display: flex;
-                gap: 6px;
+                gap: 5px;
+                flex: 1;
+                min-width: 0;
                 flex-wrap: wrap;
             }
             .ap-filter-group {
                 display: flex;
-                gap: 10px;
+                gap: 8px;
                 align-items: center;
                 flex-shrink: 0;
             }
             .ap-dept-select {
-                min-width: 190px;
-                padding: 7px 10px;
+                width: 170px;
+                padding: 6px 8px;
                 border: 1.5px solid #e5e7eb;
                 border-radius: 8px;
-                font-size: 12.5px;
+                font-size: 12px;
                 color: #374151;
                 background: white;
                 cursor: pointer;
-                height: 36px;
+                height: 34px;
                 transition: border-color 0.15s, box-shadow 0.15s;
             }
             .ap-dept-select:hover {
@@ -446,23 +447,24 @@ const ApprovalPage = {
             }
             .ap-filter-group .minicycle-multiselect {
                 position: relative;
-                min-width: 180px;
+                width: 160px;
             }
             .ap-filter-group .multiselect-toggle {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                gap: 8px;
-                padding: 7px 10px;
+                gap: 6px;
+                padding: 6px 8px;
                 background: white;
                 border: 1.5px solid #e5e7eb;
                 border-radius: 8px;
                 cursor: pointer;
-                font-size: 12.5px;
+                font-size: 12px;
                 font-weight: 500;
                 color: #374151;
-                height: 36px;
+                height: 34px;
                 white-space: nowrap;
+                overflow: hidden;
                 transition: border-color 0.15s, box-shadow 0.15s;
             }
             .ap-filter-group .multiselect-toggle:hover {
@@ -472,7 +474,7 @@ const ApprovalPage = {
                 position: absolute;
                 top: calc(100% + 4px);
                 right: 0;
-                min-width: 240px;
+                min-width: 220px;
                 background: white;
                 border: 1px solid #e5e7eb;
                 border-radius: 10px;
@@ -518,13 +520,13 @@ const ApprovalPage = {
             .ap-tab {
                 display: flex;
                 align-items: center;
-                gap: 8px;
-                padding: 10px 16px;
+                gap: 6px;
+                padding: 8px 12px;
                 background: white;
                 border: 1.5px solid #e5e7eb;
                 border-radius: 10px;
                 cursor: pointer;
-                font-size: 13px;
+                font-size: 12px;
                 font-weight: 500;
                 color: #6b7280;
                 transition: all 0.15s;
