@@ -93,7 +93,7 @@ const ApprovalPage = {
 
     filterByDepartment(value) {
         this.currentDepartment = value;
-        this.renderPage();
+        this.applyFilters();
     },
 
     toggleMiniCycleDropdown() {
@@ -107,13 +107,18 @@ const ApprovalPage = {
         } else {
             this.currentMiniCycle = [];
         }
-        this.renderPage();
+        this.applyFilters();
     },
 
     toggleMiniCycleCheck(id, checked) {
-        let selected = this.currentMiniCycle === 'all'
-            ? this.miniCycles.map(m => m.id)
-            : (Array.isArray(this.currentMiniCycle) ? [...this.currentMiniCycle] : [this.currentMiniCycle]);
+        // When "all" is active, clicking a specific item selects ONLY that one
+        if (this.currentMiniCycle === 'all') {
+            this.currentMiniCycle = [id];
+            this.applyFilters();
+            return;
+        }
+
+        let selected = Array.isArray(this.currentMiniCycle) ? [...this.currentMiniCycle] : [this.currentMiniCycle];
 
         if (checked) {
             if (!selected.includes(id)) selected.push(id);
@@ -122,7 +127,40 @@ const ApprovalPage = {
         }
 
         this.currentMiniCycle = selected.length === this.miniCycles.length ? 'all' : selected;
-        this.renderPage();
+        this.applyFilters();
+    },
+
+    applyFilters() {
+        // Update tab counts without re-rendering the whole page (keeps dropdown open)
+        const filtered = this.getFilteredOkrs();
+        const counts = {};
+        this.columns.forEach(c => { counts[c.key] = filtered.filter(o => o.status === c.key).length; });
+
+        // Update counts in existing tabs
+        document.querySelectorAll('.ap-tab').forEach(tab => {
+            const status = tab.dataset.status;
+            if (status && counts[status] !== undefined) {
+                const countEl = tab.querySelector('.ap-tab-count');
+                if (countEl) countEl.textContent = counts[status];
+            }
+        });
+
+        // Update mini-cycle checkboxes state
+        const container = document.getElementById('ap-minicycle-container');
+        if (container) {
+            const allCheckbox = container.querySelector('input[value="all"]');
+            if (allCheckbox) allCheckbox.checked = this.currentMiniCycle === 'all';
+            this.miniCycles.forEach(mc => {
+                const cb = container.querySelector(`input[value="${mc.id}"]`);
+                if (cb) cb.checked = this.currentMiniCycle === 'all' || (Array.isArray(this.currentMiniCycle) && this.currentMiniCycle.includes(mc.id));
+            });
+        }
+
+        // Update toggle label
+        const toggleSpan = container?.querySelector('.multiselect-toggle span');
+        if (toggleSpan) toggleSpan.textContent = this.getMiniCycleFilterLabel();
+
+        this.renderTable();
     },
 
     renderPage() {
@@ -133,12 +171,24 @@ const ApprovalPage = {
 
         content.innerHTML = `
             <div class="dashboard-gio">
-                <div class="ap-filters">
+                <div class="ap-toolbar">
+                    <div class="ap-tabs">
+                        ${this.columns.map(col => `
+                            <button class="ap-tab ${this.activeTab === col.key ? 'ap-tab-active' : ''}"
+                                    data-status="${col.key}"
+                                    style="--tab-color: ${col.color}"
+                                    onclick="ApprovalPage.switchTab('${col.key}')">
+                                <span class="ap-tab-dot"></span>
+                                <span class="ap-tab-label">${col.title}</span>
+                                <span class="ap-tab-count">${counts[col.key]}</span>
+                            </button>
+                        `).join('')}
+                    </div>
                     <div class="ap-filter-group">
                         <div class="minicycle-multiselect" id="ap-minicycle-container">
                             <div class="multiselect-toggle" onclick="ApprovalPage.toggleMiniCycleDropdown()">
                                 <span>${this.getMiniCycleFilterLabel()}</span>
-                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                 </svg>
                             </div>
@@ -166,18 +216,6 @@ const ApprovalPage = {
                             `).join('')}
                         </select>
                     </div>
-                </div>
-                <div class="ap-tabs">
-                    ${this.columns.map(col => `
-                        <button class="ap-tab ${this.activeTab === col.key ? 'ap-tab-active' : ''}"
-                                data-status="${col.key}"
-                                style="--tab-color: ${col.color}"
-                                onclick="ApprovalPage.switchTab('${col.key}')">
-                            <span class="ap-tab-dot"></span>
-                            <span class="ap-tab-label">${col.title}</span>
-                            <span class="ap-tab-count">${counts[col.key]}</span>
-                        </button>
-                    `).join('')}
                 </div>
                 <div id="ap-table-area"></div>
             </div>
@@ -366,64 +404,75 @@ const ApprovalPage = {
         const style = document.createElement('style');
         style.id = 'approval-styles-v3';
         style.textContent = `
-            /* === FILTERS === */
-            .ap-filters {
+            /* === TOOLBAR (tabs + filters on same row) === */
+            .ap-toolbar {
                 display: flex;
                 align-items: center;
-                justify-content: flex-end;
-                margin-bottom: 16px;
-                gap: 12px;
+                justify-content: space-between;
+                gap: 16px;
+                margin-bottom: 20px;
+                flex-wrap: wrap;
+            }
+            .ap-tabs {
+                display: flex;
+                gap: 6px;
+                flex-wrap: wrap;
             }
             .ap-filter-group {
                 display: flex;
-                gap: 12px;
+                gap: 10px;
                 align-items: center;
-                flex-wrap: wrap;
+                flex-shrink: 0;
             }
             .ap-dept-select {
-                min-width: 200px;
-                padding: 8px 12px;
+                min-width: 190px;
+                padding: 7px 10px;
                 border: 1.5px solid #e5e7eb;
-                border-radius: 10px;
-                font-size: 13px;
+                border-radius: 8px;
+                font-size: 12.5px;
                 color: #374151;
                 background: white;
                 cursor: pointer;
+                height: 36px;
+                transition: border-color 0.15s, box-shadow 0.15s;
+            }
+            .ap-dept-select:hover {
+                border-color: #d1d5db;
             }
             .ap-dept-select:focus {
                 outline: none;
                 border-color: #12b0a0;
+                box-shadow: 0 0 0 3px rgba(18,176,160,0.1);
             }
-            .ap-filters .minicycle-multiselect {
+            .ap-filter-group .minicycle-multiselect {
                 position: relative;
-                min-width: 200px;
+                min-width: 180px;
             }
-            .ap-filters .multiselect-toggle {
+            .ap-filter-group .multiselect-toggle {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
                 gap: 8px;
-                padding: 8px 12px;
+                padding: 7px 10px;
                 background: white;
                 border: 1.5px solid #e5e7eb;
-                border-radius: 10px;
+                border-radius: 8px;
                 cursor: pointer;
-                font-size: 13px;
+                font-size: 12.5px;
                 font-weight: 500;
-                color: #6b7280;
-                min-height: 38px;
+                color: #374151;
+                height: 36px;
                 white-space: nowrap;
-                transition: border-color 0.15s;
+                transition: border-color 0.15s, box-shadow 0.15s;
             }
-            .ap-filters .multiselect-toggle:hover {
-                border-color: #12b0a0;
+            .ap-filter-group .multiselect-toggle:hover {
+                border-color: #d1d5db;
             }
-            .ap-filters .multiselect-options {
+            .ap-filter-group .multiselect-options {
                 position: absolute;
                 top: calc(100% + 4px);
-                left: 0;
                 right: 0;
-                min-width: 220px;
+                min-width: 240px;
                 background: white;
                 border: 1px solid #e5e7eb;
                 border-radius: 10px;
@@ -433,7 +482,7 @@ const ApprovalPage = {
                 overflow-y: auto;
                 padding: 4px 0;
             }
-            .ap-filters .multiselect-option {
+            .ap-filter-group .multiselect-option {
                 display: flex;
                 align-items: center;
                 gap: 10px;
@@ -444,35 +493,27 @@ const ApprovalPage = {
                 transition: background 0.15s;
                 user-select: none;
             }
-            .ap-filters .multiselect-option:hover {
+            .ap-filter-group .multiselect-option:hover {
                 background: #f3f4f6;
             }
-            .ap-filters .multiselect-option input[type="checkbox"] {
+            .ap-filter-group .multiselect-option input[type="checkbox"] {
                 width: 16px;
                 height: 16px;
                 accent-color: #12b0a0;
                 cursor: pointer;
                 flex-shrink: 0;
             }
-            .ap-filters .multiselect-option span {
+            .ap-filter-group .multiselect-option span {
                 flex: 1;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
             }
-            .ap-filters .multiselect-option:first-child {
+            .ap-filter-group .multiselect-option:first-child {
                 border-bottom: 1px solid #e5e7eb;
                 margin-bottom: 2px;
                 padding-bottom: 10px;
                 font-weight: 600;
-            }
-
-            /* === TABS === */
-            .ap-tabs {
-                display: flex;
-                gap: 6px;
-                margin-bottom: 20px;
-                flex-wrap: wrap;
             }
             .ap-tab {
                 display: flex;

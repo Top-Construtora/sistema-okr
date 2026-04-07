@@ -577,8 +577,8 @@ const StrategicObjectiveDetailPage = {
             : null;
 
         const rowsHTML = metrics.map(m => {
-            const progress = m.target_value > 0 ? Math.min((m.current_value / m.target_value) * 100, 100) : 0;
-            const barColor = progress >= 70 ? '#1e6076' : (progress >= 40 ? '#2a8fad' : '#5bb8ce');
+            const displayValue = Math.min(m.current_value, 100);
+            const barColor = displayValue >= 70 ? '#1e6076' : (displayValue >= 40 ? '#2a8fad' : '#5bb8ce');
             return `
                 <div class="sod-metric-row">
                     <div class="sod-metric-info">
@@ -591,9 +591,9 @@ const StrategicObjectiveDetailPage = {
                     </div>
                     <div class="sod-metric-progress-area">
                         <div class="sod-progress-bar">
-                            <div class="sod-progress-fill" style="width:${progress}%;background:${barColor};"></div>
+                            <div class="sod-progress-fill" style="width:${displayValue}%;background:${barColor};"></div>
                         </div>
-                        <span class="sod-metric-pct" style="color:${barColor};">${progress.toFixed(0)}%</span>
+                        <span class="sod-metric-pct" style="color:${barColor};">${m.current_value.toFixed(1)}%</span>
                     </div>
                     ${isAdmin ? `
                         <div class="sod-metric-actions" onclick="event.stopPropagation();">
@@ -2098,7 +2098,7 @@ const StrategicObjectiveDetailPage = {
         const freqLabel = kpi.frequencia ? (FREQUENCIA_LABELS[kpi.frequencia] || kpi.frequencia) : null;
 
         return `
-            <div class="sod-kpi-row">
+            <div class="sod-kpi-row sod-kpi-row-clickable" onclick="KPIsPage.openDetailModal(${kpi.id})" title="Ver detalhes e medir evolução">
                 <div class="sod-kpi-content">
                     <div class="sod-kpi-header-row">
                         <span class="sod-kpi-name">${kpi.name}</span>
@@ -2143,16 +2143,9 @@ const StrategicObjectiveDetailPage = {
                         ` : ''}
                     </div>
                 </div>
-                ${isAdmin ? `
-                    <div class="sod-metric-actions" onclick="event.stopPropagation();">
-                        <button class="so-obj-action-btn" onclick="StrategicObjectiveDetailPage.openKpiModal(${kpi.id})" title="Editar">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                        </button>
-                        <button class="so-obj-action-btn so-obj-action-del" onclick="StrategicObjectiveDetailPage.deleteKpi(${kpi.id})" title="Excluir">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                        </button>
-                    </div>
-                ` : ''}
+                <div class="sod-kpi-go-arrow">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </div>
             </div>
         `;
     },
@@ -3504,8 +3497,18 @@ const StrategicObjectiveDetailPage = {
                 border: 1px solid #f1f5f9;
                 transition: background 0.15s;
             }
-            .sod-kpi-row:hover { background: #f8fafc; }
+            .sod-kpi-row-clickable { cursor: pointer; }
+            .sod-kpi-row:hover { background: #f0fdf9; border-color: #99e2d8; }
             .sod-kpi-row:hover .sod-metric-actions { opacity: 1; }
+            .sod-kpi-go-arrow {
+                display: flex;
+                align-items: center;
+                color: #94a3b8;
+                flex-shrink: 0;
+                padding-top: 4px;
+                transition: color 0.15s, transform 0.15s;
+            }
+            .sod-kpi-row:hover .sod-kpi-go-arrow { color: #12b0a0; transform: translateX(2px); }
             .sod-kpi-content { flex: 1; min-width: 0; }
             .sod-kpi-header-row {
                 display: flex;

@@ -34,6 +34,22 @@ class StrategicTimelineEntry {
         return this.measured_at || this.created_at;
     }
 
+    static async getBySubMetricId(subMetricId) {
+        try {
+            const { data, error } = await supabaseClient
+                .from('strategic_objective_entries')
+                .select('*, users(id, nome), strategic_sub_metrics(id, name, unit)')
+                .eq('sub_metric_id', subMetricId)
+                .order('measured_at', { ascending: false });
+
+            if (error) throw error;
+            return (data || []).map(d => new StrategicTimelineEntry(d));
+        } catch (error) {
+            console.error('Erro ao buscar entradas por sub_metric_id:', error);
+            return [];
+        }
+    }
+
     static async getByObjectiveId(objectiveId) {
         try {
             const { data, error } = await supabaseClient
