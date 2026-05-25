@@ -353,7 +353,10 @@ const StrategicObjectivesPage = {
                     <!-- Linha 4: Responsáveis -->
                     <div class="form-group-gio" style="margin:0;">
                         <label class="form-label-gio">Responsáveis</label>
-                        <div class="so-modal-dept-grid">
+                        <input type="text" class="form-control-gio" placeholder="Pesquisar departamento..."
+                            oninput="filterResponsibleList(this, '#strat-obj-depts-grid', '.so-modal-dept-chip')"
+                            style="margin-bottom:8px;">
+                        <div class="so-modal-dept-grid" id="strat-obj-depts-grid">
                             ${departments.map(d => {
                                 const checked = (this.currentObjective?.responsavel_departamento_ids || []).includes(d.id);
                                 return `

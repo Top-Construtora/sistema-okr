@@ -1626,9 +1626,12 @@ const StrategicObjectiveDetailPage = {
                                 <span class="sod-dept-counter" id="sod-metric-dept-counter">${selectedCount} de ${totalDepts}</span>
                             </div>
                         </div>
+                        <input type="text" class="form-control-gio" placeholder="Pesquisar departamento..."
+                            oninput="filterResponsibleList(this, '#sod-metric-depts-grid', '.sod-dept-chip')"
+                            style="margin-bottom:8px;">
                         <div class="sod-dept-checklist-box">
                             ${this.departments.length > 0 ? `
-                                <div class="sod-dept-checklist-grid">
+                                <div class="sod-dept-checklist-grid" id="sod-metric-depts-grid">
                                     ${this.departments.map(d => `
                                         <label class="sod-dept-chip ${selectedResponsavelIds.includes(d.id) ? 'sod-dept-chip-active' : ''}">
                                             <input type="checkbox" name="sod-metric-depts" value="${d.id}" ${selectedResponsavelIds.includes(d.id) ? 'checked' : ''} onchange="StrategicObjectiveDetailPage.onMetricDeptToggle(this)">
@@ -2226,8 +2229,11 @@ const StrategicObjectiveDetailPage = {
                     </div>
                     <div class="form-group-gio">
                         <label class="form-label-gio">Responsáveis</label>
+                        <input type="text" class="form-control-gio" placeholder="Pesquisar departamento..."
+                            oninput="filterResponsibleList(this, '#sod-kpi-depts-grid', '.sod-dept-chip')"
+                            style="margin-bottom:8px;">
                         <div class="sod-dept-checklist-box" style="max-height:unset;">
-                            <div class="sod-dept-checklist-grid">
+                            <div class="sod-dept-checklist-grid" id="sod-kpi-depts-grid">
                                 ${this.departments.map(d => `
                                     <label class="sod-dept-chip ${selectedIds.includes(d.id) ? 'sod-dept-chip-active' : ''}">
                                         <input type="checkbox" name="sod-kpi-depts" value="${d.id}" ${selectedIds.includes(d.id) ? 'checked' : ''} onchange="this.closest('label').classList.toggle('sod-dept-chip-active', this.checked)">
@@ -2423,9 +2429,12 @@ const StrategicObjectiveDetailPage = {
                                 <span class="sod-dept-counter" id="sod-dept-counter">${selectedCount} de ${totalDepts}</span>
                             </div>
                         </div>
+                        <input type="text" class="form-control-gio" placeholder="Pesquisar departamento..."
+                            oninput="filterResponsibleList(this, '#sod-ind-depts-grid', '.sod-dept-chip')"
+                            style="margin-bottom:8px;">
                         <div class="sod-dept-checklist-box">
                             ${this.departments.length > 0 ? `
-                                <div class="sod-dept-checklist-grid">
+                                <div class="sod-dept-checklist-grid" id="sod-ind-depts-grid">
                                     ${this.departments.map(d => `
                                         <label class="sod-dept-chip ${selectedIds.includes(d.id) ? 'sod-dept-chip-active' : ''}">
                                             <input type="checkbox" name="sod-ind-depts" value="${d.id}" ${selectedIds.includes(d.id) ? 'checked' : ''} onchange="StrategicObjectiveDetailPage.onDeptToggle(this)">
@@ -2439,6 +2448,9 @@ const StrategicObjectiveDetailPage = {
                     </div>
                     <div class="form-group-gio">
                         <label class="form-label-gio">Usuário Responsável</label>
+                        <input type="text" class="form-control-gio" placeholder="Pesquisar usuário..."
+                            oninput="filterResponsibleSelect(this, 'sod-ind-usuario')"
+                            style="margin-bottom:8px;">
                         <select id="sod-ind-usuario" class="form-control-gio">
                             <option value="">— Nenhum —</option>
                             ${this.users.map(u => `

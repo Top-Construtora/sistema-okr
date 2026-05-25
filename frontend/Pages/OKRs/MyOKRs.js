@@ -934,7 +934,7 @@ const MyOKRsPage = {
 
             const modal = document.createElement('div');
             modal.id = 'okr-modal';
-            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:1000;';
+            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:9000;isolation:isolate;';
 
             modal.innerHTML = `
                 <div class="modal-overlay" onclick="MyOKRsPage.closeModal()"></div>
@@ -1210,7 +1210,7 @@ const MyOKRsPage = {
 
             const modal = document.createElement('div');
             modal.id = 'kr-modal';
-            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:1000;';
+            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:9000;isolation:isolate;';
 
             modal.innerHTML = `
                 <div class="modal-overlay" onclick="MyOKRsPage.closeKRModal()"></div>
@@ -1285,7 +1285,7 @@ const MyOKRsPage = {
 
         const modal = document.createElement('div');
         modal.id = 'kr-modal';
-        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:1000;';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:9000;isolation:isolate;';
 
         const existingEvidence = (kr.evidence && Array.isArray(kr.evidence)) ? kr.evidence : [];
 
@@ -1946,7 +1946,7 @@ const MyOKRsPage = {
         );
         const modal = document.createElement('div');
         modal.id = 'initiative-modal';
-        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:1000;';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:9000;isolation:isolate;';
 
         modal.innerHTML = `
             <div class="modal-overlay" onclick="MyOKRsPage.closeInitiativeModal()"></div>
@@ -1976,6 +1976,9 @@ const MyOKRsPage = {
                             Responsáveis
                             <small style="font-weight:normal;color:var(--text-muted);">(selecione um ou mais)</small>
                         </label>
+                        <input type="text" class="form-control" placeholder="Pesquisar responsável..."
+                            oninput="filterResponsibleList(this, '#init-responsible-users', '.responsible-user-checkbox-item')"
+                            style="margin-bottom:8px;">
                         <div class="responsible-users-checkbox-list" id="init-responsible-users">
                             ${users.map(u => {
                                 const responsibleUserIds = this.currentInitiative.responsible_users?.map(ru => ru.id || ru.user_id || ru) ||

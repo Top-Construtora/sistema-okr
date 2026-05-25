@@ -1688,6 +1688,7 @@
             position: fixed;
             inset: 0;
             background: rgba(0, 0, 0, 0.6);
+            z-index: 0;
         }
 
         .modal-content {
@@ -5062,20 +5063,23 @@
 .modal-gio-container {
     position: fixed;
     inset: 0;
-    z-index: 1000;
+    z-index: 9000;
     display: flex;
     align-items: center;
     justify-content: center;
+    isolation: isolate;
 }
 
 .modal-overlay-gio {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.5);
+    z-index: 0;
 }
 
 .modal-content-gio {
     position: relative;
+    z-index: 1;
     background: white;
     border-radius: 16px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);

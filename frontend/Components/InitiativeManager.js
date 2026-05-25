@@ -236,6 +236,9 @@ const InitiativeManager = {
                     Responsáveis
                     <small style="font-weight:normal;color:var(--text-muted);">(selecione um ou mais)</small>
                 </label>
+                <input type="text" class="form-control" placeholder="Pesquisar responsável..."
+                    oninput="filterResponsibleList(this, '#initiative-responsible-users', '.responsible-user-checkbox-item')"
+                    style="margin-bottom:8px;">
                 <div class="responsible-users-checkbox-list" id="initiative-responsible-users">
                     ${users.map(u => {
                         const responsibleUserIds = initiative?.getResponsibleUserIds() || [];

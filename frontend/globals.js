@@ -14,6 +14,58 @@ window.AuthService = AuthService;
 window.uid = uid;
 
 // =====================================================
+// Filtros de pesquisa para listas de responsáveis
+// =====================================================
+
+// Filtra itens de uma lista (checkboxes/chips) pelo texto.
+window.filterResponsibleList = function(inputEl, containerSelector, itemSelector) {
+    const q = (inputEl.value || '').trim().toLowerCase();
+    const container = typeof containerSelector === 'string'
+        ? document.querySelector(containerSelector)
+        : containerSelector;
+    if (!container) return;
+    const items = container.querySelectorAll(itemSelector);
+    let visible = 0;
+    items.forEach(item => {
+        const text = (item.textContent || '').toLowerCase();
+        const match = !q || text.includes(q);
+        item.style.display = match ? '' : 'none';
+        if (match) visible++;
+    });
+    // Mensagem "nenhum resultado"
+    let empty = container.querySelector('.responsible-search-empty');
+    if (visible === 0 && q) {
+        if (!empty) {
+            empty = document.createElement('div');
+            empty.className = 'responsible-search-empty';
+            empty.style.cssText = 'padding:8px 12px;color:#9ca3af;font-size:13px;';
+            empty.textContent = 'Nenhum responsável encontrado';
+            container.appendChild(empty);
+        }
+        empty.style.display = '';
+    } else if (empty) {
+        empty.style.display = 'none';
+    }
+};
+
+// Filtra opções de um <select> pelo texto.
+window.filterResponsibleSelect = function(inputEl, selectId) {
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
+    if (!sel.dataset._allOptionsHtml) {
+        sel.dataset._allOptionsHtml = sel.innerHTML;
+    }
+    const q = (inputEl.value || '').trim().toLowerCase();
+    const currentValue = sel.value;
+    const tmp = document.createElement('select');
+    tmp.innerHTML = sel.dataset._allOptionsHtml;
+    const opts = Array.from(tmp.querySelectorAll('option'));
+    const filtered = opts.filter(o => !o.value || !q || o.textContent.toLowerCase().includes(q) || o.value === currentValue);
+    sel.innerHTML = filtered.map(o => o.outerHTML).join('');
+    sel.value = currentValue;
+};
+
+// =====================================================
 // Sistema de Menu Dropdown - Solução com Portal
 // O menu é criado diretamente no body para evitar
 // qualquer problema de posicionamento
