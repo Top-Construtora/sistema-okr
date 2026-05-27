@@ -2,11 +2,13 @@ import { AuthService } from '../../services/auth.js';
 import { OKR } from '../../Entities/OKR.js';
 import { Department } from '../../Entities/Department.js';
 import { MiniCycle } from '../../Entities/MiniCycle.js';
+import { OkrEditRequest } from '../../Entities/OkrEditRequest.js';
 import { Modal } from '../../Components/Modal.js';
 
 const ApprovalPage = {
     activeTab: 'pending',
     okrs: [],
+    editRequests: [],
     objectivesCache: {},
     currentDepartment: 'all',
     currentMiniCycle: 'all',
@@ -23,11 +25,12 @@ const ApprovalPage = {
     },
 
     columns: [
-        { key: 'pending',     title: 'Aguardando Revisão',   icon: 'clock',       color: '#f59e0b' },
-        { key: 'adjust',      title: 'Ajustes Solicitados',  icon: 'alert',       color: '#ef4444' },
-        { key: 'approved',    title: 'Em Andamento',          icon: 'zap',         color: '#3b82f6' },
-        { key: 'completed',   title: 'Concluídos',            icon: 'check',       color: '#10b981' },
-        { key: 'homologated', title: 'Homologados',            icon: 'award',       color: '#8b5cf6' },
+        { key: 'pending',       title: 'Aguardando Revisão',    icon: 'clock',  color: '#f59e0b' },
+        { key: 'adjust',        title: 'Ajustes Solicitados',   icon: 'alert',  color: '#ef4444' },
+        { key: 'approved',      title: 'Em Andamento',           icon: 'zap',    color: '#3b82f6' },
+        { key: 'completed',     title: 'Concluídos',             icon: 'check',  color: '#10b981' },
+        { key: 'homologated',   title: 'Homologados',             icon: 'award',  color: '#8b5cf6' },
+        { key: 'edit_requests', title: 'Pedidos de Edição',      icon: 'lock',   color: '#0ea5e9' },
     ],
 
     async render() {
@@ -40,11 +43,14 @@ const ApprovalPage = {
         const isAdmin = currentUser && (currentUser.tipo === 'admin' || currentUser.tipo === 'consultor');
         const userDepartmentNames = this.getUserDepartmentNames(currentUser);
 
-        const [okrs, departments, miniCycles] = await Promise.all([
+        const [okrs, departments, miniCycles, editRequests] = await Promise.all([
             OKR.getAll(),
             Department.getActive(),
-            MiniCycle.getActive()
+            MiniCycle.getActive(),
+            OkrEditRequest.getPending()
         ]);
+
+        this.editRequests = editRequests;
 
         this.departments = departments;
         this.miniCycles = miniCycles;
@@ -135,7 +141,13 @@ const ApprovalPage = {
         // Update tab counts without re-rendering the whole page (keeps dropdown open)
         const filtered = this.getFilteredOkrs();
         const counts = {};
-        this.columns.forEach(c => { counts[c.key] = filtered.filter(o => o.status === c.key).length; });
+        this.columns.forEach(c => {
+            if (c.key === 'edit_requests') {
+                counts[c.key] = (this.editRequests || []).length;
+            } else {
+                counts[c.key] = filtered.filter(o => o.status === c.key).length;
+            }
+        });
 
         // Update counts in existing tabs
         document.querySelectorAll('.ap-tab').forEach(tab => {
@@ -168,7 +180,13 @@ const ApprovalPage = {
         const content = document.getElementById('content');
         const filtered = this.getFilteredOkrs();
         const counts = {};
-        this.columns.forEach(c => { counts[c.key] = filtered.filter(o => o.status === c.key).length; });
+        this.columns.forEach(c => {
+            if (c.key === 'edit_requests') {
+                counts[c.key] = (this.editRequests || []).length;
+            } else {
+                counts[c.key] = filtered.filter(o => o.status === c.key).length;
+            }
+        });
 
         content.innerHTML = `
             <div class="dashboard-gio">
@@ -238,6 +256,13 @@ const ApprovalPage = {
         if (!area) return;
 
         const col = this.columns.find(c => c.key === this.activeTab);
+
+        // Aba especial: pedidos de edição
+        if (this.activeTab === 'edit_requests') {
+            this.renderEditRequestsTable(area, col);
+            return;
+        }
+
         const filtered = this.getFilteredOkrs();
         const items = filtered.filter(o => o.status === this.activeTab);
         const currentUser = AuthService.getCurrentUser();
@@ -367,6 +392,139 @@ const ApprovalPage = {
         this.activeTab = status;
         document.querySelectorAll('.ap-tab').forEach(t => t.classList.toggle('ap-tab-active', t.dataset.status === status));
         this.renderTable();
+    },
+
+    // ============== PEDIDOS DE EDICAO ==============
+
+    renderEditRequestsTable(area, col) {
+        const items = this.editRequests || [];
+        const currentUser = AuthService.getCurrentUser();
+        const isAdmin = currentUser && currentUser.tipo === 'admin';
+
+        if (items.length === 0) {
+            area.innerHTML = `
+                <div class="ap-empty">
+                    <div class="ap-empty-icon" style="color:${col.color}20;">
+                        <svg width="36" height="36" fill="none" stroke="${col.color}" viewBox="0 0 24 24" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                        </svg>
+                    </div>
+                    <p>Nenhum pedido de edição pendente</p>
+                </div>
+            `;
+            return;
+        }
+
+        area.innerHTML = `
+            <div class="ap-list">
+                ${items.map(req => this.renderEditRequestRow(req, isAdmin)).join('')}
+            </div>
+        `;
+    },
+
+    renderEditRequestRow(req, isAdmin) {
+        const okrTitle = req.okr?.title || 'OKR';
+        const okrDept = req.okr?.department || '';
+        const okrStatus = req.okr?.status || '';
+        const reqDate = req.created_at ? new Date(req.created_at).toLocaleDateString('pt-BR') : '';
+        const reqTime = req.created_at ? new Date(req.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+        const statusLabels = {
+            'pending': 'Pendente', 'adjust': 'Ajustes', 'approved': 'Em Andamento',
+            'completed': 'Concluído', 'homologated': 'Homologado'
+        };
+        return `
+            <div class="ap-card ap-edit-req-card" style="align-items:flex-start;">
+                <div class="ap-card-left" style="--accent:#0ea5e9;background:#e0f2fe;">
+                    <svg width="22" height="22" fill="none" stroke="#0ea5e9" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                </div>
+                <div class="ap-card-body" style="flex:1;">
+                    <div class="ap-card-title">${okrTitle}</div>
+                    <div class="ap-card-meta">
+                        ${okrDept ? `<span class="ap-card-krs">${okrDept}</span>` : ''}
+                        ${okrStatus ? `<span class="ap-card-krs">Status: ${statusLabels[okrStatus] || okrStatus}</span>` : ''}
+                        <span class="ap-card-krs">Solicitado por <strong>${req.requester?.nome || 'Usuário'}</strong></span>
+                        <span class="ap-card-krs">${reqDate} ${reqTime}</span>
+                    </div>
+                    <div class="ap-card-comment" style="margin-top:8px;">
+                        <strong>Motivo:</strong> ${this.escapeHtml(req.reason || '')}
+                    </div>
+                </div>
+                <div class="ap-card-actions" style="flex-direction:column;gap:6px;">
+                    ${isAdmin ? `
+                        <button class="ap-action ap-action-success" onclick="ApprovalPage.approveEditRequest('${req.id}')" title="Aprovar (libera edição por 7 dias)">
+                            <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 6L9 17l-5-5"/></svg>
+                            <span>Aprovar</span>
+                        </button>
+                        <button class="ap-action ap-action-danger" onclick="ApprovalPage.rejectEditRequest('${req.id}')" title="Recusar">
+                            <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                            <span>Recusar</span>
+                        </button>
+                    ` : `<span class="ap-flow-done">Somente admin pode aprovar</span>`}
+                </div>
+            </div>
+        `;
+    },
+
+    escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    },
+
+    async approveEditRequest(requestId) {
+        const currentUser = AuthService.getCurrentUser();
+        if (!currentUser || currentUser.tipo !== 'admin') {
+            if (window.DepartmentsPage?.showToast) DepartmentsPage.showToast('Somente admin pode aprovar', 'error');
+            return;
+        }
+        const comment = await Modal.prompt({
+            title: 'Aprovar pedido de edição',
+            message: 'O usuário poderá editar medições e evidências por 7 dias. Comentário opcional:',
+            placeholder: 'Ex: OK, atualize a evidência final.',
+            confirmLabel: 'Aprovar',
+            cancelLabel: 'Cancelar',
+            required: false,
+            maxLength: 500
+        });
+        if (comment === null) return;
+        try {
+            const req = await OkrEditRequest.getById(requestId);
+            if (!req) return;
+            await req.approve(currentUser.id, comment || '');
+            if (window.DepartmentsPage?.showToast) DepartmentsPage.showToast('Solicitação aprovada', 'success');
+            await this.render();
+        } catch (err) {
+            console.error(err);
+            if (window.DepartmentsPage?.showToast) DepartmentsPage.showToast('Erro ao aprovar', 'error');
+        }
+    },
+
+    async rejectEditRequest(requestId) {
+        const currentUser = AuthService.getCurrentUser();
+        if (!currentUser || currentUser.tipo !== 'admin') {
+            if (window.DepartmentsPage?.showToast) DepartmentsPage.showToast('Somente admin pode recusar', 'error');
+            return;
+        }
+        const comment = await Modal.prompt({
+            title: 'Recusar pedido de edição',
+            message: 'Informe o motivo da recusa (obrigatório).',
+            placeholder: 'Ex: Esse OKR já foi homologado em ciclo anterior...',
+            confirmLabel: 'Recusar',
+            cancelLabel: 'Cancelar',
+            required: true,
+            maxLength: 500
+        });
+        if (!comment) return;
+        try {
+            const req = await OkrEditRequest.getById(requestId);
+            if (!req) return;
+            await req.reject(currentUser.id, comment);
+            if (window.DepartmentsPage?.showToast) DepartmentsPage.showToast('Solicitação recusada', 'success');
+            await this.render();
+        } catch (err) {
+            console.error(err);
+            if (window.DepartmentsPage?.showToast) DepartmentsPage.showToast('Erro ao recusar', 'error');
+        }
     },
 
     async changeStatus(okrId, newStatus) {

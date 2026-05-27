@@ -1,15 +1,5 @@
-// =====================================================
-// MAIN.JS - Entry Point do Sistema OKR
-// Vite carrega este arquivo automaticamente
-// =====================================================
-
-// Importa CSS
 import './styles.css'
-
-// 1. Importa e expõe globals
 import './globals.js'
-
-// 2. Importa Entidades (order matters!)
 import { Cycle } from './Entities/Cycle.js'
 import { MiniCycle } from './Entities/MiniCycle.js'
 import { Department } from './Entities/Department.js'
@@ -17,6 +7,7 @@ import { User } from './Entities/User.js'
 import { OKR, OKR_STATUS } from './Entities/OKR.js'
 import './Entities/KeyResult.js'
 import { Initiative } from './Entities/Initiative.js'
+import { OkrEditRequest } from './Entities/OkrEditRequest.js'
 import { Reminder, REMINDER_TYPES, REMINDER_PRIORITIES } from './Entities/Reminder.js'
 import { CompanyPolicy } from './Entities/CompanyPolicy.js'
 import { StrategicObjective } from './Entities/StrategicObjective.js'
@@ -25,16 +16,10 @@ import { StrategicTimelineEntry } from './Entities/StrategicTimelineEntry.js'
 import { ProblemTree } from './Entities/ProblemTree.js'
 import { SwotItem } from './Entities/SwotItem.js'
 import { SwotCrossing } from './Entities/SwotCrossing.js'
-
-// 2.5 Importa Components
 import { Modal } from './Components/Modal.js'
 import { InitiativeManager } from './Components/InitiativeManager.js'
 import { SkeletonLoader } from './Components/SkeletonLoader.js'
-
-// 3. Importa Layout
 import { Layout } from './Layout.js'
-
-// 4. Importa Pages
 import { HomePage } from './Pages/Home/Home.js'
 import { DashboardPage } from './Pages/Dashboard/Dashboard.js'
 import { ObjectivesPage } from './Pages/Objectives/Objectives.js'
@@ -58,11 +43,8 @@ import { ProblemTreePage } from './Pages/StrategicPlanning/ProblemTree.js'
 import { SwotMatrixPage } from './Pages/StrategicPlanning/SwotMatrix.js'
 import { ImpactDefinitionPage } from './Pages/StrategicPlanning/ImpactDefinition.js'
 import { ScenarioAnalysisPage } from './Pages/StrategicPlanning/ScenarioAnalysis.js'
-
-// 5. Importa App
 import { App } from './app.js'
 
-// Expõe tudo globalmente (necessário para onclick handlers inline)
 window.Cycle = Cycle;
 window.MiniCycle = MiniCycle;
 window.Department = Department;
@@ -70,6 +52,7 @@ window.User = User;
 window.OKR = OKR;
 window.OKR_STATUS = OKR_STATUS;
 window.Initiative = Initiative;
+window.OkrEditRequest = OkrEditRequest;
 window.Reminder = Reminder;
 window.REMINDER_TYPES = REMINDER_TYPES;
 window.REMINDER_PRIORITIES = REMINDER_PRIORITIES;

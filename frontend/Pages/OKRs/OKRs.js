@@ -8,6 +8,7 @@ import { Department } from '../../Entities/Department.js';
 import { Initiative } from '../../Entities/Initiative.js';
 import { User } from '../../Entities/User.js';
 import { MiniCycle } from '../../Entities/MiniCycle.js';
+import { OkrEditRequest } from '../../Entities/OkrEditRequest.js';
 
 // Importa uid diretamente se necessário
 const generateId = () => {
@@ -43,6 +44,44 @@ const OKRsPage = {
     },
 
     /**
+     * Verifica se o OKR tem um desbloqueio temporário aprovado (e não vencido)
+     * para o usuário atual. Libera medições/evidências.
+     */
+    hasActiveUnlock(okr) {
+        return !!(okr.active_unlock && okr.active_unlock.id);
+    },
+
+    /**
+     * Anexa pending_request (objeto OkrEditRequest ou null) a cada OKR
+     * para o usuário atual.
+     */
+    async attachPendingRequests(okrs, currentUser) {
+        if (!currentUser?.id || !okrs?.length) return;
+        try {
+            const { supabaseClient } = await import('../../services/supabase.js');
+            const { data } = await supabaseClient
+                .from('okr_edit_requests')
+                .select('*')
+                .eq('requested_by', currentUser.id)
+                .eq('status', 'pending');
+            const map = {};
+            (data || []).forEach(r => { map[r.okr_id] = r; });
+            okrs.forEach(o => { o.pending_request = map[o.id] || null; });
+        } catch (e) {
+            console.warn('Falha ao carregar solicitações pendentes', e);
+        }
+    },
+
+    /**
+     * Verifica se OKR pode ser editado (título, descrição, etc.)
+     * O desbloqueio temporário NÃO libera edição do OKR/KR — só medições.
+     */
+    canEditOKR(okr) {
+        if (!this.isCycleActive(okr)) return false;
+        return okr.status === 'pending' || okr.status === 'adjust';
+    },
+
+    /**
      * Verifica se KR pode ser editado
      */
     canEditKR(okr) {
@@ -51,31 +90,95 @@ const OKRsPage = {
     },
 
     /**
-     * Verifica se pode editar apenas evidências e iniciativas
+     * Verifica se pode editar evidências e iniciativas.
+     * Liberado quando há desbloqueio temporário ativo.
      */
     canEditEvidenceAndInitiatives(okr) {
+        if (this.hasActiveUnlock(okr)) return true;
         if (!this.isCycleActive(okr)) return false;
         return okr.status === 'approved' || okr.status === 'pending' || okr.status === 'adjust';
     },
 
     /**
-     * Verifica se OKR está completamente bloqueado
-     * (ciclo inativo OU status terminal)
+     * Verifica se OKR está completamente bloqueado.
+     * Desbloqueio temporário reduz o lock.
      */
     isOKRLocked(okr) {
+        if (this.hasActiveUnlock(okr)) return false;
         if (!this.isCycleActive(okr)) return true;
         return okr.status === 'homologated' || okr.status === 'completed';
     },
 
     /**
      * Retorna o motivo do bloqueio, ou null se não está bloqueado.
-     * Usado para mostrar mensagem específica ao usuário.
      */
     getLockReason(okr) {
         if (!this.isCycleActive(okr)) return 'cycle_inactive';
         if (okr.status === 'homologated') return 'homologated';
         if (okr.status === 'completed') return 'completed';
         return null;
+    },
+
+    /**
+     * Indica se o OKR aceita uma solicitação de aprovação ao comitê
+     * (ciclo inativo OU homologado). Concluído não é elegível.
+     */
+    canRequestEditApproval(okr) {
+        const reason = this.getLockReason(okr);
+        return reason === 'cycle_inactive' || reason === 'homologated';
+    },
+
+    formatExpiresAt(iso) {
+        if (!iso) return '';
+        const d = new Date(iso);
+        return d.toLocaleDateString('pt-BR') + ' às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    },
+
+    renderEditRequestSection(okr) {
+        // Caso 1: tem desbloqueio ativo
+        if (this.hasActiveUnlock(okr)) {
+            const exp = okr.active_unlock?.expires_at;
+            return `
+                <div class="okr-unlock-banner">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>
+                    </svg>
+                    <div>
+                        <strong>Edição temporariamente liberada</strong>
+                        <p>Você pode editar medições e evidências${exp ? ` até <b>${this.formatExpiresAt(exp)}</b>` : ''}.</p>
+                    </div>
+                </div>
+            `;
+        }
+        // Caso 2: tem solicitação pendente
+        if (okr.pending_request) {
+            return `
+                <div class="okr-request-pending-banner">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <div style="flex:1;">
+                        <strong>Aguardando aprovação do comitê</strong>
+                        <p>Sua solicitação foi enviada em ${this.formatExpiresAt(okr.pending_request.created_at)}.</p>
+                    </div>
+                    <button class="btn btn-xs btn-secondary" onclick="OKRsPage.cancelEditRequest('${okr.pending_request.id}')">Cancelar</button>
+                </div>
+            `;
+        }
+        // Caso 3: pode solicitar (ciclo inativo ou homologado)
+        if (this.canRequestEditApproval(okr)) {
+            return `
+                <div style="padding:12px 20px 0 20px;">
+                    <button class="btn btn-sm btn-primary" onclick="OKRsPage.openEditRequestModal('${okr.id}')">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        Solicitar aprovação para editar
+                    </button>
+                </div>
+            `;
+        }
+        return '';
     },
 
     // Retorna apenas primeiro e segundo nome do usuário
@@ -141,9 +244,14 @@ const OKRsPage = {
         allMiniCycles.forEach(mc => {
             cycleActiveByMiniCycle[mc.id] = mc.cycle?.ativo !== false;
         });
+        // Desbloqueios ativos (aprovados e não vencidos) por usuário
+        const unlocksMap = await OkrEditRequest.getActiveUnlocksMap();
         okrs.forEach(okr => {
             okr.cycle_active = okr.mini_cycle_id ? (cycleActiveByMiniCycle[okr.mini_cycle_id] !== false) : true;
+            const unlockKey = `${okr.id}:${currentUser?.id}`;
+            okr.active_unlock = unlocksMap[unlockKey] || null;
         });
+        await this.attachPendingRequests(okrs, currentUser);
 
         // Se ainda não foi selecionado um miniciclo, pré-seleciona os ativos atuais
         if (this.currentMiniCycle === 'all') {
@@ -274,15 +382,19 @@ const OKRsPage = {
         // Página "Todos os OKRs" - mostra todos os OKRs de todos os departamentos
         let okrs = await OKR.getAll();
 
-        // Enriquece com flag cycle_active
+        // Enriquece com flag cycle_active e desbloqueios ativos
         const allMiniCycles = await MiniCycle.getAll();
         const cycleActiveByMiniCycle = {};
         allMiniCycles.forEach(mc => {
             cycleActiveByMiniCycle[mc.id] = mc.cycle?.ativo !== false;
         });
+        const unlocksMap = await OkrEditRequest.getActiveUnlocksMap();
         okrs.forEach(okr => {
             okr.cycle_active = okr.mini_cycle_id ? (cycleActiveByMiniCycle[okr.mini_cycle_id] !== false) : true;
+            const unlockKey = `${okr.id}:${currentUser?.id}`;
+            okr.active_unlock = unlocksMap[unlockKey] || null;
         });
+        await this.attachPendingRequests(okrs, currentUser);
 
         // Filtro por status
         if (this.currentFilter === 'pending') {
@@ -508,6 +620,7 @@ const OKRsPage = {
                 </div>
 
                 <div class="okr-accordion-body ${isOKRExpanded ? 'expanded' : ''}" data-okr-id="${okr.id}">
+                    ${this.renderEditRequestSection(okr)}
                     ${isLocked ? (() => {
                         const reason = this.getLockReason(okr);
                         if (reason === 'cycle_inactive') {
@@ -1429,6 +1542,103 @@ const OKRsPage = {
 
     closeAllMenus() {
         window.closeAllDropdownMenus();
+    },
+
+    // ============== SOLICITACAO DE APROVACAO PARA EDITAR ==============
+
+    openEditRequestModal(okrId) {
+        const existing = document.getElementById('edit-request-modal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'edit-request-modal';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:9000;isolation:isolate;';
+        modal.innerHTML = `
+            <div class="modal-overlay" onclick="OKRsPage.closeEditRequestModal()"></div>
+            <div class="modal-content" style="max-width:520px;">
+                <div class="modal-header">
+                    <h3>Solicitar aprovação para editar</h3>
+                    <button class="modal-close" onclick="OKRsPage.closeEditRequestModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p style="margin:0 0 12px;color:var(--text-muted);font-size:13px;">
+                        Descreva por que precisa editar este OKR. O comitê irá revisar e aprovar ou recusar.
+                        Se aprovado, você terá 7 dias para editar medições e evidências.
+                    </p>
+                    <div class="form-group">
+                        <label class="form-label">Motivo *</label>
+                        <textarea id="edit-request-reason" class="form-control" rows="4" maxlength="500"
+                            placeholder="Ex: Preciso atualizar a evidência do KR2 com o relatório final..."></textarea>
+                        <small style="color:var(--text-muted);font-size:11px;">Máx 500 caracteres.</small>
+                    </div>
+                    <input type="hidden" id="edit-request-okr-id" value="${okrId}">
+                    <div id="edit-request-error" class="error-message-gio" style="display:none;color:var(--danger);font-size:13px;margin-top:8px;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="OKRsPage.closeEditRequestModal()">Cancelar</button>
+                    <button class="btn btn-primary" id="edit-request-submit-btn" onclick="OKRsPage.submitEditRequest()">Enviar solicitação</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        setTimeout(() => document.getElementById('edit-request-reason')?.focus(), 50);
+    },
+
+    closeEditRequestModal() {
+        const m = document.getElementById('edit-request-modal');
+        if (m) m.remove();
+    },
+
+    async submitEditRequest() {
+        const okrId = document.getElementById('edit-request-okr-id')?.value;
+        const reason = document.getElementById('edit-request-reason')?.value.trim();
+        const errorDiv = document.getElementById('edit-request-error');
+        const btn = document.getElementById('edit-request-submit-btn');
+        if (errorDiv) errorDiv.style.display = 'none';
+        if (!reason) {
+            if (errorDiv) { errorDiv.textContent = 'Por favor, descreva o motivo.'; errorDiv.style.display = 'block'; }
+            return;
+        }
+        const user = AuthService.getCurrentUser();
+        if (!user) {
+            if (errorDiv) { errorDiv.textContent = 'Sessão expirada.'; errorDiv.style.display = 'block'; }
+            return;
+        }
+        try {
+            if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+            // Verifica se já existe pendente
+            const existing = await OkrEditRequest.getPendingFor(okrId, user.id);
+            if (existing) {
+                if (errorDiv) { errorDiv.textContent = 'Você já tem uma solicitação pendente para este OKR.'; errorDiv.style.display = 'block'; }
+                if (btn) { btn.disabled = false; btn.textContent = 'Enviar solicitação'; }
+                return;
+            }
+            await OkrEditRequest.create({ okrId, requestedBy: user.id, reason });
+            this.closeEditRequestModal();
+            if (window.DepartmentsPage?.showToast) {
+                DepartmentsPage.showToast('Solicitação enviada ao comitê', 'success');
+            }
+            await this.renderList();
+        } catch (err) {
+            console.error(err);
+            if (errorDiv) { errorDiv.textContent = err.message || 'Erro ao enviar solicitação.'; errorDiv.style.display = 'block'; }
+            if (btn) { btn.disabled = false; btn.textContent = 'Enviar solicitação'; }
+        }
+    },
+
+    async cancelEditRequest(requestId) {
+        if (!confirm('Cancelar esta solicitação?')) return;
+        try {
+            const req = await OkrEditRequest.getById(requestId);
+            if (!req) return;
+            const user = AuthService.getCurrentUser();
+            await req.close(user?.id);
+            if (window.DepartmentsPage?.showToast) DepartmentsPage.showToast('Solicitação cancelada', 'success');
+            await this.renderList();
+        } catch (err) {
+            console.error(err);
+            if (window.DepartmentsPage?.showToast) DepartmentsPage.showToast('Erro ao cancelar', 'error');
+        }
     },
 
     addKR(okrId) {

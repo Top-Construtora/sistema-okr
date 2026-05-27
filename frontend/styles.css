@@ -5059,6 +5059,44 @@
     color: white;
 }
 
+/* ===== Banners de solicitação de edição (locked OKR) ===== */
+.okr-unlock-banner,
+.okr-request-pending-banner {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 14px 18px;
+    margin: 16px 20px 0 20px;
+    border-radius: 8px;
+    border-left: 4px solid;
+}
+.okr-unlock-banner {
+    background: #ecfdf5;
+    border-left-color: #10b981;
+    color: #065f46;
+}
+.okr-request-pending-banner {
+    background: #eff6ff;
+    border-left-color: #3b82f6;
+    color: #1e40af;
+}
+.okr-unlock-banner svg,
+.okr-request-pending-banner svg {
+    flex-shrink: 0;
+}
+.okr-unlock-banner strong,
+.okr-request-pending-banner strong {
+    display: block;
+    font-size: 14px;
+    margin-bottom: 2px;
+}
+.okr-unlock-banner p,
+.okr-request-pending-banner p {
+    margin: 0;
+    font-size: 13px;
+    opacity: 0.9;
+}
+
 /* Modal GIO */
 .modal-gio-container {
     position: fixed;
