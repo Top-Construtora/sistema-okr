@@ -633,7 +633,7 @@ const MyOKRsPage = {
                                                         ? `<span class="kr-count-badge">${initiatives.length}</span>`
                                                         : ''
                                                     }
-                                                    ${canEdit ? `
+                                                    ${canEditEvidence ? `
                                                     <button class="btn btn-xs btn-primary" onclick="MyOKRsPage.openInitiativeModal('${kr.id}')" style="margin-left:auto;">
                                                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -649,7 +649,7 @@ const MyOKRsPage = {
                                                         <div class="initiatives-list">
                                                             ${initiatives.map(init => `
                                                                 <div class="initiative-item ${init.concluida ? 'completed' : ''} ${init.isOverdue() ? 'overdue' : ''}">
-                                                                    ${canEdit ? `
+                                                                    ${canEditEvidence ? `
                                                                     <label class="initiative-checkbox">
                                                                         <input type="checkbox" ${init.concluida ? 'checked' : ''}
                                                                             onchange="MyOKRsPage.toggleInitiative('${init.id}')">
@@ -770,7 +770,7 @@ const MyOKRsPage = {
                                                                             </div>
                                                                         ` : ''}
                                                                     </div>
-                                                                    ${canEdit ? `
+                                                                    ${canEditEvidence ? `
                                                                     <div class="initiative-actions">
                                                                         <button class="btn-icon-sm" onclick="MyOKRsPage.openInitiativeModal('${kr.id}', '${init.id}')" title="Editar">
                                                                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
