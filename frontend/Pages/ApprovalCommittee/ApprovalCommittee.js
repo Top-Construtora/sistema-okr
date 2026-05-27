@@ -12,6 +12,7 @@ const ApprovalPage = {
     editRequests: [],
     objectivesCache: {},
     expandedOkrs: new Set(),
+    expandedKrs: new Set(),
     currentDepartment: 'all',
     currentMiniCycle: 'all',
     departments: [],
@@ -22,6 +23,15 @@ const ApprovalPage = {
             this.expandedOkrs.delete(okrId);
         } else {
             this.expandedOkrs.add(okrId);
+        }
+        this.renderTable();
+    },
+
+    toggleKrExpand(krId) {
+        if (this.expandedKrs.has(krId)) {
+            this.expandedKrs.delete(krId);
+        } else {
+            this.expandedKrs.add(krId);
         }
         this.renderTable();
     },
@@ -407,42 +417,82 @@ const ApprovalPage = {
         const krProgress = kr.progress || 0;
         const krColor = krProgress >= 70 ? '#10b981' : krProgress >= 40 ? '#f59e0b' : '#ef4444';
         const evidences = Array.isArray(kr.evidence) ? kr.evidence : [];
+        const isExpanded = this.expandedKrs.has(kr.id);
+        const hasAdjust = kr.committee_comment && kr.committee_comment.trim();
+        const hasComment = kr.comment && kr.comment.trim();
+
+        const iconChart = '<svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>';
+        const iconComment = '<svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>';
+        const iconAlert = '<svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>';
+        const iconAttach = '<svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>';
+
         return `
-            <div class="ap-kr-item">
-                <div class="ap-kr-header">
+            <div class="ap-kr-item ${isExpanded ? 'ap-kr-item-expanded' : ''}">
+                <div class="ap-kr-header" onclick="ApprovalPage.toggleKrExpand('${kr.id}')">
+                    <button class="ap-kr-expand-btn ${isExpanded ? 'expanded' : ''}" type="button" title="${isExpanded ? 'Recolher' : 'Expandir'}">
+                        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </button>
                     <span class="ap-kr-badge">KR${idx + 1}</span>
                     <span class="ap-kr-title">${this.escapeHtml(kr.title || 'Sem título')}</span>
-                </div>
-                <div class="ap-kr-meta">
-                    <div class="ap-kr-bar">
-                        <div class="ap-kr-bar-fill" style="width:${krProgress}%;background:${krColor};"></div>
-                    </div>
-                    <span class="ap-kr-pct" style="color:${krColor};">${krProgress}%</span>
-                    ${kr.metric ? `<span class="ap-kr-metric">Métrica: ${this.escapeHtml(kr.metric)}</span>` : ''}
-                    ${kr.target ? `<span class="ap-kr-metric">Meta: ${this.escapeHtml(String(kr.target))}</span>` : ''}
-                </div>
-                ${kr.comment && kr.comment.trim() ? `
-                    <div class="ap-kr-comment">
-                        <strong>Comentário:</strong> ${this.escapeHtml(kr.comment)}
-                    </div>
-                ` : ''}
-                ${kr.committee_comment && kr.committee_comment.trim() ? `
-                    <div class="ap-kr-adjust">
-                        <strong>Ajuste solicitado:</strong> ${this.escapeHtml(kr.committee_comment)}
-                    </div>
-                ` : ''}
-                ${evidences.length > 0 ? `
-                    <div class="ap-kr-evidence-block">
-                        <div class="ap-kr-evidence-header">
-                            <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                            </svg>
-                            <span>Medições e Evidências (${evidences.length})</span>
+                    <div class="ap-kr-header-summary">
+                        <div class="ap-kr-mini-bar">
+                            <div class="ap-kr-mini-bar-fill" style="width:${krProgress}%;background:${krColor};"></div>
                         </div>
-                        <div class="ap-kr-evidence-list">
-                            ${evidences.map(ev => this.renderEvidence(ev)).join('')}
+                        <span class="ap-kr-mini-pct" style="color:${krColor};">${krProgress}%</span>
+                        ${evidences.length > 0 ? `<span class="ap-kr-mini-chip" title="${evidences.length} evidência${evidences.length > 1 ? 's' : ''}">${iconAttach}${evidences.length}</span>` : ''}
+                        ${hasAdjust ? `<span class="ap-kr-mini-chip warning" title="Ajuste solicitado">${iconAlert}</span>` : ''}
+                    </div>
+                </div>
+
+                ${isExpanded ? `
+                    <div class="ap-kr-section">
+                        <div class="ap-kr-section-label">${iconChart}<span>Progresso</span></div>
+                        <div class="ap-kr-section-body">
+                            <div class="ap-kr-progress-row">
+                                <div class="ap-kr-bar">
+                                    <div class="ap-kr-bar-fill" style="width:${krProgress}%;background:${krColor};"></div>
+                                </div>
+                                <span class="ap-kr-pct" style="color:${krColor};">${krProgress}%</span>
+                            </div>
+                            ${(kr.metric || kr.target) ? `
+                                <div class="ap-kr-targets">
+                                    ${kr.metric ? `<span class="ap-kr-target-item"><span class="ap-kr-target-key">Métrica</span><span class="ap-kr-target-val">${this.escapeHtml(kr.metric)}</span></span>` : ''}
+                                    ${kr.target ? `<span class="ap-kr-target-item"><span class="ap-kr-target-key">Meta</span><span class="ap-kr-target-val">${this.escapeHtml(String(kr.target))}</span></span>` : ''}
+                                </div>
+                            ` : ''}
                         </div>
                     </div>
+
+                    ${hasAdjust ? `
+                        <div class="ap-kr-section ap-kr-section-warning">
+                            <div class="ap-kr-section-label">${iconAlert}<span>Ajuste solicitado pelo comitê</span></div>
+                            <div class="ap-kr-section-body">
+                                <p class="ap-kr-section-text">${this.escapeHtml(kr.committee_comment)}</p>
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${hasComment ? `
+                        <div class="ap-kr-section">
+                            <div class="ap-kr-section-label">${iconComment}<span>Comentário do colaborador</span></div>
+                            <div class="ap-kr-section-body">
+                                <p class="ap-kr-section-text">${this.escapeHtml(kr.comment)}</p>
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${evidences.length > 0 ? `
+                        <div class="ap-kr-section">
+                            <div class="ap-kr-section-label">${iconAttach}<span>Medições e Evidências (${evidences.length})</span></div>
+                            <div class="ap-kr-section-body">
+                                <div class="ap-kr-evidence-list">
+                                    ${evidences.map(ev => this.renderEvidence(ev)).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
                 ` : ''}
             </div>
         `;
@@ -907,9 +957,9 @@ const ApprovalPage = {
     },
 
     addStyles() {
-        if (document.getElementById('approval-styles-v6')) return;
+        if (document.getElementById('approval-styles-v8')) return;
         const style = document.createElement('style');
-        style.id = 'approval-styles-v6';
+        style.id = 'approval-styles-v8';
         style.textContent = `
             /* === TOOLBAR (tabs + filters on same row) === */
             .ap-toolbar {
@@ -1231,12 +1281,30 @@ const ApprovalPage = {
             }
             .ap-kr-header {
                 display: flex;
-                align-items: flex-start;
+                align-items: center;
                 gap: 10px;
-                padding: 14px 16px 12px;
+                padding: 12px 14px;
                 background: linear-gradient(to bottom, #ffffff, #fafafa);
-                border-bottom: 1px solid #f3f4f6;
+                cursor: pointer;
+                transition: background 0.15s;
             }
+            .ap-kr-header:hover { background: #f9fafb; }
+            .ap-kr-item-expanded .ap-kr-header { border-bottom: 1px solid #e5e7eb; }
+            .ap-kr-expand-btn {
+                background: transparent;
+                border: none;
+                padding: 4px;
+                cursor: pointer;
+                color: #6b7280;
+                border-radius: 4px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                transition: transform 0.2s ease, background 0.15s;
+                flex-shrink: 0;
+            }
+            .ap-kr-expand-btn:hover { background: #f3f4f6; color: #111827; }
+            .ap-kr-expand-btn.expanded { transform: rotate(90deg); }
             .ap-kr-badge {
                 background: #0f766e;
                 color: white;
@@ -1246,70 +1314,119 @@ const ApprovalPage = {
                 border-radius: 5px;
                 letter-spacing: 0.4px;
                 flex-shrink: 0;
-                margin-top: 1px;
             }
-            .ap-kr-title { font-size: 14px; font-weight: 600; color: #1f2937; flex: 1; line-height: 1.4; }
-            .ap-kr-meta {
-                display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-                font-size: 11px; color: #6b7280;
-                padding: 12px 16px;
-                background: #fafafa;
-                border-bottom: 1px solid #f3f4f6;
+            .ap-kr-title { font-size: 14px; font-weight: 600; color: #1f2937; flex: 1; line-height: 1.4; min-width: 0; }
+            .ap-kr-header-summary {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                flex-shrink: 0;
             }
-            .ap-kr-bar {
-                width: 100px; height: 7px; background: #e5e7eb;
-                border-radius: 4px; overflow: hidden;
+            .ap-kr-mini-bar {
+                width: 70px;
+                height: 6px;
+                background: #e5e7eb;
+                border-radius: 3px;
+                overflow: hidden;
             }
-            .ap-kr-bar-fill { height: 100%; transition: width 0.3s; border-radius: 4px; }
-            .ap-kr-pct { font-weight: 700; font-size: 13px; }
-            .ap-kr-metric {
-                padding: 3px 10px;
-                background: #fff;
-                border: 1px solid #e5e7eb;
-                border-radius: 5px;
+            .ap-kr-mini-bar-fill { height: 100%; transition: width 0.3s; border-radius: 3px; }
+            .ap-kr-mini-pct {
+                font-weight: 700;
+                font-size: 12px;
+                min-width: 36px;
+                text-align: right;
+            }
+            .ap-kr-mini-chip {
+                display: inline-flex;
+                align-items: center;
+                gap: 3px;
+                padding: 2px 7px;
+                background: #f3f4f6;
+                border-radius: 10px;
                 font-size: 11px;
-                color: #374151;
+                font-weight: 600;
+                color: #4b5563;
             }
-            .ap-kr-comment {
-                margin: 0;
-                padding: 12px 16px;
-                background: #f9fafb;
-                border-bottom: 1px solid #f3f4f6;
-                font-size: 13px;
-                color: #374151;
-                line-height: 1.5;
+            .ap-kr-mini-chip.warning {
+                background: #fef3c7;
+                color: #b45309;
             }
-            .ap-kr-comment strong { color: #1f2937; }
-            .ap-kr-adjust {
-                margin: 0;
-                padding: 12px 16px;
-                background: #fef2f2;
-                border-left: 4px solid #dc2626;
-                border-bottom: 1px solid #fee2e2;
-                font-size: 13px;
-                color: #991b1b;
-                line-height: 1.5;
-            }
-            .ap-kr-adjust strong { color: #7f1d1d; }
-            .ap-kr-item > *:last-child { border-bottom: none !important; }
 
-            /* Evidências */
-            .ap-kr-evidence-block {
-                margin: 0;
-                padding: 14px 16px;
+            /* Seções padrão dentro do KR */
+            .ap-kr-section {
+                padding: 12px 16px;
+                border-bottom: 1px solid #f3f4f6;
                 background: #ffffff;
             }
-            .ap-kr-evidence-header {
+            .ap-kr-item > .ap-kr-section:last-child { border-bottom: none; }
+            .ap-kr-section-warning {
+                background: #fffbf5;
+                border-left: 3px solid #f59e0b;
+            }
+            .ap-kr-section-label {
                 display: flex;
                 align-items: center;
                 gap: 6px;
-                font-size: 11px;
+                font-size: 10px;
                 font-weight: 700;
                 text-transform: uppercase;
-                letter-spacing: 0.4px;
+                letter-spacing: 0.6px;
                 color: #6b7280;
                 margin-bottom: 8px;
             }
+            .ap-kr-section-warning .ap-kr-section-label { color: #b45309; }
+            .ap-kr-section-body { padding-left: 0; }
+            .ap-kr-section-text {
+                margin: 0;
+                font-size: 13px;
+                color: #374151;
+                line-height: 1.5;
+                white-space: pre-wrap;
+            }
+            .ap-kr-section-warning .ap-kr-section-text { color: #92400e; }
+
+            /* Progresso */
+            .ap-kr-progress-row {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+            .ap-kr-bar {
+                flex: 1;
+                max-width: 240px;
+                height: 8px;
+                background: #e5e7eb;
+                border-radius: 4px;
+                overflow: hidden;
+            }
+            .ap-kr-bar-fill { height: 100%; transition: width 0.3s; border-radius: 4px; }
+            .ap-kr-pct { font-weight: 700; font-size: 14px; }
+            .ap-kr-targets {
+                display: flex;
+                gap: 8px;
+                margin-top: 10px;
+                flex-wrap: wrap;
+            }
+            .ap-kr-target-item {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 4px 10px;
+                background: #f9fafb;
+                border: 1px solid #e5e7eb;
+                border-radius: 6px;
+                font-size: 12px;
+            }
+            .ap-kr-target-key {
+                color: #6b7280;
+                font-weight: 500;
+            }
+            .ap-kr-target-val {
+                color: #1f2937;
+                font-weight: 600;
+            }
+
+            /* Evidências */
             .ap-kr-evidence-list {
                 display: flex;
                 flex-direction: column;
