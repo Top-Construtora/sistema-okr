@@ -28,10 +28,17 @@ const MyOKRsPage = {
     currentInitiative: null,
 
     /**
+     * Verifica se o ciclo do OKR está ativo (default true se desconhecido)
+     */
+    isCycleActive(okr) {
+        return okr.cycle_active !== false;
+    },
+
+    /**
      * Verifica se OKR pode ser editado (título, descrição, etc.)
      */
     canEditOKR(okr) {
-        // Não pode editar se aprovado, concluído ou homologado
+        if (!this.isCycleActive(okr)) return false;
         return okr.status === 'pending' || okr.status === 'adjust';
     },
 
@@ -39,7 +46,7 @@ const MyOKRsPage = {
      * Verifica se KR pode ser editado
      */
     canEditKR(okr) {
-        // KR só pode ser editado se OKR não foi aprovado ainda
+        if (!this.isCycleActive(okr)) return false;
         return okr.status === 'pending' || okr.status === 'adjust';
     },
 
@@ -47,16 +54,27 @@ const MyOKRsPage = {
      * Verifica se pode editar apenas evidências e iniciativas
      */
     canEditEvidenceAndInitiatives(okr) {
-        // Pode editar evidências/iniciativas se aprovado
-        // Não pode se homologado
+        if (!this.isCycleActive(okr)) return false;
         return okr.status === 'approved' || okr.status === 'pending' || okr.status === 'adjust';
     },
 
     /**
-     * Verifica se OKR está completamente bloqueado (homologado)
+     * Verifica se OKR está completamente bloqueado
+     * (ciclo inativo OU status terminal)
      */
     isOKRLocked(okr) {
+        if (!this.isCycleActive(okr)) return true;
         return okr.status === 'homologated' || okr.status === 'completed';
+    },
+
+    /**
+     * Retorna o motivo do bloqueio, ou null se não está bloqueado.
+     */
+    getLockReason(okr) {
+        if (!this.isCycleActive(okr)) return 'cycle_inactive';
+        if (okr.status === 'homologated') return 'homologated';
+        if (okr.status === 'completed') return 'completed';
+        return null;
     },
 
     // Retorna apenas primeiro e segundo nome do usuário
@@ -106,6 +124,16 @@ const MyOKRsPage = {
 
         let okrs = await OKR.getAll();
         const miniCycles = await MiniCycle.getActive();
+
+        // Enriquece OKRs com flag cycle_active (status do ciclo pai)
+        const allMiniCycles = await MiniCycle.getAll();
+        const cycleActiveByMiniCycle = {};
+        allMiniCycles.forEach(mc => {
+            cycleActiveByMiniCycle[mc.id] = mc.cycle?.ativo !== false;
+        });
+        okrs.forEach(okr => {
+            okr.cycle_active = okr.mini_cycle_id ? (cycleActiveByMiniCycle[okr.mini_cycle_id] !== false) : true;
+        });
 
         // Se ainda não foi selecionado um miniciclo, pré-seleciona os ativos atuais
         if (this.currentMiniCycle === 'all') {
@@ -415,7 +443,43 @@ const MyOKRsPage = {
                 </div>
 
                 <div class="okr-accordion-body ${isOKRExpanded ? 'expanded' : ''}" data-okr-id="${okr.id}">
-                    ${okr.status === 'approved' ? `
+                    ${isLocked ? (() => {
+                        const reason = this.getLockReason(okr);
+                        if (reason === 'cycle_inactive') {
+                            return `
+                            <div class="okr-locked-notice">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                </svg>
+                                <div>
+                                    <strong>Ciclo encerrado</strong>
+                                    <p>O ciclo deste OKR está inativo. Para editar medições ou adicionar evidências, solicite aprovação ao comitê.</p>
+                                </div>
+                            </div>`;
+                        }
+                        if (reason === 'homologated') {
+                            return `
+                            <div class="okr-locked-notice">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                </svg>
+                                <div>
+                                    <strong>OKR homologado</strong>
+                                    <p>Para editar medições deste OKR, solicite aprovação ao comitê.</p>
+                                </div>
+                            </div>`;
+                        }
+                        return `
+                        <div class="okr-locked-notice">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                            </svg>
+                            <div>
+                                <strong>OKR concluído</strong>
+                                <p>Este OKR foi concluído e não pode mais ser editado.</p>
+                            </div>
+                        </div>`;
+                    })() : okr.status === 'approved' ? `
                     <div class="okr-approved-notice">
                         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
