@@ -484,6 +484,13 @@ const Layout = {
         });
     },
 
+    // Atalho: navega pra detalhe de objetivo estratégico (URL parametrizada)
+    navigateToObjectiveDetail(id) {
+        if (!id) return;
+        window.history.pushState({ page: 'strategic-objective-detail' }, '', `/objetivos-estrategicos/${id}`);
+        this.navigate('strategic-objective-detail', false);
+    },
+
     // Navega para uma página
     async navigate(page, updateURL = true) {
         // Garante que o scroll está habilitado ao navegar

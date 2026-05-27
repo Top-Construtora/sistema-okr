@@ -165,7 +165,7 @@ const HomePage = {
                             const pct = objProgress[obj.id];
                             const hasProgress = pct !== null && pct !== undefined;
                             return `
-                            <a class="hp-obj-card" onclick="Layout.navigate('strategic-objective-detail', '/objetivos-estrategicos/${obj.id}')" title="${obj.text.replace(/"/g, '&quot;')}">
+                            <a class="hp-obj-card" onclick="Layout.navigateToObjectiveDetail('${obj.id}')" title="${obj.text.replace(/"/g, '&quot;')}">
                                 <div class="hp-obj-color" style="background:${color};"></div>
                                 <div class="hp-obj-body">
                                     <div class="hp-obj-row">
