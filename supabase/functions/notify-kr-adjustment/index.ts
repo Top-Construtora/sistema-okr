@@ -97,35 +97,62 @@ Deno.serve(async (req) => {
             return new Response(JSON.stringify({ skipped: true, reason: 'no adjustment to notify' }), { headers: cors });
         }
 
-        // 3) Resolve usuários ativos do departamento do OKR
-        // department é uma string (nome) - resolvemos para id via departments.nome
-        const { data: dept } = await sb
-            .from('departments')
-            .select('id, nome')
-            .eq('nome', okr.department)
-            .maybeSingle();
+        // 3) Resolve destinatários: primeiro tenta okr_responsible_users (responsáveis explícitos),
+        // se vazio cai para todos os usuários ativos do departamento do OKR.
+        let recipients: Array<{ id: string; nome: string; email: string }> = [];
+        let recipientSource = 'responsible_users';
 
-        if (!dept) {
-            return new Response(JSON.stringify({ skipped: true, reason: `department '${okr.department}' not found` }), { headers: cors });
-        }
-
-        const { data: junction } = await sb
-            .from('user_departments')
+        const { data: okrResp } = await sb
+            .from('okr_responsible_users')
             .select('user_id')
-            .eq('department_id', dept.id);
+            .eq('okr_id', okr.id);
+        const responsibleIds = (okrResp || []).map((r: { user_id: string }) => r.user_id);
 
-        const userIds = (junction || []).map(j => j.user_id);
-        if (userIds.length === 0) {
-            return new Response(JSON.stringify({ skipped: true, reason: 'no users in department' }), { headers: cors });
+        if (responsibleIds.length > 0) {
+            const { data: users } = await sb
+                .from('users')
+                .select('id, nome, email, ativo')
+                .in('id', responsibleIds)
+                .eq('ativo', true);
+            recipients = (users || [])
+                .filter((u: any) => u.email && String(u.email).includes('@'))
+                .map((u: any) => ({ id: u.id, nome: u.nome, email: u.email }));
         }
 
-        const { data: users } = await sb
-            .from('users')
-            .select('id, nome, email, ativo')
-            .in('id', userIds)
-            .eq('ativo', true);
+        // Fallback: departamento
+        if (recipients.length === 0) {
+            recipientSource = 'department';
+            const { data: dept } = await sb
+                .from('departments')
+                .select('id, nome')
+                .eq('nome', okr.department)
+                .maybeSingle();
 
-        const recipients = (users || []).filter(u => u.email && String(u.email).includes('@'));
+            if (!dept) {
+                return new Response(JSON.stringify({ skipped: true, reason: `department '${okr.department}' not found and no responsible_users set` }), { headers: cors });
+            }
+
+            const { data: junction } = await sb
+                .from('user_departments')
+                .select('user_id')
+                .eq('department_id', dept.id);
+
+            const userIds = (junction || []).map((j: { user_id: string }) => j.user_id);
+            if (userIds.length === 0) {
+                return new Response(JSON.stringify({ skipped: true, reason: 'no users in department and no responsible_users set' }), { headers: cors });
+            }
+
+            const { data: users } = await sb
+                .from('users')
+                .select('id, nome, email, ativo')
+                .in('id', userIds)
+                .eq('ativo', true);
+
+            recipients = (users || [])
+                .filter((u: any) => u.email && String(u.email).includes('@'))
+                .map((u: any) => ({ id: u.id, nome: u.nome, email: u.email }));
+        }
+
         if (recipients.length === 0) {
             return new Response(JSON.stringify({ skipped: true, reason: 'no recipients with email' }), { headers: cors });
         }
@@ -211,6 +238,7 @@ Deno.serve(async (req) => {
             JSON.stringify({
                 ok: true,
                 department: okr.department,
+                recipient_source: recipientSource,
                 recipients: recipients.length,
                 sent,
                 failed: results.length - sent,

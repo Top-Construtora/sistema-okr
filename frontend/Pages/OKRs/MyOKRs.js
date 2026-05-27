@@ -1087,6 +1087,10 @@ const MyOKRsPage = {
             const objectives = await StorageService.getObjectives();
             const departments = await Department.getActive();
             const miniCycles = await MiniCycle.getActive();
+            const allUsers = (await User.getAll()).filter(u =>
+                u.ativo !== false && u.tipo !== 'consultor' && u.email !== 'admin@sistema.com'
+            );
+            const responsibleIds = this.currentOKR ? this.currentOKR.getResponsibleUserIds() : [];
             const currentUser = AuthService.getCurrentUser();
             const isAdmin = currentUser && currentUser.tipo === 'admin';
             const userDepartmentNames = this.getUserDepartmentNames(currentUser);
@@ -1188,6 +1192,31 @@ const MyOKRsPage = {
                             </small>
                         </div>
 
+                        <div class="form-group" style="margin-top:16px;">
+                            <label class="form-label">
+                                Responsáveis
+                                <small style="font-weight:normal;color:var(--text-muted);">(receberão notificações por email quando o comitê solicitar ajustes)</small>
+                            </label>
+                            <input type="text" class="form-control" placeholder="Pesquisar responsável..."
+                                oninput="filterResponsibleList(this, '#okr-responsible-users', '.responsible-user-checkbox-item')"
+                                style="margin-bottom:8px;">
+                            <div class="responsible-users-checkbox-list" id="okr-responsible-users">
+                                ${allUsers.map(u => {
+                                    const isChecked = responsibleIds.includes(u.id);
+                                    return `
+                                        <label class="responsible-user-checkbox-item ${isChecked ? 'checked' : ''}">
+                                            <input type="checkbox" name="okr-responsible" value="${u.id}" ${isChecked ? 'checked' : ''}
+                                                onchange="this.parentElement.classList.toggle('checked', this.checked)">
+                                            <span class="responsible-checkbox-name">${u.nome}</span>
+                                        </label>
+                                    `;
+                                }).join('')}
+                            </div>
+                            <small style="color:var(--text-muted);font-size:11px;display:block;margin-top:6px;">
+                                Se nenhum responsável for selecionado, o email cai para todos os usuários ativos do departamento.
+                            </small>
+                        </div>
+
                         ${!this.currentOKR ? `
                             <div class="info-box" style="margin-top:16px;padding:12px 16px;background:var(--info-bg);border-left:3px solid var(--info);border-radius:6px;">
                                 <p style="margin:0;font-size:13px;color:var(--text-secondary);">
@@ -1263,6 +1292,10 @@ const MyOKRsPage = {
             okr.objectiveId = objectiveId;
             okr.department = department;
             okr.mini_cycle_id = miniCycleId;
+
+            // Coleta responsáveis selecionados (primeiro = primary)
+            const checkedResp = Array.from(document.querySelectorAll('input[name="okr-responsible"]:checked'));
+            okr.responsible_users = checkedResp.map((cb, idx) => ({ id: cb.value, is_primary: idx === 0 }));
 
             // Se for novo OKR, cria com array vazio de KRs
             if (!this.currentOKR) {

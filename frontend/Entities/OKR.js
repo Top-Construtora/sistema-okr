@@ -17,6 +17,21 @@ class OKR {
         this.updated_at = data.updated_at || null;
         this.objective_text = data.objective_text || null; // Quando vem da view
         this.mini_cycle = data.mini_cycle || null; // Quando vem de join
+        this.responsible_users = Array.isArray(data.responsible_users) ? data.responsible_users : [];
+    }
+
+    // Helpers de responsáveis (espelha padrão de Initiative)
+    getResponsibleUsers() {
+        return Array.isArray(this.responsible_users) ? this.responsible_users : [];
+    }
+
+    getResponsibleUserIds() {
+        return this.getResponsibleUsers().map(u => typeof u === 'string' ? u : u.id);
+    }
+
+    getPrimaryResponsibleUser() {
+        const list = this.getResponsibleUsers();
+        return list.find(u => u && u.is_primary) || list[0] || null;
     }
 
     // Normaliza mini_cycle_id
@@ -210,6 +225,9 @@ class OKR {
                 }
             }
 
+            // Persiste responsáveis (após o OKR ter id)
+            await this._saveResponsibleUsers();
+
             return this;
         } catch (error) {
             console.error('Erro ao salvar OKR:', error);
@@ -326,6 +344,82 @@ class OKR {
         }
     }
 
+    // Persiste responsible_users via tabela de junção okr_responsible_users.
+    // Faz diff: remove os que saíram, adiciona os que entraram, atualiza is_primary.
+    async _saveResponsibleUsers() {
+        if (!this.id) return;
+        const desired = this.getResponsibleUsers();
+        const desiredIds = desired.map(u => typeof u === 'string' ? u : u.id).filter(Boolean);
+        try {
+            const { data: current } = await supabaseClient
+                .from('okr_responsible_users')
+                .select('user_id, is_primary')
+                .eq('okr_id', this.id);
+
+            const currentIds = (current || []).map(r => r.user_id);
+            const toRemove = currentIds.filter(id => !desiredIds.includes(id));
+            const toAdd = desiredIds.filter(id => !currentIds.includes(id));
+
+            if (toRemove.length > 0) {
+                await supabaseClient
+                    .from('okr_responsible_users')
+                    .delete()
+                    .eq('okr_id', this.id)
+                    .in('user_id', toRemove);
+            }
+
+            // Zera is_primary atual pra evitar conflito de unique index
+            await supabaseClient
+                .from('okr_responsible_users')
+                .update({ is_primary: false })
+                .eq('okr_id', this.id);
+
+            // Insere novos (sem is_primary - setamos depois)
+            if (toAdd.length > 0) {
+                await supabaseClient
+                    .from('okr_responsible_users')
+                    .insert(toAdd.map(uid => ({ okr_id: this.id, user_id: uid, is_primary: false })));
+            }
+
+            // Marca o primary (primeiro da lista, ou quem tem is_primary explícito)
+            const primaryEntry = desired.find(u => u && u.is_primary) || desired[0];
+            const primaryId = primaryEntry ? (typeof primaryEntry === 'string' ? primaryEntry : primaryEntry.id) : null;
+            if (primaryId) {
+                await supabaseClient
+                    .from('okr_responsible_users')
+                    .update({ is_primary: true })
+                    .eq('okr_id', this.id)
+                    .eq('user_id', primaryId);
+            }
+        } catch (e) {
+            console.error('Erro ao salvar responsáveis do OKR:', e);
+            throw e;
+        }
+    }
+
+    // Carrega responsáveis para uma lista de OKRs (usado em getAll/getById)
+    static async _attachResponsibleUsers(okrs) {
+        try {
+            const ids = okrs.map(o => o.id).filter(Boolean);
+            if (ids.length === 0) return okrs;
+            const { data, error } = await supabaseClient
+                .from('okr_responsible_users')
+                .select('okr_id, user_id, is_primary, user:users!okr_responsible_users_user_id_fkey(id, nome, email)')
+                .in('okr_id', ids);
+            if (error) return okrs;
+            const map = {};
+            (data || []).forEach(r => {
+                if (!map[r.okr_id]) map[r.okr_id] = [];
+                const u = r.user || { id: r.user_id };
+                map[r.okr_id].push({ ...u, is_primary: !!r.is_primary });
+            });
+            okrs.forEach(o => {
+                o.responsible_users = map[o.id] || [];
+            });
+        } catch (e) { /* não-fatal */ }
+        return okrs;
+    }
+
     // Merge defensivo: garante kr.committee_comment vindo direto de key_results,
     // caso a view okrs_complete não exponha a coluna.
     static async _mergeKRCommitteeComments(okrs) {
@@ -359,7 +453,9 @@ class OKR {
 
             if (error) throw error;
             const okrs = data.map(o => new OKR(o));
-            return await OKR._mergeKRCommitteeComments(okrs);
+            await OKR._mergeKRCommitteeComments(okrs);
+            await OKR._attachResponsibleUsers(okrs);
+            return okrs;
         } catch (error) {
             console.error('Erro ao buscar OKRs:', error);
             return [];
@@ -378,6 +474,7 @@ class OKR {
             if (!data) return null;
             const okr = new OKR(data);
             await OKR._mergeKRCommitteeComments([okr]);
+            await OKR._attachResponsibleUsers([okr]);
             return okr;
         } catch (error) {
             console.error('Erro ao buscar OKR:', error);
