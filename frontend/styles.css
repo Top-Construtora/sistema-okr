@@ -5059,6 +5059,80 @@
     color: white;
 }
 
+/* ===== Modal de ajustes em KRs específicos (Comitê) ===== */
+.kr-adjust-list { display: flex; flex-direction: column; gap: 12px; }
+.kr-adjust-item {
+    border: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 12px 14px;
+    background: #fff;
+    transition: border-color 0.15s, background 0.15s;
+}
+.kr-adjust-item-checked {
+    border-color: #f59e0b;
+    background: #fffbeb;
+}
+.kr-adjust-check {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    cursor: pointer;
+    margin-bottom: 8px;
+}
+.kr-adjust-check input[type="checkbox"] { margin-top: 3px; }
+.kr-adjust-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    font-size: 14px;
+}
+.kr-adjust-title .kr-badge {
+    background: #f1f5f9;
+    color: #475569;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+}
+.kr-adjust-comment {
+    width: 100%;
+    resize: vertical;
+    font-size: 13px;
+}
+.kr-adjust-comment:disabled {
+    background: #f9fafb;
+    color: #9ca3af;
+    cursor: not-allowed;
+}
+
+/* Banner de ajuste solicitado em KR específico (mostrado dentro do KR) */
+.kr-adjustment-banner {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 10px 12px;
+    margin: 8px 0 0 0;
+    border-radius: 8px;
+    background: #fef2f2;
+    border-left: 4px solid #dc2626;
+    color: #991b1b;
+    font-size: 13px;
+}
+.kr-adjustment-banner svg { flex-shrink: 0; margin-top: 1px; }
+.kr-adjustment-banner strong { display: block; font-size: 13px; margin-bottom: 2px; }
+.kr-adjustment-banner p { margin: 0; font-size: 12px; opacity: 0.9; }
+
+/* Ação warning no Comitê (Ajustar KRs) */
+.ap-action-warning {
+    background: #fef3c7;
+    color: #92400e;
+    border-color: #f59e0b;
+}
+.ap-action-warning:hover {
+    background: #fde68a;
+}
+
 /* ===== Banners de solicitação de edição (locked OKR) ===== */
 .okr-unlock-banner,
 .okr-request-pending-banner {

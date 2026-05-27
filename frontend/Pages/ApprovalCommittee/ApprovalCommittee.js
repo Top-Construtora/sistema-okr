@@ -350,8 +350,10 @@ const ApprovalPage = {
     getActions(okr, currentStatus, isConsultor) {
         const adminActions = {
             pending:     [{ action: 'adjust', label: 'Ajuste', icon: 'edit', cls: 'danger' },
+                          { action: 'adjust_krs', label: 'Ajustar KRs', icon: 'edit-list', cls: 'warning' },
                           { action: 'approved', label: 'Aprovar', icon: 'check', cls: 'success' }],
             adjust:      [{ action: 'pending', label: 'Revisão', icon: 'arrow-left', cls: 'secondary' },
+                          { action: 'adjust_krs', label: 'Ajustar KRs', icon: 'edit-list', cls: 'warning' },
                           { action: 'approved', label: 'Aprovar', icon: 'check', cls: 'success' }],
             approved:    [{ action: 'completed', label: 'Concluir', icon: 'check-circle', cls: 'success' }],
             completed:   [{ action: 'homologated', label: 'Homologar', icon: 'award', cls: 'primary' }],
@@ -364,6 +366,7 @@ const ApprovalPage = {
 
         const icons = {
             'edit':         '<path stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>',
+            'edit-list':    '<path stroke-linecap="round" stroke-linejoin="round" d="M9 5h6a2 2 0 012 2v2M9 5a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5m-9-7h6m-6 4h6m-6 4h3M15 13l4-4m-4 4l4 4"/>',
             'check':        '<path stroke-linecap="round" stroke-linejoin="round" d="M20 6L9 17l-5-5"/>',
             'check-circle': '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>',
             'arrow-left':   '<path stroke-linecap="round" stroke-linejoin="round" d="M19 12H5M12 19l-7-7 7-7"/>',
@@ -527,7 +530,129 @@ const ApprovalPage = {
         }
     },
 
+    // ============== AJUSTES EM KRs ESPECIFICOS ==============
+
+    async openKRAdjustmentsModal(okrId) {
+        const okr = await OKR.getById(okrId);
+        if (!okr) {
+            if (window.DepartmentsPage?.showToast) DepartmentsPage.showToast('OKR não encontrado', 'error');
+            return;
+        }
+        const krs = okr.keyResults || [];
+        if (krs.length === 0) {
+            if (window.DepartmentsPage?.showToast) DepartmentsPage.showToast('Este OKR não tem KRs', 'error');
+            return;
+        }
+
+        const existing = document.getElementById('kr-adjust-modal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'kr-adjust-modal';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:9000;isolation:isolate;';
+        modal.innerHTML = `
+            <div class="modal-overlay" onclick="ApprovalPage.closeKRAdjustmentsModal()"></div>
+            <div class="modal-content" style="max-width:680px;max-height:90vh;">
+                <div class="modal-header">
+                    <h3>Ajustes em KRs específicos</h3>
+                    <button class="modal-close" onclick="ApprovalPage.closeKRAdjustmentsModal()">&times;</button>
+                </div>
+                <div class="modal-body" style="overflow-y:auto;">
+                    <p style="margin:0 0 16px;color:var(--text-muted);font-size:13px;">
+                        Marque os KRs que precisam de ajuste e descreva o motivo de cada um. O OKR será movido para <strong>"Ajustes Solicitados"</strong>.
+                    </p>
+                    <input type="hidden" id="kr-adjust-okr-id" value="${okr.id}">
+                    <div class="kr-adjust-list">
+                        ${krs.map((kr, idx) => `
+                            <div class="kr-adjust-item" data-kr-id="${kr.id}">
+                                <label class="kr-adjust-check">
+                                    <input type="checkbox" name="kr-adjust-check" value="${kr.id}"
+                                        onchange="ApprovalPage.onKRAdjustToggle(this)">
+                                    <div class="kr-adjust-title">
+                                        <span class="kr-badge">KR${idx + 1}</span>
+                                        <span>${this.escapeHtml(kr.title || 'Sem título')}</span>
+                                    </div>
+                                </label>
+                                <textarea class="form-control kr-adjust-comment" rows="2" maxlength="500"
+                                    placeholder="Descreva o ajuste necessário neste KR..."
+                                    disabled
+                                    data-kr-id="${kr.id}">${kr.committee_comment ? this.escapeHtml(kr.committee_comment) : ''}</textarea>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div id="kr-adjust-error" style="display:none;color:var(--danger);font-size:13px;margin-top:8px;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="ApprovalPage.closeKRAdjustmentsModal()">Cancelar</button>
+                    <button class="btn btn-primary" id="kr-adjust-submit-btn" onclick="ApprovalPage.submitKRAdjustments()">Solicitar ajustes</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    },
+
+    onKRAdjustToggle(checkbox) {
+        const item = checkbox.closest('.kr-adjust-item');
+        const ta = item?.querySelector('.kr-adjust-comment');
+        if (!ta) return;
+        ta.disabled = !checkbox.checked;
+        item.classList.toggle('kr-adjust-item-checked', checkbox.checked);
+        if (checkbox.checked) setTimeout(() => ta.focus(), 30);
+    },
+
+    closeKRAdjustmentsModal() {
+        const m = document.getElementById('kr-adjust-modal');
+        if (m) m.remove();
+    },
+
+    async submitKRAdjustments() {
+        const okrId = document.getElementById('kr-adjust-okr-id')?.value;
+        const errorDiv = document.getElementById('kr-adjust-error');
+        const btn = document.getElementById('kr-adjust-submit-btn');
+        if (errorDiv) errorDiv.style.display = 'none';
+
+        const checked = Array.from(document.querySelectorAll('input[name="kr-adjust-check"]:checked'));
+        if (checked.length === 0) {
+            if (errorDiv) { errorDiv.textContent = 'Selecione ao menos um KR.'; errorDiv.style.display = 'block'; }
+            return;
+        }
+
+        const adjustments = [];
+        for (const cb of checked) {
+            const krId = cb.value;
+            const ta = document.querySelector(`.kr-adjust-comment[data-kr-id="${krId}"]`);
+            const comment = (ta?.value || '').trim();
+            if (!comment) {
+                if (errorDiv) { errorDiv.textContent = 'Descreva o ajuste para cada KR selecionado.'; errorDiv.style.display = 'block'; }
+                ta?.focus();
+                return;
+            }
+            adjustments.push({ kr_id: krId, comment });
+        }
+
+        try {
+            if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+            const okr = await OKR.getById(okrId);
+            if (!okr) throw new Error('OKR não encontrado');
+            await okr.requestKRAdjustments(adjustments);
+            this.closeKRAdjustmentsModal();
+            if (window.DepartmentsPage?.showToast) {
+                DepartmentsPage.showToast(`Ajustes solicitados em ${adjustments.length} KR${adjustments.length > 1 ? 's' : ''}`, 'success');
+            }
+            await this.render();
+        } catch (err) {
+            console.error(err);
+            if (errorDiv) { errorDiv.textContent = err.message || 'Erro ao solicitar ajustes.'; errorDiv.style.display = 'block'; }
+            if (btn) { btn.disabled = false; btn.textContent = 'Solicitar ajustes'; }
+        }
+    },
+
     async changeStatus(okrId, newStatus) {
+        // Roteamento especial: ajustes em KRs específicos
+        if (newStatus === 'adjust_krs') {
+            return this.openKRAdjustmentsModal(okrId);
+        }
+
         const okr = await OKR.getById(okrId);
         if (!okr) return;
 
@@ -824,6 +949,8 @@ const ApprovalPage = {
             .ap-action-secondary:hover { background: #e5e7eb; }
             .ap-action-primary { background: rgba(18,176,160,0.1); color: #12b0a0; }
             .ap-action-primary:hover { background: #12b0a0; color: white; box-shadow: 0 2px 8px rgba(18,176,160,0.3); }
+            .ap-action-warning { background: #fef3c7; color: #92400e; }
+            .ap-action-warning:hover { background: #f59e0b; color: white; box-shadow: 0 2px 8px rgba(245,158,11,0.3); }
 
             .ap-flow-done {
                 display: inline-flex; align-items: center; gap: 5px;

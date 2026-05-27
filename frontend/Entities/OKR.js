@@ -152,7 +152,8 @@ class OKR {
                         position: idx,
                         status: kr.status || 'pending',
                         comment: kr.comment || null,
-                        evidence: kr.evidence || []
+                        evidence: kr.evidence || [],
+                        committee_comment: kr.committee_comment ?? null
                     };
 
                     // Se KR já existe (tem ID válido no banco), atualizar
@@ -197,7 +198,8 @@ class OKR {
                         position: idx,
                         status: kr.status || 'pending',
                         comment: kr.comment || null,
-                        evidence: kr.evidence || []
+                        evidence: kr.evidence || [],
+                        committee_comment: kr.committee_comment ?? null
                     }));
 
                     const { error: krError } = await supabaseClient
@@ -255,11 +257,81 @@ class OKR {
                 .eq('id', this.id);
 
             if (error) throw error;
+
+            // Ao sair de 'adjust', limpa committee_comment dos KRs deste OKR
+            // (espelha o comportamento de limpeza do committee_comment do OKR)
+            if (newStatus !== 'adjust') {
+                await supabaseClient
+                    .from('key_results')
+                    .update({ committee_comment: null })
+                    .eq('okr_id', this.id);
+            }
             // O trigger salvará no histórico automaticamente!
         } catch (error) {
             console.error('Erro ao mudar status:', error);
             throw error;
         }
+    }
+
+    /**
+     * Solicita ajustes em KRs específicos.
+     * @param {Array<{kr_id: string, comment: string}>} adjustments - lista de ajustes por KR
+     * @param {string} okrSummary - comentário a gravar no committee_comment do OKR (opcional)
+     */
+    async requestKRAdjustments(adjustments, okrSummary = '') {
+        if (!Array.isArray(adjustments) || adjustments.length === 0) {
+            throw new Error('Forneça pelo menos um ajuste de KR');
+        }
+        try {
+            // 1) Atualiza committee_comment de cada KR (uma chamada por KR)
+            for (const adj of adjustments) {
+                if (!adj.kr_id || !adj.comment || !adj.comment.trim()) continue;
+                const { error } = await supabaseClient
+                    .from('key_results')
+                    .update({ committee_comment: adj.comment.trim() })
+                    .eq('id', adj.kr_id);
+                if (error) throw error;
+            }
+
+            // 2) Marca o OKR como 'adjust' com um resumo (ou o texto fornecido).
+            const count = adjustments.length;
+            const summary = okrSummary && okrSummary.trim()
+                ? okrSummary.trim()
+                : `Ajustes solicitados em ${count} KR${count > 1 ? 's' : ''} específico${count > 1 ? 's' : ''}. Veja detalhes em cada KR.`;
+            const { error: okrError } = await supabaseClient
+                .from('okrs')
+                .update({ status: 'adjust', committee_comment: summary })
+                .eq('id', this.id);
+            if (okrError) throw okrError;
+
+            this.status = 'adjust';
+            this.committee_comment = summary;
+        } catch (error) {
+            console.error('Erro ao solicitar ajustes nos KRs:', error);
+            throw error;
+        }
+    }
+
+    // Merge defensivo: garante kr.committee_comment vindo direto de key_results,
+    // caso a view okrs_complete não exponha a coluna.
+    static async _mergeKRCommitteeComments(okrs) {
+        try {
+            const krIds = okrs.flatMap(o => (o.keyResults || []).map(k => k.id)).filter(Boolean);
+            if (krIds.length === 0) return okrs;
+            const { data, error } = await supabaseClient
+                .from('key_results')
+                .select('id, committee_comment')
+                .in('id', krIds);
+            if (error) return okrs;
+            const map = {};
+            (data || []).forEach(r => { map[r.id] = r.committee_comment; });
+            okrs.forEach(o => {
+                (o.keyResults || []).forEach(k => {
+                    if (map[k.id] !== undefined) k.committee_comment = map[k.id];
+                });
+            });
+        } catch (e) { /* não-fatal */ }
+        return okrs;
     }
 
     // Métodos estáticos
@@ -272,7 +344,8 @@ class OKR {
                 .order('created_at', { ascending: true });
 
             if (error) throw error;
-            return data.map(o => new OKR(o));
+            const okrs = data.map(o => new OKR(o));
+            return await OKR._mergeKRCommitteeComments(okrs);
         } catch (error) {
             console.error('Erro ao buscar OKRs:', error);
             return [];
@@ -288,7 +361,10 @@ class OKR {
                 .single();
 
             if (error) throw error;
-            return data ? new OKR(data) : null;
+            if (!data) return null;
+            const okr = new OKR(data);
+            await OKR._mergeKRCommitteeComments([okr]);
+            return okr;
         } catch (error) {
             console.error('Erro ao buscar OKR:', error);
             return null;
