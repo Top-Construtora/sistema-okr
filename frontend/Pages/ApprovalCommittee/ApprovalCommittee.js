@@ -676,6 +676,20 @@ const ApprovalPage = {
         }
 
         await okr.changeStatus(newStatus, comment);
+
+        // Notifica colaboradores do departamento quando OKR vai para 'adjust'.
+        // Best-effort: falhas não impedem a operação.
+        if (newStatus === 'adjust') {
+            try {
+                const { supabaseClient } = await import('../../services/supabase.js');
+                await supabaseClient.functions.invoke('notify-kr-adjustment', {
+                    body: { okr_id: okrId }
+                });
+            } catch (e) {
+                console.warn('notify-kr-adjustment não disponível:', e);
+            }
+        }
+
         await this.render();
 
         if (window.DepartmentsPage?.showToast) {

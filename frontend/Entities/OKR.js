@@ -306,6 +306,20 @@ class OKR {
 
             this.status = 'adjust';
             this.committee_comment = summary;
+
+            // 3) Notifica colaboradores do departamento via Edge Function.
+            // Best-effort: falhas não impedem a operação principal.
+            try {
+                const { error: fnError } = await supabaseClient.functions.invoke('notify-kr-adjustment', {
+                    body: {
+                        okr_id: this.id,
+                        kr_ids: adjustments.map(a => a.kr_id)
+                    }
+                });
+                if (fnError) console.warn('notify-kr-adjustment falhou:', fnError);
+            } catch (e) {
+                console.warn('notify-kr-adjustment não disponível:', e);
+            }
         } catch (error) {
             console.error('Erro ao solicitar ajustes nos KRs:', error);
             throw error;
