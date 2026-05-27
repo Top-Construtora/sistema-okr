@@ -4,16 +4,27 @@ import { Department } from '../../Entities/Department.js';
 import { MiniCycle } from '../../Entities/MiniCycle.js';
 import { OkrEditRequest } from '../../Entities/OkrEditRequest.js';
 import { Modal } from '../../Components/Modal.js';
+import { convertToProxyUrl, convertToDownloadUrl } from '../../services/supabase.js';
 
 const ApprovalPage = {
     activeTab: 'pending',
     okrs: [],
     editRequests: [],
     objectivesCache: {},
+    expandedOkrs: new Set(),
     currentDepartment: 'all',
     currentMiniCycle: 'all',
     departments: [],
     miniCycles: [],
+
+    toggleOkrExpand(okrId) {
+        if (this.expandedOkrs.has(okrId)) {
+            this.expandedOkrs.delete(okrId);
+        } else {
+            this.expandedOkrs.add(okrId);
+        }
+        this.renderTable();
+    },
 
     getUserDepartmentNames(user) {
         if (!user) return [];
@@ -313,36 +324,152 @@ const ApprovalPage = {
         const p = okr.progress;
         const progressColor = p >= 70 ? '#10b981' : p >= 40 ? '#f59e0b' : '#ef4444';
         const actions = this.getActions(okr, col.key, isConsultor);
+        const isExpanded = this.expandedOkrs.has(okr.id);
+        const responsibles = okr.getResponsibleUsers ? okr.getResponsibleUsers() : [];
 
         return `
-            <div class="ap-card">
-                <div class="ap-card-left" style="--accent:${progressColor};">
-                    <div class="ap-card-pct">${p}%</div>
-                    <div class="ap-card-ring">
-                        <svg viewBox="0 0 36 36">
-                            <circle cx="18" cy="18" r="15.5" fill="none" stroke="#e5e7eb" stroke-width="3"/>
-                            <circle cx="18" cy="18" r="15.5" fill="none" stroke="${progressColor}" stroke-width="3"
-                                stroke-dasharray="${p * 0.9745} 100"
-                                stroke-linecap="round" transform="rotate(-90 18 18)"/>
+            <div class="ap-card-wrapper">
+                <div class="ap-card ${isExpanded ? 'ap-card-expanded' : ''}">
+                    <button class="ap-expand-btn ${isExpanded ? 'expanded' : ''}" onclick="ApprovalPage.toggleOkrExpand('${okr.id}')" title="${isExpanded ? 'Recolher' : 'Expandir'}">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
                         </svg>
+                    </button>
+                    <div class="ap-card-left" style="--accent:${progressColor};">
+                        <div class="ap-card-pct">${p}%</div>
+                        <div class="ap-card-ring">
+                            <svg viewBox="0 0 36 36">
+                                <circle cx="18" cy="18" r="15.5" fill="none" stroke="#e5e7eb" stroke-width="3"/>
+                                <circle cx="18" cy="18" r="15.5" fill="none" stroke="${progressColor}" stroke-width="3"
+                                    stroke-dasharray="${p * 0.9745} 100"
+                                    stroke-linecap="round" transform="rotate(-90 18 18)"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ap-card-body" onclick="ApprovalPage.toggleOkrExpand('${okr.id}')" style="cursor:pointer;">
+                        <div class="ap-card-title">${okr.title}</div>
+                        <div class="ap-card-meta">
+                            ${objText ? `<span class="ap-card-obj" title="${(objective?.text || '').replace(/"/g, '&quot;')}">
+                                <svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+                                ${objText}
+                            </span>` : ''}
+                            <span class="ap-card-krs">${okr.keyResults.length} KRs</span>
+                            ${responsibles.length > 0 ? `<span class="ap-card-krs">${responsibles.length} resp.</span>` : ''}
+                        </div>
+                        ${okr.committee_comment ? `
+                            <div class="ap-card-comment">${okr.committee_comment}</div>
+                        ` : ''}
+                    </div>
+                    <div class="ap-card-actions" onclick="event.stopPropagation();">
+                        ${actions}
                     </div>
                 </div>
-                <div class="ap-card-body">
-                    <div class="ap-card-title">${okr.title}</div>
-                    <div class="ap-card-meta">
-                        ${objText ? `<span class="ap-card-obj" title="${(objective?.text || '').replace(/"/g, '&quot;')}">
-                            <svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
-                            ${objText}
-                        </span>` : ''}
-                        <span class="ap-card-krs">${okr.keyResults.length} KRs</span>
+                ${isExpanded ? this.renderExpandedDetails(okr) : ''}
+            </div>
+        `;
+    },
+
+    renderExpandedDetails(okr) {
+        const responsibles = okr.getResponsibleUsers ? okr.getResponsibleUsers() : [];
+        const krs = okr.keyResults || [];
+
+        return `
+            <div class="ap-card-details">
+                ${responsibles.length > 0 ? `
+                    <div class="ap-detail-section">
+                        <div class="ap-detail-label">Responsáveis</div>
+                        <div class="ap-resp-badges">
+                            ${responsibles.map(u => `
+                                <span class="ap-resp-badge${u.is_primary ? ' primary' : ''}" title="${this.escapeHtml(u.email || '')}">
+                                    ${this.escapeHtml(u.nome || 'Usuário')}${u.is_primary ? ' ⭐' : ''}
+                                </span>
+                            `).join('')}
+                        </div>
                     </div>
-                    ${okr.committee_comment ? `
-                        <div class="ap-card-comment">${okr.committee_comment}</div>
-                    ` : ''}
+                ` : `
+                    <div class="ap-detail-section">
+                        <div class="ap-detail-label">Responsáveis</div>
+                        <div class="ap-resp-empty">Nenhum responsável cadastrado — emails caem para o departamento.</div>
+                    </div>
+                `}
+                <div class="ap-detail-section">
+                    <div class="ap-detail-label">Key Results (${krs.length})</div>
+                    ${krs.length === 0 ? `<div class="ap-resp-empty">Este OKR ainda não tem KRs.</div>` : ''}
+                    <div class="ap-kr-list">
+                        ${krs.map((kr, idx) => this.renderKrDetail(kr, idx)).join('')}
+                    </div>
                 </div>
-                <div class="ap-card-actions">
-                    ${actions}
+            </div>
+        `;
+    },
+
+    renderKrDetail(kr, idx) {
+        const krProgress = kr.progress || 0;
+        const krColor = krProgress >= 70 ? '#10b981' : krProgress >= 40 ? '#f59e0b' : '#ef4444';
+        const evidences = Array.isArray(kr.evidence) ? kr.evidence : [];
+        return `
+            <div class="ap-kr-item">
+                <div class="ap-kr-header">
+                    <span class="ap-kr-badge">KR${idx + 1}</span>
+                    <span class="ap-kr-title">${this.escapeHtml(kr.title || 'Sem título')}</span>
                 </div>
+                <div class="ap-kr-meta">
+                    <div class="ap-kr-bar">
+                        <div class="ap-kr-bar-fill" style="width:${krProgress}%;background:${krColor};"></div>
+                    </div>
+                    <span class="ap-kr-pct" style="color:${krColor};">${krProgress}%</span>
+                    ${kr.metric ? `<span class="ap-kr-metric">Métrica: ${this.escapeHtml(kr.metric)}</span>` : ''}
+                    ${kr.target ? `<span class="ap-kr-metric">Meta: ${this.escapeHtml(String(kr.target))}</span>` : ''}
+                </div>
+                ${kr.comment && kr.comment.trim() ? `
+                    <div class="ap-kr-comment">
+                        <strong>Comentário:</strong> ${this.escapeHtml(kr.comment)}
+                    </div>
+                ` : ''}
+                ${kr.committee_comment && kr.committee_comment.trim() ? `
+                    <div class="ap-kr-adjust">
+                        <strong>Ajuste solicitado:</strong> ${this.escapeHtml(kr.committee_comment)}
+                    </div>
+                ` : ''}
+                ${evidences.length > 0 ? `
+                    <div class="ap-kr-evidence-block">
+                        <div class="ap-kr-evidence-header">
+                            <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            <span>Medições e Evidências (${evidences.length})</span>
+                        </div>
+                        <div class="ap-kr-evidence-list">
+                            ${evidences.map(ev => this.renderEvidence(ev)).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    },
+
+    renderEvidence(ev) {
+        if (ev.type === 'text') {
+            return `
+                <div class="ap-evidence ap-evidence-text">
+                    <span class="ap-evidence-badge">Texto</span>
+                    <p>${this.escapeHtml(ev.content || '')}</p>
+                </div>
+            `;
+        }
+        const name = this.escapeHtml(ev.name || 'Arquivo');
+        const proxyUrl = convertToProxyUrl(ev.content || '');
+        const downloadUrl = convertToDownloadUrl(ev.content || '', ev.name || undefined);
+        const sizeKb = ev.size ? ` · ${Math.round(ev.size / 1024)} KB` : '';
+        return `
+            <div class="ap-evidence ap-evidence-file">
+                <span class="ap-evidence-badge file">Arquivo</span>
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <span class="ap-evidence-name">${name}${sizeKb}</span>
+                <a href="${proxyUrl}" target="_blank" rel="noopener" class="ap-evidence-link" title="Visualizar">Ver</a>
+                <a href="${downloadUrl}" download="${this.escapeHtml(ev.name || '')}" class="ap-evidence-link" title="Baixar">Baixar</a>
             </div>
         `;
     },
@@ -482,12 +609,15 @@ const ApprovalPage = {
         }
         const comment = await Modal.prompt({
             title: 'Aprovar pedido de edição',
-            message: 'O usuário poderá editar medições e evidências por 7 dias. Comentário opcional:',
+            subtitle: 'O usuário poderá editar medições e evidências por 7 dias.',
             placeholder: 'Ex: OK, atualize a evidência final.',
+            hint: 'Comentário opcional',
             confirmLabel: 'Aprovar',
             cancelLabel: 'Cancelar',
             required: false,
-            maxLength: 500
+            maxLength: 500,
+            variant: 'primary',
+            icon: 'check'
         });
         if (comment === null) return;
         try {
@@ -510,12 +640,14 @@ const ApprovalPage = {
         }
         const comment = await Modal.prompt({
             title: 'Recusar pedido de edição',
-            message: 'Informe o motivo da recusa (obrigatório).',
+            subtitle: 'Informe o motivo da recusa para o solicitante.',
             placeholder: 'Ex: Esse OKR já foi homologado em ciclo anterior...',
-            confirmLabel: 'Recusar',
+            confirmLabel: 'Recusar pedido',
             cancelLabel: 'Cancelar',
             required: true,
-            maxLength: 500
+            maxLength: 500,
+            variant: 'danger',
+            icon: 'warning'
         });
         if (!comment) return;
         try {
@@ -552,15 +684,21 @@ const ApprovalPage = {
         modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:9000;isolation:isolate;';
         modal.innerHTML = `
             <div class="modal-overlay" onclick="ApprovalPage.closeKRAdjustmentsModal()"></div>
-            <div class="modal-content" style="max-width:680px;max-height:90vh;">
+            <div class="modal-content" style="max-width:720px;max-height:90vh;">
                 <div class="modal-header">
-                    <h3>Ajustes em KRs específicos</h3>
+                    <div>
+                        <h3>Ajustes em KRs específicos</h3>
+                        <p style="margin:4px 0 0;font-size:12px;color:var(--text-muted);font-weight:normal;">
+                            Selecione um ou mais KRs que precisam de revisão.
+                        </p>
+                    </div>
                     <button class="modal-close" onclick="ApprovalPage.closeKRAdjustmentsModal()">&times;</button>
                 </div>
                 <div class="modal-body" style="overflow-y:auto;">
-                    <p style="margin:0 0 16px;color:var(--text-muted);font-size:13px;">
-                        Marque os KRs que precisam de ajuste e descreva o motivo de cada um. O OKR será movido para <strong>"Ajustes Solicitados"</strong>.
-                    </p>
+                    <div class="kr-adjust-toolbar">
+                        <span id="kr-adjust-counter" class="kr-adjust-counter">0 de ${krs.length} selecionados</span>
+                        <button type="button" class="kr-adjust-toggle-all" id="kr-adjust-toggle-all" onclick="ApprovalPage.toggleAllKRAdjust()">Marcar todos</button>
+                    </div>
                     <input type="hidden" id="kr-adjust-okr-id" value="${okr.id}">
                     <div class="kr-adjust-list">
                         ${krs.map((kr, idx) => `
@@ -568,36 +706,96 @@ const ApprovalPage = {
                                 <label class="kr-adjust-check">
                                     <input type="checkbox" name="kr-adjust-check" value="${kr.id}"
                                         onchange="ApprovalPage.onKRAdjustToggle(this)">
-                                    <div class="kr-adjust-title">
-                                        <span class="kr-badge">KR${idx + 1}</span>
-                                        <span>${this.escapeHtml(kr.title || 'Sem título')}</span>
-                                    </div>
+                                    <span class="kr-adjust-checkbox-visual">
+                                        <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                        </svg>
+                                    </span>
+                                    <span class="kr-adjust-badge">KR${idx + 1}</span>
+                                    <span class="kr-adjust-text">${this.escapeHtml(kr.title || 'Sem título')}</span>
                                 </label>
-                                <textarea class="form-control kr-adjust-comment" rows="2" maxlength="500"
-                                    placeholder="Descreva o ajuste necessário neste KR..."
-                                    disabled
-                                    data-kr-id="${kr.id}">${kr.committee_comment ? this.escapeHtml(kr.committee_comment) : ''}</textarea>
+                                <div class="kr-adjust-comment-wrapper">
+                                    <textarea class="form-control kr-adjust-comment" rows="3" maxlength="500"
+                                        placeholder="Descreva o ajuste necessário neste KR..."
+                                        oninput="ApprovalPage.onKRAdjustCommentInput(this)"
+                                        data-kr-id="${kr.id}">${kr.committee_comment ? this.escapeHtml(kr.committee_comment) : ''}</textarea>
+                                    <div class="kr-adjust-charcount" data-kr-id="${kr.id}">0/500</div>
+                                </div>
                             </div>
                         `).join('')}
                     </div>
-                    <div id="kr-adjust-error" style="display:none;color:var(--danger);font-size:13px;margin-top:8px;"></div>
+                    <div id="kr-adjust-error" class="kr-adjust-error">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        <span id="kr-adjust-error-text"></span>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" onclick="ApprovalPage.closeKRAdjustmentsModal()">Cancelar</button>
-                    <button class="btn btn-primary" id="kr-adjust-submit-btn" onclick="ApprovalPage.submitKRAdjustments()">Solicitar ajustes</button>
+                    <button class="btn btn-primary" id="kr-adjust-submit-btn" onclick="ApprovalPage.submitKRAdjustments()" disabled>
+                        Solicitar ajustes
+                    </button>
                 </div>
             </div>
         `;
         document.body.appendChild(modal);
+        // Inicializa contadores e estado
+        modal.querySelectorAll('.kr-adjust-comment').forEach(ta => this.onKRAdjustCommentInput(ta));
     },
 
     onKRAdjustToggle(checkbox) {
         const item = checkbox.closest('.kr-adjust-item');
         const ta = item?.querySelector('.kr-adjust-comment');
         if (!ta) return;
-        ta.disabled = !checkbox.checked;
         item.classList.toggle('kr-adjust-item-checked', checkbox.checked);
-        if (checkbox.checked) setTimeout(() => ta.focus(), 30);
+        if (checkbox.checked) setTimeout(() => ta.focus(), 200);
+        this._updateKRAdjustState();
+    },
+
+    onKRAdjustCommentInput(ta) {
+        const count = (ta.value || '').length;
+        const counter = document.querySelector(`.kr-adjust-charcount[data-kr-id="${ta.dataset.krId}"]`);
+        if (counter) {
+            counter.textContent = `${count}/500`;
+            counter.classList.toggle('warning', count > 450);
+        }
+    },
+
+    toggleAllKRAdjust() {
+        const checkboxes = document.querySelectorAll('input[name="kr-adjust-check"]');
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        const target = !allChecked;
+        checkboxes.forEach(cb => {
+            if (cb.checked !== target) {
+                cb.checked = target;
+                this.onKRAdjustToggle(cb);
+            }
+        });
+    },
+
+    _updateKRAdjustState() {
+        const checkboxes = document.querySelectorAll('input[name="kr-adjust-check"]');
+        const total = checkboxes.length;
+        const selected = Array.from(checkboxes).filter(cb => cb.checked).length;
+        const counter = document.getElementById('kr-adjust-counter');
+        if (counter) {
+            counter.textContent = selected === 0
+                ? `0 de ${total} selecionados`
+                : `${selected} de ${total} selecionado${selected > 1 ? 's' : ''}`;
+            counter.classList.toggle('active', selected > 0);
+        }
+        const submitBtn = document.getElementById('kr-adjust-submit-btn');
+        if (submitBtn) {
+            submitBtn.disabled = selected === 0;
+            submitBtn.textContent = selected === 0
+                ? 'Solicitar ajustes'
+                : `Solicitar ajustes (${selected})`;
+        }
+        const toggleBtn = document.getElementById('kr-adjust-toggle-all');
+        if (toggleBtn) {
+            toggleBtn.textContent = selected === total && total > 0 ? 'Desmarcar todos' : 'Marcar todos';
+        }
     },
 
     closeKRAdjustmentsModal() {
@@ -608,12 +806,17 @@ const ApprovalPage = {
     async submitKRAdjustments() {
         const okrId = document.getElementById('kr-adjust-okr-id')?.value;
         const errorDiv = document.getElementById('kr-adjust-error');
+        const errorText = document.getElementById('kr-adjust-error-text');
         const btn = document.getElementById('kr-adjust-submit-btn');
-        if (errorDiv) errorDiv.style.display = 'none';
+        const showError = (msg) => {
+            if (errorText) errorText.textContent = msg;
+            if (errorDiv) errorDiv.classList.add('show');
+        };
+        if (errorDiv) errorDiv.classList.remove('show');
 
         const checked = Array.from(document.querySelectorAll('input[name="kr-adjust-check"]:checked'));
         if (checked.length === 0) {
-            if (errorDiv) { errorDiv.textContent = 'Selecione ao menos um KR.'; errorDiv.style.display = 'block'; }
+            showError('Selecione ao menos um KR.');
             return;
         }
 
@@ -623,7 +826,7 @@ const ApprovalPage = {
             const ta = document.querySelector(`.kr-adjust-comment[data-kr-id="${krId}"]`);
             const comment = (ta?.value || '').trim();
             if (!comment) {
-                if (errorDiv) { errorDiv.textContent = 'Descreva o ajuste para cada KR selecionado.'; errorDiv.style.display = 'block'; }
+                showError('Descreva o ajuste para cada KR selecionado.');
                 ta?.focus();
                 return;
             }
@@ -642,8 +845,11 @@ const ApprovalPage = {
             await this.render();
         } catch (err) {
             console.error(err);
-            if (errorDiv) { errorDiv.textContent = err.message || 'Erro ao solicitar ajustes.'; errorDiv.style.display = 'block'; }
-            if (btn) { btn.disabled = false; btn.textContent = 'Solicitar ajustes'; }
+            showError(err.message || 'Erro ao solicitar ajustes.');
+            if (btn) {
+                btn.disabled = false;
+                this._updateKRAdjustState();
+            }
         }
     },
 
@@ -659,13 +865,16 @@ const ApprovalPage = {
         let comment = '';
         if (newStatus === 'adjust') {
             comment = await Modal.prompt({
-                title: 'Solicitar Ajustes',
-                message: 'Descreva os ajustes necessários para este OKR.',
-                placeholder: 'Ex: O Key Result 2 precisa ter uma meta mais desafiadora...',
-                confirmLabel: 'Solicitar Ajuste',
+                title: 'Solicitar ajustes neste OKR',
+                subtitle: 'O OKR será movido para "Ajustes Solicitados" e o time será notificado.',
+                placeholder: 'Ex: O Key Result 2 precisa ter uma meta mais desafiadora e prazo definido...',
+                hint: 'Ctrl+Enter para enviar',
+                confirmLabel: 'Solicitar ajuste',
                 cancelLabel: 'Cancelar',
                 required: true,
-                maxLength: 500
+                maxLength: 500,
+                variant: 'warning',
+                icon: 'warning'
             });
             if (!comment) return;
         }
@@ -698,9 +907,9 @@ const ApprovalPage = {
     },
 
     addStyles() {
-        if (document.getElementById('approval-styles-v3')) return;
+        if (document.getElementById('approval-styles-v6')) return;
         const style = document.createElement('style');
-        style.id = 'approval-styles-v3';
+        style.id = 'approval-styles-v6';
         style.textContent = `
             /* === TOOLBAR (tabs + filters on same row) === */
             .ap-toolbar {
@@ -942,6 +1151,223 @@ const ApprovalPage = {
                 display: inline-block;
                 max-width: 100%;
                 overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            }
+
+            /* Expand button + container */
+            .ap-card-wrapper {
+                display: block;
+                margin-bottom: 8px;
+                border-radius: 10px;
+                overflow: hidden;
+                background: white;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            }
+            .ap-card-wrapper .ap-card { margin-bottom: 0; box-shadow: none; }
+            .ap-card-wrapper .ap-card.ap-card-expanded { border-bottom: 1px solid #e5e7eb; border-radius: 10px 10px 0 0; }
+            .ap-expand-btn {
+                background: transparent;
+                border: none;
+                padding: 6px;
+                margin: 0 4px 0 -4px;
+                cursor: pointer;
+                color: #6b7280;
+                border-radius: 6px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                transition: transform 0.2s ease, background 0.15s;
+                align-self: center;
+            }
+            .ap-expand-btn:hover { background: #f3f4f6; color: #111827; }
+            .ap-expand-btn.expanded { transform: rotate(90deg); }
+
+            /* Expanded details */
+            .ap-card-details {
+                background: #f9fafb;
+                padding: 16px 18px;
+                border-radius: 0 0 10px 10px;
+                animation: ap-expand 0.18s ease-out;
+            }
+            @keyframes ap-expand {
+                from { opacity: 0; transform: translateY(-4px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            .ap-detail-section { margin-bottom: 14px; }
+            .ap-detail-section:last-child { margin-bottom: 0; }
+            .ap-detail-label {
+                font-size: 11px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                color: #6b7280;
+                margin-bottom: 8px;
+            }
+            .ap-resp-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+            .ap-resp-badge {
+                display: inline-flex; align-items: center;
+                padding: 4px 10px;
+                border-radius: 999px;
+                background: #e0f2fe;
+                color: #075985;
+                font-size: 12px;
+                font-weight: 500;
+            }
+            .ap-resp-badge.primary { background: #fef3c7; color: #92400e; }
+            .ap-resp-empty {
+                font-size: 12px; color: #9ca3af; font-style: italic;
+            }
+            .ap-kr-list { display: flex; flex-direction: column; gap: 16px; }
+            .ap-kr-item {
+                background: white;
+                border: 1.5px solid #e5e7eb;
+                border-radius: 12px;
+                padding: 0;
+                overflow: hidden;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+                transition: box-shadow 0.15s;
+            }
+            .ap-kr-item:hover {
+                box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            }
+            .ap-kr-header {
+                display: flex;
+                align-items: flex-start;
+                gap: 10px;
+                padding: 14px 16px 12px;
+                background: linear-gradient(to bottom, #ffffff, #fafafa);
+                border-bottom: 1px solid #f3f4f6;
+            }
+            .ap-kr-badge {
+                background: #0f766e;
+                color: white;
+                font-size: 11px;
+                font-weight: 700;
+                padding: 4px 10px;
+                border-radius: 5px;
+                letter-spacing: 0.4px;
+                flex-shrink: 0;
+                margin-top: 1px;
+            }
+            .ap-kr-title { font-size: 14px; font-weight: 600; color: #1f2937; flex: 1; line-height: 1.4; }
+            .ap-kr-meta {
+                display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+                font-size: 11px; color: #6b7280;
+                padding: 12px 16px;
+                background: #fafafa;
+                border-bottom: 1px solid #f3f4f6;
+            }
+            .ap-kr-bar {
+                width: 100px; height: 7px; background: #e5e7eb;
+                border-radius: 4px; overflow: hidden;
+            }
+            .ap-kr-bar-fill { height: 100%; transition: width 0.3s; border-radius: 4px; }
+            .ap-kr-pct { font-weight: 700; font-size: 13px; }
+            .ap-kr-metric {
+                padding: 3px 10px;
+                background: #fff;
+                border: 1px solid #e5e7eb;
+                border-radius: 5px;
+                font-size: 11px;
+                color: #374151;
+            }
+            .ap-kr-comment {
+                margin: 0;
+                padding: 12px 16px;
+                background: #f9fafb;
+                border-bottom: 1px solid #f3f4f6;
+                font-size: 13px;
+                color: #374151;
+                line-height: 1.5;
+            }
+            .ap-kr-comment strong { color: #1f2937; }
+            .ap-kr-adjust {
+                margin: 0;
+                padding: 12px 16px;
+                background: #fef2f2;
+                border-left: 4px solid #dc2626;
+                border-bottom: 1px solid #fee2e2;
+                font-size: 13px;
+                color: #991b1b;
+                line-height: 1.5;
+            }
+            .ap-kr-adjust strong { color: #7f1d1d; }
+            .ap-kr-item > *:last-child { border-bottom: none !important; }
+
+            /* Evidências */
+            .ap-kr-evidence-block {
+                margin: 0;
+                padding: 14px 16px;
+                background: #ffffff;
+            }
+            .ap-kr-evidence-header {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 11px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.4px;
+                color: #6b7280;
+                margin-bottom: 8px;
+            }
+            .ap-kr-evidence-list {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+            }
+            .ap-evidence {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 8px 10px;
+                background: #f9fafb;
+                border: 1px solid #e5e7eb;
+                border-radius: 6px;
+                font-size: 12px;
+            }
+            .ap-evidence-text { align-items: flex-start; }
+            .ap-evidence-text p {
+                margin: 0;
+                color: #374151;
+                white-space: pre-wrap;
+                flex: 1;
+            }
+            .ap-evidence-badge {
+                display: inline-block;
+                padding: 2px 6px;
+                background: #dbeafe;
+                color: #1e40af;
+                font-size: 10px;
+                font-weight: 700;
+                border-radius: 4px;
+                text-transform: uppercase;
+                letter-spacing: 0.3px;
+                flex-shrink: 0;
+            }
+            .ap-evidence-badge.file { background: #fef3c7; color: #92400e; }
+            .ap-evidence-name {
+                flex: 1;
+                color: #374151;
+                font-weight: 500;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .ap-evidence-link {
+                padding: 4px 10px;
+                background: white;
+                border: 1px solid #d1d5db;
+                border-radius: 5px;
+                color: #0f766e;
+                font-size: 11px;
+                font-weight: 600;
+                text-decoration: none;
+                transition: all 0.15s;
+            }
+            .ap-evidence-link:hover {
+                background: #0f766e;
+                color: white;
+                border-color: #0f766e;
             }
 
             /* Actions */

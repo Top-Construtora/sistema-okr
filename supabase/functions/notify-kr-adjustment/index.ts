@@ -1,23 +1,20 @@
 // Supabase Edge Function: notify-kr-adjustment
-// Envia email para todos os colaboradores ativos do departamento do OKR
+// Envia email via Gmail SMTP para os responsáveis (ou departamento como fallback)
 // quando o comitê solicita ajustes em KRs específicos (ou no OKR inteiro).
 //
 // Secrets necessários:
-//   - RESEND_API_KEY  (https://resend.com)
-//   - FROM_EMAIL      (ex: "Comitê OKR <noreply@seudominio.com>")
-//   - APP_URL         (opcional: URL do frontend para deep-link)
+//   - GMAIL_USER          (ex: topconstrutora.inovacoes@gmail.com)
+//   - GMAIL_APP_PASSWORD  (App Password de 16 chars - https://myaccount.google.com/apppasswords)
+//   - FROM_NAME           (opcional, padrão: "Comitê OKR")
+//   - APP_URL             (opcional: URL do frontend para deep-link)
+//   - EMAIL_BLOCKLIST     (opcional: emails separados por vírgula que NUNCA recebem notificações)
 //
 // Variáveis fornecidas automaticamente pelo Supabase em runtime:
 //   - SUPABASE_URL
 //   - SUPABASE_SERVICE_ROLE_KEY
-//
-// Deploy:
-//   supabase functions deploy notify-kr-adjustment
-//   supabase secrets set RESEND_API_KEY=re_xxx FROM_EMAIL="Comitê OKR <noreply@dominio.com>"
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
-
-const RESEND_API = 'https://api.resend.com/emails';
+import nodemailer from 'npm:nodemailer@6.9.16';
 
 interface RequestBody {
     okr_id: string;
@@ -56,15 +53,22 @@ Deno.serve(async (req) => {
 
         const supabaseUrl = Deno.env.get('SUPABASE_URL');
         const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-        const resendKey = Deno.env.get('RESEND_API_KEY');
-        const fromEmail = Deno.env.get('FROM_EMAIL') || 'onboarding@resend.dev';
+        const gmailUser = Deno.env.get('GMAIL_USER');
+        const gmailPass = Deno.env.get('GMAIL_APP_PASSWORD');
+        const fromName = Deno.env.get('FROM_NAME') || 'Comitê OKR';
         const appUrl = Deno.env.get('APP_URL') || '';
+        const blocklist = new Set(
+            (Deno.env.get('EMAIL_BLOCKLIST') || '')
+                .split(',')
+                .map(e => e.trim().toLowerCase())
+                .filter(Boolean)
+        );
 
         if (!supabaseUrl || !serviceKey) {
             return new Response(JSON.stringify({ error: 'Supabase env not set' }), { status: 500, headers: cors });
         }
-        if (!resendKey) {
-            return new Response(JSON.stringify({ error: 'RESEND_API_KEY not set' }), { status: 500, headers: cors });
+        if (!gmailUser || !gmailPass) {
+            return new Response(JSON.stringify({ error: 'GMAIL_USER ou GMAIL_APP_PASSWORD não configurado' }), { status: 500, headers: cors });
         }
 
         const sb = createClient(supabaseUrl, serviceKey);
@@ -153,8 +157,20 @@ Deno.serve(async (req) => {
                 .map((u: any) => ({ id: u.id, nome: u.nome, email: u.email }));
         }
 
+        // Aplica blocklist (diretores e similares que nunca devem receber)
+        const blocked: string[] = [];
+        recipients = recipients.filter(r => {
+            const isBlocked = blocklist.has((r.email || '').toLowerCase());
+            if (isBlocked) blocked.push(r.email);
+            return !isBlocked;
+        });
+
         if (recipients.length === 0) {
-            return new Response(JSON.stringify({ skipped: true, reason: 'no recipients with email' }), { headers: cors });
+            return new Response(JSON.stringify({
+                skipped: true,
+                reason: 'no recipients with email after blocklist',
+                blocked
+            }), { headers: cors });
         }
 
         // 4) Monta HTML do email
@@ -203,35 +219,53 @@ Deno.serve(async (req) => {
         </div>
         `;
 
-        // 5) Envia via Resend (uma chamada por destinatário para evitar vazamento de emails)
+        // 5) Envia via Gmail SMTP (uma mensagem por destinatário pra não vazar lista)
         const subject = `Ajustes solicitados no OKR: ${okr.title}`;
         const results: Array<{ to: string; ok: boolean; error?: string }> = [];
 
+        // Plain text alternativo (gerado manualmente, sem whitespace bagunçado)
+        const krLines = krsWithComment.map((kr, idx) =>
+            `KR${(kr.position ?? idx) + 1}: ${kr.title || ''}\n  → ${kr.committee_comment || ''}`
+        ).join('\n\n');
+        const plain = [
+            `Ajustes solicitados no OKR`,
+            `Departamento: ${okr.department || ''}`,
+            ``,
+            `OKR: ${okr.title || ''}`,
+            okr.committee_comment ? `\nComentário do comitê:\n${okr.committee_comment}` : '',
+            krsWithComment.length > 0 ? `\nDetalhes por KR (${krsWithComment.length}):\n${krLines}` : '',
+            appUrl ? `\nAbrir no sistema: ${appUrl}/okrs` : '',
+            ``,
+            `--`,
+            `Sistema OKR · TOP Construtora`,
+            `Este email foi enviado automaticamente, não responda.`
+        ].filter(Boolean).join('\n');
+
+        const transporter = nodemailer.createTransport({
+            host: 'smtp.gmail.com',
+            port: 465,
+            secure: true,
+            auth: {
+                user: gmailUser,
+                pass: gmailPass
+            }
+        });
+
         for (const r of recipients) {
             try {
-                const res = await fetch(RESEND_API, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${resendKey}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        from: fromEmail,
-                        to: r.email,
-                        subject,
-                        html
-                    })
+                await transporter.sendMail({
+                    from: `"${fromName}" <${gmailUser}>`,
+                    to: r.email,
+                    subject,
+                    text: plain,
+                    html
                 });
-                if (res.ok) {
-                    results.push({ to: r.email, ok: true });
-                } else {
-                    const txt = await res.text();
-                    results.push({ to: r.email, ok: false, error: `${res.status}: ${txt}` });
-                }
-            } catch (e) {
-                results.push({ to: r.email, ok: false, error: String(e) });
+                results.push({ to: r.email, ok: true });
+            } catch (e: any) {
+                results.push({ to: r.email, ok: false, error: String(e?.message || e) });
             }
         }
+        try { transporter.close(); } catch (_) { /* ignore */ }
 
         const sent = results.filter(r => r.ok).length;
         return new Response(
@@ -240,6 +274,7 @@ Deno.serve(async (req) => {
                 department: okr.department,
                 recipient_source: recipientSource,
                 recipients: recipients.length,
+                blocked,
                 sent,
                 failed: results.length - sent,
                 kr_count: krsWithComment.length,

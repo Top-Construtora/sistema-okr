@@ -350,50 +350,60 @@ class OKR {
         if (!this.id) return;
         const desired = this.getResponsibleUsers();
         const desiredIds = desired.map(u => typeof u === 'string' ? u : u.id).filter(Boolean);
-        try {
-            const { data: current } = await supabaseClient
-                .from('okr_responsible_users')
-                .select('user_id, is_primary')
-                .eq('okr_id', this.id);
 
-            const currentIds = (current || []).map(r => r.user_id);
-            const toRemove = currentIds.filter(id => !desiredIds.includes(id));
-            const toAdd = desiredIds.filter(id => !currentIds.includes(id));
+        const { data: current, error: selectError } = await supabaseClient
+            .from('okr_responsible_users')
+            .select('user_id, is_primary')
+            .eq('okr_id', this.id);
 
-            if (toRemove.length > 0) {
-                await supabaseClient
-                    .from('okr_responsible_users')
-                    .delete()
-                    .eq('okr_id', this.id)
-                    .in('user_id', toRemove);
+        if (selectError) {
+            // Tabela não existe? Erro de RLS? Avisa em vez de mascarar.
+            if (selectError.code === 'PGRST205' || /not find the table/i.test(selectError.message || '')) {
+                throw new Error('Tabela "okr_responsible_users" não existe. Rode a migration 34 no Supabase.');
             }
+            throw new Error(`Erro ao ler responsáveis: ${selectError.message}`);
+        }
 
-            // Zera is_primary atual pra evitar conflito de unique index
-            await supabaseClient
+        const currentIds = (current || []).map(r => r.user_id);
+        const toRemove = currentIds.filter(id => !desiredIds.includes(id));
+        const toAdd = desiredIds.filter(id => !currentIds.includes(id));
+
+        if (toRemove.length > 0) {
+            const { error } = await supabaseClient
+                .from('okr_responsible_users')
+                .delete()
+                .eq('okr_id', this.id)
+                .in('user_id', toRemove);
+            if (error) throw new Error(`Erro ao remover responsáveis: ${error.message}`);
+        }
+
+        // Zera is_primary atual pra evitar conflito de unique index
+        if (currentIds.length > 0 || desiredIds.length > 0) {
+            const { error } = await supabaseClient
                 .from('okr_responsible_users')
                 .update({ is_primary: false })
                 .eq('okr_id', this.id);
+            if (error) throw new Error(`Erro ao limpar primary: ${error.message}`);
+        }
 
-            // Insere novos (sem is_primary - setamos depois)
-            if (toAdd.length > 0) {
-                await supabaseClient
-                    .from('okr_responsible_users')
-                    .insert(toAdd.map(uid => ({ okr_id: this.id, user_id: uid, is_primary: false })));
-            }
+        // Insere novos
+        if (toAdd.length > 0) {
+            const { error } = await supabaseClient
+                .from('okr_responsible_users')
+                .insert(toAdd.map(uid => ({ okr_id: this.id, user_id: uid, is_primary: false })));
+            if (error) throw new Error(`Erro ao inserir responsáveis: ${error.message}`);
+        }
 
-            // Marca o primary (primeiro da lista, ou quem tem is_primary explícito)
-            const primaryEntry = desired.find(u => u && u.is_primary) || desired[0];
-            const primaryId = primaryEntry ? (typeof primaryEntry === 'string' ? primaryEntry : primaryEntry.id) : null;
-            if (primaryId) {
-                await supabaseClient
-                    .from('okr_responsible_users')
-                    .update({ is_primary: true })
-                    .eq('okr_id', this.id)
-                    .eq('user_id', primaryId);
-            }
-        } catch (e) {
-            console.error('Erro ao salvar responsáveis do OKR:', e);
-            throw e;
+        // Marca o primary (primeiro da lista, ou quem tem is_primary explícito)
+        const primaryEntry = desired.find(u => u && u.is_primary) || desired[0];
+        const primaryId = primaryEntry ? (typeof primaryEntry === 'string' ? primaryEntry : primaryEntry.id) : null;
+        if (primaryId) {
+            const { error } = await supabaseClient
+                .from('okr_responsible_users')
+                .update({ is_primary: true })
+                .eq('okr_id', this.id)
+                .eq('user_id', primaryId);
+            if (error) throw new Error(`Erro ao marcar primary: ${error.message}`);
         }
     }
 

@@ -77,12 +77,16 @@ function convertToProxyUrl(url) {
 }
 
 /**
- * Converte URL para URL de download do Supabase Storage
+ * Converte URL para URL de download do Supabase Storage.
+ * Se filename for fornecido, o arquivo é baixado com esse nome.
+ * Caso contrário, usa o nome original (parâmetro 'download' sem valor).
  * @param {string} url - URL original
+ * @param {string} [filename] - Nome a usar no download (opcional)
  * @returns {string} URL de download do Supabase Storage
  */
-function convertToDownloadUrl(url) {
+function convertToDownloadUrl(url, filename) {
     if (!url) return url;
+    const downloadParam = filename ? `download=${encodeURIComponent(filename)}` : 'download';
 
     // Se é uma URL antiga de proxy do backend, extrair bucket e path
     const proxyPattern = /\/api\/evidence\/(?:view|download)\/([^/]+)\/(.+)$/;
@@ -90,12 +94,12 @@ function convertToDownloadUrl(url) {
     if (proxyMatch) {
         const bucket = proxyMatch[1];
         const filePath = proxyMatch[2];
-        return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${filePath}?download=true`;
+        return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${filePath}?${downloadParam}`;
     }
 
     // Se é URL pública do Supabase, adicionar parâmetro de download
     if (url.includes('supabase.co/storage/v1/object/public/')) {
-        return url.includes('?') ? `${url}&download=true` : `${url}?download=true`;
+        return url.includes('?') ? `${url}&${downloadParam}` : `${url}?${downloadParam}`;
     }
 
     return url;

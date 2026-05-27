@@ -767,7 +767,7 @@ const MyOKRsPage = {
                                                                                     }
                                                                                     ${ev.size ? `<span class="file-size-display">${this.formatFileSize(ev.size)}</span>` : ''}
                                                                                 </div>
-                                                                                <a href="${convertToDownloadUrl(ev.content)}" download class="btn btn-xs btn-secondary" title="Baixar">
+                                                                                <a href="${convertToDownloadUrl(ev.content, ev.name || undefined)}" download="${ev.name || ''}" class="btn btn-xs btn-secondary" title="Baixar">
                                                                                     <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                                                                                     </svg>

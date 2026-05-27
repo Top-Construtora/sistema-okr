@@ -24,4 +24,4 @@ Thumbs.db
 # Logs
 *.log
 
-.planning/
+.planning/supabase/.temp/
