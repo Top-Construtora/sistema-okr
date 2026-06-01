@@ -212,10 +212,17 @@ class Initiative {
 
     // Toggle concluída
     async toggleComplete() {
+        // BUG FIX #4: Desmarcar deve restaurar o progresso (não deixar em 100).
+        // Decisão: sem coluna `previous_progress` no schema (evita migration),
+        // adotamos a regra simples: marcar = 100, desmarcar = 0.
+        // Ambos os campos (progress e concluida) são persistidos via save() abaixo.
         this.concluida = !this.concluida;
-        // Quando marca como concluída, progresso = 100%, senão volta ao valor anterior
         if (this.concluida) {
             this.progress = 100;
+        } else {
+            // Desmarcando: zera o progresso para manter consistência com o DB
+            // (caso contrário, KR continuaria refletindo 100% mesmo desmarcado).
+            this.progress = 0;
         }
         return await this.save();
     }

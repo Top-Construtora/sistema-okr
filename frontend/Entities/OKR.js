@@ -154,22 +154,26 @@ class OKR {
                         .in('id', krsToDelete);
                 }
 
+                // Helper: monta payload condicional — só inclui campos definidos
+                // pra evitar sobrescrever valores válidos no DB com null/undefined
+                // vindos da view okrs_complete (que pode não expor todos os campos).
+                const buildKrPayload = (kr, idx) => {
+                    const p = { okr_id: this.id, title: kr.title, position: idx };
+                    if (kr.metric !== undefined && kr.metric !== null) p.metric = kr.metric;
+                    if (kr.target !== undefined && kr.target !== null) p.target = kr.target;
+                    if (kr.progress !== undefined && kr.progress !== null) p.progress = kr.progress;
+                    if (kr.tasks !== undefined && kr.tasks !== null) p.tasks = kr.tasks;
+                    if (kr.status !== undefined && kr.status !== null) p.status = kr.status;
+                    if (kr.comment !== undefined && kr.comment !== null) p.comment = kr.comment;
+                    if (kr.evidence !== undefined && kr.evidence !== null) p.evidence = kr.evidence;
+                    if (kr.committee_comment !== undefined && kr.committee_comment !== null) p.committee_comment = kr.committee_comment;
+                    return p;
+                };
+
                 // Processar cada KR
                 for (let idx = 0; idx < this.key_results.length; idx++) {
                     const kr = this.key_results[idx];
-                    const krData = {
-                        okr_id: this.id,
-                        title: kr.title,
-                        metric: kr.metric || '%',
-                        target: kr.target || '100',
-                        progress: kr.progress || 0,
-                        tasks: kr.tasks || [],
-                        position: idx,
-                        status: kr.status || 'pending',
-                        comment: kr.comment || null,
-                        evidence: kr.evidence || [],
-                        committee_comment: kr.committee_comment ?? null
-                    };
+                    const krData = buildKrPayload(kr, idx);
 
                     // Se KR já existe (tem ID válido no banco), atualizar
                     if (kr.id && existingKRIds.has(kr.id)) {
@@ -203,19 +207,22 @@ class OKR {
 
                 // Insert KRs
                 if (this.key_results.length > 0) {
-                    const krs = this.key_results.map((kr, idx) => ({
-                        okr_id: this.id,
-                        title: kr.title,
-                        metric: kr.metric || '%',
-                        target: kr.target || '100',
-                        progress: kr.progress || 0,
-                        tasks: kr.tasks || [],
-                        position: idx,
-                        status: kr.status || 'pending',
-                        comment: kr.comment || null,
-                        evidence: kr.evidence || [],
-                        committee_comment: kr.committee_comment ?? null
-                    }));
+                    // Helper: payload condicional — só inclui campos definidos
+                    // (mesma lógica do branch UPDATE pra consistência)
+                    const buildKrPayload = (kr, idx) => {
+                        const p = { okr_id: this.id, title: kr.title, position: idx };
+                        if (kr.metric !== undefined && kr.metric !== null) p.metric = kr.metric;
+                        if (kr.target !== undefined && kr.target !== null) p.target = kr.target;
+                        if (kr.progress !== undefined && kr.progress !== null) p.progress = kr.progress;
+                        if (kr.tasks !== undefined && kr.tasks !== null) p.tasks = kr.tasks;
+                        if (kr.status !== undefined && kr.status !== null) p.status = kr.status;
+                        if (kr.comment !== undefined && kr.comment !== null) p.comment = kr.comment;
+                        if (kr.evidence !== undefined && kr.evidence !== null) p.evidence = kr.evidence;
+                        if (kr.committee_comment !== undefined && kr.committee_comment !== null) p.committee_comment = kr.committee_comment;
+                        return p;
+                    };
+
+                    const krs = this.key_results.map((kr, idx) => buildKrPayload(kr, idx));
 
                     const { error: krError } = await supabaseClient
                         .from('key_results')

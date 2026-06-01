@@ -2132,7 +2132,7 @@ const MyOKRsPage = {
         const title = document.getElementById('kr-title').value.trim();
         const status = document.getElementById('kr-status').value;
         const comment = document.getElementById('kr-comment')?.value.trim() || '';
-        const krId = generateId(); // Gerar ID antes para usar no upload
+        const krId = generateId(); // Usado apenas como folder no storage upload
         const evidence = await this.collectEvidence(krId);
         const errorDiv = document.getElementById('kr-error');
 
@@ -2143,23 +2143,38 @@ const MyOKRsPage = {
         }
 
         try {
-            const okr = await OKR.getById(okrId);
-            if (!okr) throw new Error('OKR não encontrado');
+            // Calcula a próxima position consultando os KRs atuais do OKR
+            const { data: existingKRs, error: fetchError } = await supabaseClient
+                .from('key_results')
+                .select('position')
+                .eq('okr_id', okrId);
 
-            const newKR = {
-                id: krId,
-                title: title,
-                status: status,
-                target: 100,
-                metric: '%',
-                progress: 0,
-                tasks: [],
-                comment: comment,
-                evidence: evidence
-            };
+            if (fetchError) throw fetchError;
 
-            okr.keyResults.push(newKR);
-            await okr.save();
+            const maxPosition = (existingKRs || []).reduce(
+                (max, kr) => (typeof kr.position === 'number' && kr.position > max ? kr.position : max),
+                -1
+            );
+            const nextPosition = maxPosition + 1;
+
+            // INSERT direto em key_results, sem tocar nos KRs irmãos
+            const { error: insertError } = await supabaseClient
+                .from('key_results')
+                .insert({
+                    okr_id: okrId,
+                    title: title,
+                    status: status,
+                    target: '100',
+                    metric: '%',
+                    progress: 0,
+                    tasks: [],
+                    position: nextPosition,
+                    comment: comment || null,
+                    evidence: evidence || [],
+                    committee_comment: null
+                });
+
+            if (insertError) throw insertError;
 
             this.closeKRModal();
             await this.renderList();
@@ -2186,18 +2201,18 @@ const MyOKRsPage = {
         }
 
         try {
-            const okr = await OKR.getById(okrId);
-            if (!okr) throw new Error('OKR não encontrado');
+            // UPDATE direto em key_results, só com os campos editados pelo form
+            const { error: updateError } = await supabaseClient
+                .from('key_results')
+                .update({
+                    title: title,
+                    status: status,
+                    comment: comment || null,
+                    evidence: evidence || []
+                })
+                .eq('id', krId);
 
-            const kr = okr.keyResults.find(k => k.id === krId);
-            if (!kr) throw new Error('Key Result não encontrado');
-
-            kr.title = title;
-            kr.status = status;
-            kr.comment = comment;
-            kr.evidence = evidence;
-
-            await okr.save();
+            if (updateError) throw updateError;
 
             this.closeKRModal();
             await this.renderList();
@@ -2218,11 +2233,13 @@ const MyOKRsPage = {
         if (!confirmed) return;
 
         try {
-            const okr = await OKR.getById(okrId);
-            if (!okr) throw new Error('OKR não encontrado');
+            // DELETE direto em key_results
+            const { error: deleteError } = await supabaseClient
+                .from('key_results')
+                .delete()
+                .eq('id', krId);
 
-            okr.keyResults = okr.keyResults.filter(kr => kr.id !== krId);
-            await okr.save();
+            if (deleteError) throw deleteError;
 
             await this.renderList();
             DepartmentsPage.showToast('Key Result excluído com sucesso!', 'success');

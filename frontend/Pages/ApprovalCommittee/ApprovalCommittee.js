@@ -929,6 +929,22 @@ const ApprovalPage = {
             if (!comment) return;
         }
 
+        // Confirmação para transições terminais (evita cliques acidentais, especialmente em mobile)
+        const confirmMsg = {
+            completed: 'Marcar este OKR como Concluído? Os KRs e o OKR ficarão bloqueados para edição.',
+            homologated: 'Homologar este OKR? Esta é uma transição final.'
+        }[newStatus];
+        if (confirmMsg) {
+            const ok = await Modal.confirm({
+                title: 'Confirmar transição',
+                message: confirmMsg,
+                confirmLabel: newStatus === 'homologated' ? 'Homologar' : 'Concluir',
+                cancelLabel: 'Cancelar',
+                danger: newStatus === 'homologated'
+            });
+            if (!ok) return;
+        }
+
         // Limpa comentário ao sair de "ajustes" (o comentário era referente àquele ciclo de revisão)
         if (okr.committee_comment && newStatus !== 'adjust') {
             comment = '';
