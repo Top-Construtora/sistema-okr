@@ -419,6 +419,45 @@ const StrategicObjectiveDetailPage = {
         return `<div class="sod-sm-info-row">${parts.join('')}</div>`;
     },
 
+    renderMetricMenu(metric) {
+        const isChecklist = metric.unit === 'checklist';
+        return `
+            <div class="action-menu" onclick="event.stopPropagation();">
+                <button class="action-menu-btn" onclick="StrategicObjectiveDetailPage.toggleMetricMenu(event, ${metric.id})" title="Ações">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+                    </svg>
+                </button>
+                <div class="action-menu-dropdown" id="metric-menu-${metric.id}">
+                    ${isChecklist ? `
+                        <button class="menu-item" onclick="StrategicObjectiveDetailPage.openItemsModal(${metric.id});window.closeAllDropdownMenus();">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                            Gerenciar itens
+                        </button>
+                    ` : ''}
+                    <button class="menu-item" onclick="StrategicObjectiveDetailPage.openMetricModal(${metric.id});window.closeAllDropdownMenus();">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        Editar
+                    </button>
+                    <button class="menu-item danger" onclick="StrategicObjectiveDetailPage.deleteMetric(${metric.id});window.closeAllDropdownMenus();">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        Excluir
+                    </button>
+                </div>
+            </div>
+        `;
+    },
+
+    toggleMetricMenu(event, metricId) {
+        event.stopPropagation();
+        window.closeAllDropdownMenus();
+        const menu = document.getElementById(`metric-menu-${metricId}`);
+        if (menu) {
+            window.positionDropdownMenu(event.currentTarget, `metric-menu-${metricId}`);
+            menu.classList.toggle('show');
+        }
+    },
+
     renderMetricRow(metric, categoryConfig, colors, isAdmin, metricMode) {
         const isText = metric.unit === 'texto';
         const isDate = metric.unit === 'data';
@@ -453,19 +492,7 @@ const StrategicObjectiveDetailPage = {
                         </div>
                         <span class="sod-metric-pct" style="color:${barColor};">${pct}%</span>
                     </div>
-                    ${isAdmin ? `
-                        <div class="sod-metric-actions" onclick="event.stopPropagation();">
-                            <button class="so-obj-action-btn" onclick="StrategicObjectiveDetailPage.openItemsModal(${metric.id})" title="Gerenciar itens">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
-                            </button>
-                            <button class="so-obj-action-btn" onclick="StrategicObjectiveDetailPage.openMetricModal(${metric.id})" title="Editar sub-métrica">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                            </button>
-                            <button class="so-obj-action-btn so-obj-action-del" onclick="StrategicObjectiveDetailPage.deleteMetric(${metric.id})" title="Excluir">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                            </button>
-                        </div>
-                    ` : ''}
+                    ${isAdmin ? this.renderMetricMenu(metric) : ''}
                 </div>
             `;
         }
@@ -488,14 +515,7 @@ const StrategicObjectiveDetailPage = {
                     <div style="display:flex;align-items:center;gap:8px;">
                         <span style="font-size:11px;font-weight:600;padding:3px 8px;border-radius:12px;background:${status.color}20;color:${status.color};white-space:nowrap;">${status.label}</span>
                         ${isAdmin ? `
-                            <div class="sod-metric-actions" onclick="event.stopPropagation();">
-                                <button class="so-obj-action-btn" onclick="StrategicObjectiveDetailPage.openMetricModal(${metric.id})" title="Editar">
-                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                                </button>
-                                <button class="so-obj-action-btn so-obj-action-del" onclick="StrategicObjectiveDetailPage.deleteMetric(${metric.id})" title="Excluir">
-                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                </button>
-                            </div>
+                            ${this.renderMetricMenu(metric)}
                         ` : ''}
                     </div>
                 </div>
@@ -512,14 +532,7 @@ const StrategicObjectiveDetailPage = {
                         ${this.renderMetricIndicatorInfo(metric)}
                     </div>
                     ${isAdmin && !isAuto ? `
-                        <div class="sod-metric-actions" onclick="event.stopPropagation();">
-                            <button class="so-obj-action-btn" onclick="StrategicObjectiveDetailPage.openMetricModal(${metric.id})" title="Editar">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                            </button>
-                            <button class="so-obj-action-btn so-obj-action-del" onclick="StrategicObjectiveDetailPage.deleteMetric(${metric.id})" title="Excluir">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                            </button>
-                        </div>
+                        ${this.renderMetricMenu(metric)}
                     ` : ''}
                 </div>
             `;
@@ -579,14 +592,7 @@ const StrategicObjectiveDetailPage = {
                         <span class="sod-metric-pct" style="color:${barColor};">${inverseProgress.toFixed(0)}%</span>
                     </div>
                     ${isAdmin ? `
-                        <div class="sod-metric-actions" onclick="event.stopPropagation();">
-                            <button class="so-obj-action-btn" onclick="StrategicObjectiveDetailPage.openMetricModal(${metric.id})" title="Editar">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                            </button>
-                            <button class="so-obj-action-btn so-obj-action-del" onclick="StrategicObjectiveDetailPage.deleteMetric(${metric.id})" title="Excluir">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                            </button>
-                        </div>
+                        ${this.renderMetricMenu(metric)}
                     ` : ''}
                 </div>
             `;
@@ -611,14 +617,7 @@ const StrategicObjectiveDetailPage = {
                     <span class="sod-metric-pct">${progress.toFixed(0)}%</span>
                 </div>
                 ${isAdmin ? `
-                    <div class="sod-metric-actions" onclick="event.stopPropagation();">
-                        <button class="so-obj-action-btn" onclick="StrategicObjectiveDetailPage.openMetricModal(${metric.id})" title="Editar">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                        </button>
-                        <button class="so-obj-action-btn so-obj-action-del" onclick="StrategicObjectiveDetailPage.deleteMetric(${metric.id})" title="Excluir">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                        </button>
-                    </div>
+                    ${this.renderMetricMenu(metric)}
                 ` : ''}
             </div>
         `;
@@ -1777,7 +1776,7 @@ const StrategicObjectiveDetailPage = {
 
         modal.innerHTML = `
             <div class="modal-overlay-gio" onclick="StrategicObjectiveDetailPage.closeItemsModal()"></div>
-            <div class="modal-content-gio" style="max-width:640px;max-height:90vh;">
+            <div class="modal-content-gio" style="max-width:900px;width:95vw;max-height:90vh;">
                 <div class="modal-header-gio">
                     <div>
                         <h3>Itens · ${metric.name}</h3>
@@ -1801,7 +1800,7 @@ const StrategicObjectiveDetailPage = {
 
                     <form onsubmit="event.preventDefault();StrategicObjectiveDetailPage.addItem();" style="display:flex;gap:8px;margin-bottom:16px;">
                         <input type="text" id="sod-items-new-name" class="form-control-gio"
-                            placeholder="Ex: Residencial Alpha, Obra Beta..." maxlength="200" style="flex:1;">
+                            placeholder="Digite aqui o item..." maxlength="200" style="flex:1;">
                         <button type="submit" class="btn-gio-primary" style="white-space:nowrap;padding:0 16px;">
                             + Adicionar
                         </button>
