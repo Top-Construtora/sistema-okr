@@ -64,13 +64,14 @@ const StrategicObjectiveDetailPage = {
         }
 
         // Enriquecer sub-métricas tipo 'checklist' com contagem de itens
-        const checklistMetricsInit = (this.objective.sub_metrics || []).filter(m => m.unit === 'checklist');
+        const checklistMetricsInit = (this.objective.sub_metrics || []).filter(m => m.unit === 'checklist' || m.unit === 'items_pct');
         if (checklistMetricsInit.length > 0) {
             const counts = await StrategicSubMetricItem.getCountsBySubMetricIds(checklistMetricsInit.map(m => m.id));
             checklistMetricsInit.forEach(m => {
-                const c = counts[m.id] || { total: 0, done: 0 };
+                const c = counts[m.id] || { total: 0, done: 0, avg_pct: 0 };
                 m._items_total = c.total;
                 m._items_done = c.done;
+                m._items_avg_pct = c.avg_pct;
             });
         }
 
@@ -464,26 +465,30 @@ const StrategicObjectiveDetailPage = {
         const isAuto = metric._is_auto;
         const isInverse = metricMode === 'inverse';
         const isChecklist = metric.unit === 'checklist';
+        const isItemsPct = metric.unit === 'items_pct';
 
-        // Checklist mode - lista de itens com checkbox
-        if (isChecklist) {
+        // Checklist / items_pct - lista de itens
+        if (isChecklist || isItemsPct) {
             const total = metric._items_total || 0;
-            const done = metric._items_done || 0;
-            const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+            const pct = isItemsPct
+                ? (total > 0 ? Math.round(metric._items_avg_pct || 0) : 0)
+                : (total > 0 ? Math.round(((metric._items_done || 0) / total) * 100) : 0);
             const barColor = pct >= 70 ? '#10b981' : pct >= 40 ? '#f59e0b' : '#94a3b8';
+            const iconColor = isItemsPct ? '#3b82f6' : '#10b981';
+            const summary = total === 0
+                ? '<span style="font-size:12px;color:#9ca3af;font-style:italic;">Nenhum item — clique para adicionar</span>'
+                : (isItemsPct
+                    ? `<span style="font-size:12px;color:#6b7280;"><strong>${total}</strong> ${total > 1 ? 'itens' : 'item'} · média <strong>${pct}%</strong></span>`
+                    : `<span style="font-size:12px;color:#6b7280;"><strong>${metric._items_done || 0}</strong> de <strong>${total}</strong> concluído${total > 1 ? 's' : ''}</span>`
+                );
             return `
                 <div class="sod-metric-row sod-metric-row-clickable" onclick="StrategicObjectiveDetailPage.openItemsModal(${metric.id})" title="Gerenciar itens">
                     <div class="sod-metric-info">
                         <span class="sod-metric-name">
-                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="vertical-align:-2px;margin-right:4px;color:#10b981;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="vertical-align:-2px;margin-right:4px;color:${iconColor};"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
                             ${metric.name}
                         </span>
-                        <div class="sod-metric-values">
-                            ${total === 0
-                                ? '<span style="font-size:12px;color:#9ca3af;font-style:italic;">Nenhum item — clique para adicionar</span>'
-                                : `<span style="font-size:12px;color:#6b7280;"><strong>${done}</strong> de <strong>${total}</strong> concluído${total > 1 ? 's' : ''}</span>`
-                            }
-                        </div>
+                        <div class="sod-metric-values">${summary}</div>
                         ${this.renderMetricIndicatorInfo(metric)}
                     </div>
                     <div class="sod-metric-progress-area">
@@ -1552,9 +1557,10 @@ const StrategicObjectiveDetailPage = {
             'texto': 'Texto (Qualitativo)',
             'data': 'Data (Prazo)',
             'un': 'Unidade (Quantidade)',
-            'checklist': 'Lista de itens (Checklist)'
+            'checklist': 'Lista de itens (Concluído sim/não)',
+            'items_pct': 'Lista de itens (% por item — média)'
         };
-        const options = [categoryUnit, 'checklist', 'un', 'data'].filter((v, i, a) => a.indexOf(v) === i);
+        const options = [categoryUnit, 'checklist', 'items_pct', 'un', 'data'].filter((v, i, a) => a.indexOf(v) === i);
         return options.map(u => `<option value="${u}"${u === selectedUnit ? ' selected' : ''}>${unitLabels[u] || u}</option>`).join('');
     },
 
@@ -1570,8 +1576,19 @@ const StrategicObjectiveDetailPage = {
             return `
                 <div class="form-group-gio">
                     <div style="padding:14px 16px;background:#ecfdf5;border-left:4px solid #10b981;border-radius:8px;font-size:13px;color:#065f46;line-height:1.55;">
-                        <strong style="display:block;margin-bottom:4px;">Lista de itens (checklist)</strong>
-                        Após salvar a sub-métrica, você poderá adicionar itens (obras, projetos, atividades, etc.) com um checkbox cada. A porcentagem é calculada automaticamente como <strong>itens concluídos ÷ total</strong>.
+                        <strong style="display:block;margin-bottom:4px;">Lista de itens — Concluído sim/não</strong>
+                        Cada item terá 3 estados: <strong>concluída no prazo</strong>, <strong>não concluída</strong>, ou em progresso. A % é calculada como <strong>concluídas ÷ total</strong>.
+                    </div>
+                </div>
+            `;
+        }
+
+        if (selectedUnit === 'items_pct') {
+            return `
+                <div class="form-group-gio">
+                    <div style="padding:14px 16px;background:#eff6ff;border-left:4px solid #3b82f6;border-radius:8px;font-size:13px;color:#1e40af;line-height:1.55;">
+                        <strong style="display:block;margin-bottom:4px;">Lista de itens — % por item</strong>
+                        Cada item terá um valor de 0 a 100%. A % geral da sub-métrica é a <strong>média dos valores</strong>.
                     </div>
                 </div>
             `;
@@ -1746,8 +1763,8 @@ const StrategicObjectiveDetailPage = {
 
     async openItemsModal(metricId) {
         const metric = (this.objective?.sub_metrics || []).find(m => m.id === metricId);
-        if (!metric || metric.unit !== 'checklist') {
-            DepartmentsPage.showToast('Esta sub-métrica não é do tipo checklist', 'error');
+        if (!metric || (metric.unit !== 'checklist' && metric.unit !== 'items_pct')) {
+            DepartmentsPage.showToast('Esta sub-métrica não tem lista de itens', 'error');
             return;
         }
         this._itemsCurrentMetric = metric;
@@ -1770,11 +1787,26 @@ const StrategicObjectiveDetailPage = {
         const metric = this._itemsCurrentMetric;
         const items = this._itemsList || [];
         const total = items.length;
-        const done = items.filter(it => it.status === 'completed').length;
-        const failed = items.filter(it => it.status === 'not_completed').length;
-        const pending = total - done - failed;
-        const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-        const barColor = pct >= 70 ? '#10b981' : pct >= 40 ? '#f59e0b' : '#94a3b8';
+        const isItemsPct = metric.unit === 'items_pct';
+
+        let pct, summaryText, barColor;
+        if (isItemsPct) {
+            const sum = items.reduce((s, it) => s + Number(it.value_pct || 0), 0);
+            pct = total > 0 ? Math.round(sum / total) : 0;
+            barColor = pct >= 70 ? '#10b981' : pct >= 40 ? '#f59e0b' : '#94a3b8';
+            summaryText = total === 0
+                ? 'Adicione itens e defina o % de cada um (0–100).'
+                : `<strong>${total}</strong> ${total > 1 ? 'itens' : 'item'} · média <strong>${pct}%</strong>`;
+        } else {
+            const done = items.filter(it => it.status === 'completed').length;
+            const failed = items.filter(it => it.status === 'not_completed').length;
+            const pending = total - done - failed;
+            pct = total > 0 ? Math.round((done / total) * 100) : 0;
+            barColor = pct >= 70 ? '#10b981' : pct >= 40 ? '#f59e0b' : '#94a3b8';
+            summaryText = total === 0
+                ? 'Adicione itens (obras, projetos, etc.) e marque o status de cada um.'
+                : `<strong>${done}</strong> concluídos · <strong>${failed}</strong> não concluídos · <strong>${pending}</strong> em progresso — ${pct}%`;
+        }
 
         modal.innerHTML = `
             <div class="modal-overlay-gio" onclick="StrategicObjectiveDetailPage.closeItemsModal()"></div>
@@ -1782,7 +1814,7 @@ const StrategicObjectiveDetailPage = {
                 <div class="modal-header-gio">
                     <div>
                         <h3>Itens · ${metric.name}</h3>
-                        <p>${total === 0 ? 'Adicione itens (obras, projetos, etc.) e marque o status de cada um.' : `<strong>${done}</strong> concluídos · <strong>${failed}</strong> não concluídos · <strong>${pending}</strong> em progresso — ${pct}%`}</p>
+                        <p>${summaryText}</p>
                     </div>
                     <button class="modal-close-gio" onclick="StrategicObjectiveDetailPage.closeItemsModal()">
                         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -1814,7 +1846,7 @@ const StrategicObjectiveDetailPage = {
                                 <svg width="36" height="36" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-bottom:8px;opacity:0.4;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                                 <p style="margin:0;">Nenhum item ainda. Use o campo acima pra adicionar.</p>
                             </div>
-                        ` : items.map(it => this._renderItemRow(it)).join('')}
+                        ` : items.map(it => isItemsPct ? this._renderItemRowPct(it) : this._renderItemRow(it)).join('')}
                     </div>
                 </div>
                 <div class="modal-footer-gio">
@@ -1855,6 +1887,46 @@ const StrategicObjectiveDetailPage = {
         `;
     },
 
+    _renderItemRowPct(it) {
+        const safeName = (it.name || '').replace(/"/g, '&quot;');
+        const val = it.value_pct !== null && it.value_pct !== undefined ? Number(it.value_pct) : 0;
+        const rowClass = val >= 70 ? 'sod-item-row-done'
+            : val >= 40 ? 'sod-item-row-warn'
+            : val > 0 ? 'sod-item-row-low'
+            : '';
+        return `
+            <div class="sod-item-row ${rowClass}" data-id="${it.id}">
+                <input type="text" class="sod-item-name-input" value="${safeName}" maxlength="200"
+                    onblur="StrategicObjectiveDetailPage.renameItem('${it.id}', this.value)"
+                    onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
+                <div class="sod-item-pct-wrapper">
+                    <input type="number" class="sod-item-pct-input" min="0" max="100" step="1"
+                        value="${val}"
+                        onchange="StrategicObjectiveDetailPage.setItemPct('${it.id}', this.value)"
+                        onclick="event.stopPropagation();this.select();">
+                    <span class="sod-item-pct-suffix">%</span>
+                </div>
+                <button class="sod-item-del" onclick="StrategicObjectiveDetailPage.deleteItem('${it.id}')" title="Remover">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+            </div>
+        `;
+    },
+
+    async setItemPct(itemId, value) {
+        const it = (this._itemsList || []).find(x => x.id === itemId);
+        if (!it) return;
+        const v = Math.max(0, Math.min(100, Number(value) || 0));
+        try {
+            await StrategicSubMetricItem.update(itemId, { value_pct: v });
+            it.value_pct = v;
+            this._renderItemsModal();
+        } catch (e) {
+            console.error(e);
+            DepartmentsPage.showToast('Erro ao atualizar item', 'error');
+        }
+    },
+
     closeItemsModal() {
         const modal = document.getElementById('sod-items-modal');
         if (modal) modal.style.display = 'none';
@@ -1869,11 +1941,13 @@ const StrategicObjectiveDetailPage = {
         const metric = this._itemsCurrentMetric;
         if (!metric) return;
         try {
-            const newItem = await StrategicSubMetricItem.create({
+            const payload = {
                 sub_metric_id: metric.id,
                 name,
                 position: (this._itemsList || []).length
-            });
+            };
+            if (metric.unit === 'items_pct') payload.value_pct = 0;
+            const newItem = await StrategicSubMetricItem.create(payload);
             this._itemsList = [...(this._itemsList || []), newItem];
             input.value = '';
             this._renderItemsModal();
@@ -1970,8 +2044,8 @@ const StrategicObjectiveDetailPage = {
                 responsavel_ids: responsavelIds
             };
 
-            if (isChecklist) {
-                // Sub-métrica tipo checklist: meta = 100, atual = 0 (será atualizado pelo trigger ao adicionar items)
+            if (isChecklist || unit === 'items_pct') {
+                // Lista de itens: meta = 100, atual = 0 (será atualizado pelo trigger ao adicionar items)
                 data.target_value = 100;
                 data.current_value = 0;
                 data.target_date = null;
@@ -2887,14 +2961,15 @@ const StrategicObjectiveDetailPage = {
             this.objective.sub_metrics = autoMetrics;
         }
 
-        // Enriquecer sub-métricas tipo 'checklist' com contagem de itens
-        const checklistMetrics = (this.objective.sub_metrics || []).filter(m => m.unit === 'checklist');
-        if (checklistMetrics.length > 0) {
-            const counts = await StrategicSubMetricItem.getCountsBySubMetricIds(checklistMetrics.map(m => m.id));
-            checklistMetrics.forEach(m => {
-                const c = counts[m.id] || { total: 0, done: 0 };
+        // Enriquecer sub-métricas tipo 'checklist' e 'items_pct' com contagem/média dos itens
+        const itemBasedMetrics = (this.objective.sub_metrics || []).filter(m => m.unit === 'checklist' || m.unit === 'items_pct');
+        if (itemBasedMetrics.length > 0) {
+            const counts = await StrategicSubMetricItem.getCountsBySubMetricIds(itemBasedMetrics.map(m => m.id));
+            itemBasedMetrics.forEach(m => {
+                const c = counts[m.id] || { total: 0, done: 0, avg_pct: 0 };
                 m._items_total = c.total;
                 m._items_done = c.done;
+                m._items_avg_pct = c.avg_pct;
             });
         }
 
@@ -2939,6 +3014,51 @@ const StrategicObjectiveDetailPage = {
             .sod-item-row-fail {
                 background: #fef2f2;
                 border-color: #fecaca;
+            }
+            .sod-item-row-warn {
+                background: #fffbeb;
+                border-color: #fde68a;
+            }
+            .sod-item-row-low {
+                background: #fef2f2;
+                border-color: #fecaca;
+            }
+            /* Input % de items_pct */
+            .sod-item-pct-wrapper {
+                display: inline-flex;
+                align-items: center;
+                gap: 2px;
+                background: #fff;
+                border: 1.5px solid #d1d5db;
+                border-radius: 6px;
+                padding: 0 8px;
+                flex-shrink: 0;
+                transition: border-color 0.15s, box-shadow 0.15s;
+            }
+            .sod-item-pct-wrapper:focus-within {
+                border-color: #3b82f6;
+                box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+            }
+            .sod-item-pct-input {
+                width: 50px;
+                border: none;
+                background: transparent;
+                font-size: 14px;
+                font-weight: 700;
+                color: #1f2937;
+                text-align: right;
+                padding: 4px 0;
+                font-family: inherit;
+            }
+            .sod-item-pct-input:focus { outline: none; }
+            .sod-item-pct-input::-webkit-inner-spin-button,
+            .sod-item-pct-input::-webkit-outer-spin-button {
+                opacity: 0.4;
+            }
+            .sod-item-pct-suffix {
+                font-size: 13px;
+                color: #6b7280;
+                font-weight: 600;
             }
             .sod-item-status-buttons {
                 display: inline-flex;

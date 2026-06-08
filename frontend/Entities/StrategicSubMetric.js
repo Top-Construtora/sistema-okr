@@ -33,9 +33,10 @@ class StrategicSubMetric {
         this._okr_count = data._okr_count || 0;
         this._is_auto = data._is_auto || false;
         this.sub_metric_type = data.sub_metric_type || null;
-        // Propriedades de checklist (preenchidas em runtime, não persistidas)
+        // Propriedades de checklist / items_pct (preenchidas em runtime, não persistidas)
         this._items_total = data._items_total || 0;
         this._items_done = data._items_done || 0;
+        this._items_avg_pct = data._items_avg_pct !== undefined ? data._items_avg_pct : 0;
     }
 
     get dateStatus() {
@@ -63,6 +64,13 @@ class StrategicSubMetric {
         if (this.unit === 'checklist') {
             if (this._items_total > 0) {
                 return Math.round((this._items_done / this._items_total) * 100);
+            }
+            return Math.min(Math.max(Number(this.current_value || 0), 0), 100);
+        }
+        // items_pct: current_value é a média dos value_pct dos itens (setada pelo trigger).
+        if (this.unit === 'items_pct') {
+            if (this._items_total > 0 && this._items_avg_pct !== undefined) {
+                return Math.round(this._items_avg_pct);
             }
             return Math.min(Math.max(Number(this.current_value || 0), 0), 100);
         }

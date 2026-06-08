@@ -17,6 +17,9 @@ class StrategicSubMetricItem {
         }
         this.position = data.position || 0;
         this.notes = data.notes || null;
+        this.value_pct = data.value_pct !== null && data.value_pct !== undefined
+            ? Math.max(0, Math.min(100, Number(data.value_pct)))
+            : null;
         this.created_at = data.created_at || null;
         this.updated_at = data.updated_at || null;
     }
@@ -39,20 +42,26 @@ class StrategicSubMetricItem {
         }
     }
 
-    // Pega contagens (total, concluídos) para uma lista de sub_metric_ids — usado pra renderizar rows
+    // Pega contagens (total, concluídos, avg) para uma lista de sub_metric_ids
+    // Retorna: { [smId]: { total, done, avg_pct } }
     static async getCountsBySubMetricIds(subMetricIds) {
         if (!Array.isArray(subMetricIds) || subMetricIds.length === 0) return {};
         try {
             const { data, error } = await supabaseClient
                 .from('strategic_sub_metric_items')
-                .select('sub_metric_id, status')
+                .select('sub_metric_id, status, value_pct')
                 .in('sub_metric_id', subMetricIds);
             if (error) throw error;
             const counts = {};
             (data || []).forEach(it => {
-                if (!counts[it.sub_metric_id]) counts[it.sub_metric_id] = { total: 0, done: 0 };
+                if (!counts[it.sub_metric_id]) counts[it.sub_metric_id] = { total: 0, done: 0, sum_pct: 0 };
                 counts[it.sub_metric_id].total += 1;
                 if (it.status === 'completed') counts[it.sub_metric_id].done += 1;
+                counts[it.sub_metric_id].sum_pct += Number(it.value_pct || 0);
+            });
+            // Calcula avg_pct
+            Object.values(counts).forEach(c => {
+                c.avg_pct = c.total > 0 ? Math.round(c.sum_pct / c.total) : 0;
             });
             return counts;
         } catch (error) {
@@ -61,19 +70,23 @@ class StrategicSubMetricItem {
         }
     }
 
-    static async create({ sub_metric_id, name, status = 'pending', position = 0, notes = null }) {
+    static async create({ sub_metric_id, name, status = 'pending', position = 0, notes = null, value_pct = null }) {
         if (!sub_metric_id) throw new Error('sub_metric_id é obrigatório');
         if (!name || !String(name).trim()) throw new Error('Nome do item é obrigatório');
         const validStatus = ['pending', 'completed', 'not_completed'].includes(status) ? status : 'pending';
+        const payload = {
+            sub_metric_id,
+            name: String(name).trim(),
+            status: validStatus,
+            position,
+            notes: notes || null
+        };
+        if (value_pct !== null && value_pct !== undefined) {
+            payload.value_pct = Math.max(0, Math.min(100, Number(value_pct)));
+        }
         const { data, error } = await supabaseClient
             .from('strategic_sub_metric_items')
-            .insert([{
-                sub_metric_id,
-                name: String(name).trim(),
-                status: validStatus,
-                position,
-                notes: notes || null
-            }])
+            .insert([payload])
             .select()
             .single();
         if (error) throw error;
@@ -89,6 +102,11 @@ class StrategicSubMetricItem {
         }
         if (fields.position !== undefined) updateData.position = Number(fields.position) || 0;
         if (fields.notes !== undefined) updateData.notes = fields.notes || null;
+        if (fields.value_pct !== undefined) {
+            updateData.value_pct = fields.value_pct === null
+                ? null
+                : Math.max(0, Math.min(100, Number(fields.value_pct)));
+        }
         const { data, error } = await supabaseClient
             .from('strategic_sub_metric_items')
             .update(updateData)
