@@ -2,6 +2,7 @@ import { AuthService } from '../../services/auth.js';
 import { convertToProxyUrl } from '../../services/supabase.js';
 import { StrategicObjective } from '../../Entities/StrategicObjective.js';
 import { StrategicSubMetric, CATEGORY_METRIC_CONFIG } from '../../Entities/StrategicSubMetric.js';
+import { StrategicSubMetricItem } from '../../Entities/StrategicSubMetricItem.js';
 import { StrategicTimelineEntry } from '../../Entities/StrategicTimelineEntry.js';
 import { Department } from '../../Entities/Department.js';
 import { User } from '../../Entities/User.js';
@@ -60,6 +61,17 @@ const StrategicObjectiveDetailPage = {
         if (categoryConfig.metric_mode === 'auto_okr' && this.objective.cycle_id) {
             const autoMetrics = await StrategicSubMetric.getAutoOkrMetrics(this.objective.id, this.objective.cycle_id);
             this.objective.sub_metrics = autoMetrics;
+        }
+
+        // Enriquecer sub-métricas tipo 'checklist' com contagem de itens
+        const checklistMetricsInit = (this.objective.sub_metrics || []).filter(m => m.unit === 'checklist');
+        if (checklistMetricsInit.length > 0) {
+            const counts = await StrategicSubMetricItem.getCountsBySubMetricIds(checklistMetricsInit.map(m => m.id));
+            checklistMetricsInit.forEach(m => {
+                const c = counts[m.id] || { total: 0, done: 0 };
+                m._items_total = c.total;
+                m._items_done = c.done;
+            });
         }
 
         // Busca entradas da timeline, departamentos, usuários e políticas em paralelo
@@ -412,6 +424,51 @@ const StrategicObjectiveDetailPage = {
         const isDate = metric.unit === 'data';
         const isAuto = metric._is_auto;
         const isInverse = metricMode === 'inverse';
+        const isChecklist = metric.unit === 'checklist';
+
+        // Checklist mode - lista de itens com checkbox
+        if (isChecklist) {
+            const total = metric._items_total || 0;
+            const done = metric._items_done || 0;
+            const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+            const barColor = pct >= 70 ? '#10b981' : pct >= 40 ? '#f59e0b' : '#94a3b8';
+            return `
+                <div class="sod-metric-row sod-metric-row-clickable" onclick="StrategicObjectiveDetailPage.openItemsModal(${metric.id})" title="Gerenciar itens">
+                    <div class="sod-metric-info">
+                        <span class="sod-metric-name">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="vertical-align:-2px;margin-right:4px;color:#10b981;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                            ${metric.name}
+                        </span>
+                        <div class="sod-metric-values">
+                            ${total === 0
+                                ? '<span style="font-size:12px;color:#9ca3af;font-style:italic;">Nenhum item — clique para adicionar</span>'
+                                : `<span style="font-size:12px;color:#6b7280;"><strong>${done}</strong> de <strong>${total}</strong> concluído${total > 1 ? 's' : ''}</span>`
+                            }
+                        </div>
+                        ${this.renderMetricIndicatorInfo(metric)}
+                    </div>
+                    <div class="sod-metric-progress-area">
+                        <div class="sod-progress-bar">
+                            <div class="sod-progress-fill" style="width:${pct}%;background:${barColor};"></div>
+                        </div>
+                        <span class="sod-metric-pct" style="color:${barColor};">${pct}%</span>
+                    </div>
+                    ${isAdmin ? `
+                        <div class="sod-metric-actions" onclick="event.stopPropagation();">
+                            <button class="so-obj-action-btn" onclick="StrategicObjectiveDetailPage.openItemsModal(${metric.id})" title="Gerenciar itens">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                            </button>
+                            <button class="so-obj-action-btn" onclick="StrategicObjectiveDetailPage.openMetricModal(${metric.id})" title="Editar sub-métrica">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                            </button>
+                            <button class="so-obj-action-btn so-obj-action-del" onclick="StrategicObjectiveDetailPage.deleteMetric(${metric.id})" title="Excluir">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            </button>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
 
         // Date mode
         if (isDate) {
@@ -1490,8 +1547,15 @@ const StrategicObjectiveDetailPage = {
     // =====================================================
 
     _getMetricUnitOptions(categoryUnit, selectedUnit) {
-        const unitLabels = { 'R$': 'R$ (Monetário)', '%': '% (Percentual)', 'texto': 'Texto (Qualitativo)', 'data': 'Data (Prazo)', 'un': 'Unidade (Quantidade)' };
-        const options = [categoryUnit, 'un', 'data'].filter((v, i, a) => a.indexOf(v) === i);
+        const unitLabels = {
+            'R$': 'R$ (Monetário)',
+            '%': '% (Percentual)',
+            'texto': 'Texto (Qualitativo)',
+            'data': 'Data (Prazo)',
+            'un': 'Unidade (Quantidade)',
+            'checklist': 'Lista de itens (Checklist)'
+        };
+        const options = [categoryUnit, 'checklist', 'un', 'data'].filter((v, i, a) => a.indexOf(v) === i);
         return options.map(u => `<option value="${u}"${u === selectedUnit ? ' selected' : ''}>${unitLabels[u] || u}</option>`).join('');
     },
 
@@ -1500,7 +1564,19 @@ const StrategicObjectiveDetailPage = {
         const isInverse = categoryConfig.metric_mode === 'inverse';
         const isDate = selectedUnit === 'data';
         const isText = selectedUnit === 'texto';
+        const isChecklist = selectedUnit === 'checklist';
         const metric = this.currentMetric;
+
+        if (isChecklist) {
+            return `
+                <div class="form-group-gio">
+                    <div style="padding:14px 16px;background:#ecfdf5;border-left:4px solid #10b981;border-radius:8px;font-size:13px;color:#065f46;line-height:1.55;">
+                        <strong style="display:block;margin-bottom:4px;">Lista de itens (checklist)</strong>
+                        Após salvar a sub-métrica, você poderá adicionar itens (obras, projetos, atividades, etc.) com um checkbox cada. A porcentagem é calculada automaticamente como <strong>itens concluídos ÷ total</strong>.
+                    </div>
+                </div>
+            `;
+        }
 
         if (isDate) {
             const targetVal = metric?.target_date || '';
@@ -1665,6 +1741,190 @@ const StrategicObjectiveDetailPage = {
         this.currentMetric = null;
     },
 
+    // =====================================================
+    // CHECKLIST ITEMS MODAL (sub-métrica tipo 'checklist')
+    // =====================================================
+
+    async openItemsModal(metricId) {
+        const metric = (this.objective?.sub_metrics || []).find(m => m.id === metricId);
+        if (!metric || metric.unit !== 'checklist') {
+            DepartmentsPage.showToast('Esta sub-métrica não é do tipo checklist', 'error');
+            return;
+        }
+        this._itemsCurrentMetric = metric;
+        this._itemsList = await StrategicSubMetricItem.getBySubMetricId(metricId);
+
+        let modal = document.getElementById('sod-items-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'sod-items-modal';
+            modal.className = 'modal-gio-container';
+            document.body.appendChild(modal);
+        }
+        modal.style.display = 'flex';
+        this._renderItemsModal();
+    },
+
+    _renderItemsModal() {
+        const modal = document.getElementById('sod-items-modal');
+        if (!modal) return;
+        const metric = this._itemsCurrentMetric;
+        const items = this._itemsList || [];
+        const total = items.length;
+        const done = items.filter(it => it.completed).length;
+        const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+        const barColor = pct >= 70 ? '#10b981' : pct >= 40 ? '#f59e0b' : '#94a3b8';
+
+        modal.innerHTML = `
+            <div class="modal-overlay-gio" onclick="StrategicObjectiveDetailPage.closeItemsModal()"></div>
+            <div class="modal-content-gio" style="max-width:640px;max-height:90vh;">
+                <div class="modal-header-gio">
+                    <div>
+                        <h3>Itens · ${metric.name}</h3>
+                        <p>${total === 0 ? 'Adicione itens (obras, projetos, etc.) e marque os concluídos.' : `${done} de ${total} concluído${total > 1 ? 's' : ''} — ${pct}%`}</p>
+                    </div>
+                    <button class="modal-close-gio" onclick="StrategicObjectiveDetailPage.closeItemsModal()">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <div class="modal-body-gio" style="overflow-y:auto;">
+                    <div style="margin-bottom:16px;">
+                        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;">
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <div style="flex:1;height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden;">
+                                    <div style="height:100%;width:${pct}%;background:${barColor};transition:width 0.3s;border-radius:4px;"></div>
+                                </div>
+                                <span style="font-weight:700;font-size:14px;color:${barColor};">${pct}%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form onsubmit="event.preventDefault();StrategicObjectiveDetailPage.addItem();" style="display:flex;gap:8px;margin-bottom:16px;">
+                        <input type="text" id="sod-items-new-name" class="form-control-gio"
+                            placeholder="Ex: Residencial Alpha, Obra Beta..." maxlength="200" style="flex:1;">
+                        <button type="submit" class="btn-gio-primary" style="white-space:nowrap;padding:0 16px;">
+                            + Adicionar
+                        </button>
+                    </form>
+
+                    <div id="sod-items-list">
+                        ${items.length === 0 ? `
+                            <div style="padding:32px 16px;text-align:center;color:#9ca3af;font-size:13px;">
+                                <svg width="36" height="36" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-bottom:8px;opacity:0.4;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                                <p style="margin:0;">Nenhum item ainda. Use o campo acima pra adicionar.</p>
+                            </div>
+                        ` : items.map(it => this._renderItemRow(it)).join('')}
+                    </div>
+                </div>
+                <div class="modal-footer-gio">
+                    <button class="btn-gio-secondary" onclick="StrategicObjectiveDetailPage.closeItemsModal()">Fechar</button>
+                </div>
+            </div>
+        `;
+        setTimeout(() => document.getElementById('sod-items-new-name')?.focus(), 50);
+    },
+
+    _renderItemRow(it) {
+        const safeName = (it.name || '').replace(/"/g, '&quot;');
+        return `
+            <div class="sod-item-row${it.completed ? ' sod-item-row-done' : ''}" data-id="${it.id}">
+                <label class="sod-item-check">
+                    <input type="checkbox" ${it.completed ? 'checked' : ''}
+                        onchange="StrategicObjectiveDetailPage.toggleItem('${it.id}', this.checked)">
+                    <span class="sod-item-check-visual">
+                        <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    </span>
+                </label>
+                <input type="text" class="sod-item-name-input" value="${safeName}" maxlength="200"
+                    onblur="StrategicObjectiveDetailPage.renameItem('${it.id}', this.value)"
+                    onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
+                <button class="sod-item-del" onclick="StrategicObjectiveDetailPage.deleteItem('${it.id}')" title="Remover">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+            </div>
+        `;
+    },
+
+    closeItemsModal() {
+        const modal = document.getElementById('sod-items-modal');
+        if (modal) modal.style.display = 'none';
+        // Refresh para atualizar a contagem na lista de sub-métricas
+        this.refreshData().catch(e => console.error(e));
+    },
+
+    async addItem() {
+        const input = document.getElementById('sod-items-new-name');
+        const name = (input?.value || '').trim();
+        if (!name) return;
+        const metric = this._itemsCurrentMetric;
+        if (!metric) return;
+        try {
+            const newItem = await StrategicSubMetricItem.create({
+                sub_metric_id: metric.id,
+                name,
+                position: (this._itemsList || []).length
+            });
+            this._itemsList = [...(this._itemsList || []), newItem];
+            input.value = '';
+            this._renderItemsModal();
+        } catch (e) {
+            console.error(e);
+            DepartmentsPage.showToast(e.message || 'Erro ao adicionar item', 'error');
+        }
+    },
+
+    async toggleItem(itemId, checked) {
+        try {
+            await StrategicSubMetricItem.toggleCompleted(itemId, checked);
+            const it = (this._itemsList || []).find(x => x.id === itemId);
+            if (it) it.completed = !!checked;
+            this._renderItemsModal();
+        } catch (e) {
+            console.error(e);
+            DepartmentsPage.showToast('Erro ao atualizar item', 'error');
+        }
+    },
+
+    async renameItem(itemId, newName) {
+        const trimmed = (newName || '').trim();
+        const it = (this._itemsList || []).find(x => x.id === itemId);
+        if (!it) return;
+        if (!trimmed) {
+            // Restaura o valor anterior se vazio
+            this._renderItemsModal();
+            return;
+        }
+        if (trimmed === it.name) return;
+        try {
+            await StrategicSubMetricItem.update(itemId, { name: trimmed });
+            it.name = trimmed;
+        } catch (e) {
+            console.error(e);
+            DepartmentsPage.showToast('Erro ao renomear', 'error');
+            this._renderItemsModal();
+        }
+    },
+
+    async deleteItem(itemId) {
+        const it = (this._itemsList || []).find(x => x.id === itemId);
+        if (!it) return;
+        const ok = await Modal.confirm({
+            title: 'Remover item',
+            message: `Remover <strong>"${(it.name || '').replace(/</g, '&lt;')}"</strong>?`,
+            confirmLabel: 'Remover',
+            danger: true
+        });
+        if (!ok) return;
+        try {
+            await StrategicSubMetricItem.delete(itemId);
+            this._itemsList = (this._itemsList || []).filter(x => x.id !== itemId);
+            this._renderItemsModal();
+        } catch (e) {
+            console.error(e);
+            DepartmentsPage.showToast('Erro ao remover', 'error');
+        }
+    },
+
     async saveMetric() {
         const name = document.getElementById('sod-metric-name').value.trim();
         const unitEl = document.getElementById('sod-metric-unit');
@@ -1674,6 +1934,7 @@ const StrategicObjectiveDetailPage = {
         const unit = unitEl ? unitEl.value : categoryConfig.unit;
         const isDate = unit === 'data';
         const isText = unit === 'texto';
+        const isChecklist = unit === 'checklist';
 
         if (!name) {
             errorDiv.textContent = 'Nome é obrigatório';
@@ -1696,7 +1957,13 @@ const StrategicObjectiveDetailPage = {
                 responsavel_ids: responsavelIds
             };
 
-            if (isDate) {
+            if (isChecklist) {
+                // Sub-métrica tipo checklist: meta = 100, atual = 0 (será atualizado pelo trigger ao adicionar items)
+                data.target_value = 100;
+                data.current_value = 0;
+                data.target_date = null;
+                data.conclusion_date = null;
+            } else if (isDate) {
                 const targetDate = document.getElementById('sod-metric-target-date')?.value || null;
                 const currentDate = document.getElementById('sod-metric-conclusion-date')?.value || null;
                 if (!targetDate) {
@@ -2607,6 +2874,17 @@ const StrategicObjectiveDetailPage = {
             this.objective.sub_metrics = autoMetrics;
         }
 
+        // Enriquecer sub-métricas tipo 'checklist' com contagem de itens
+        const checklistMetrics = (this.objective.sub_metrics || []).filter(m => m.unit === 'checklist');
+        if (checklistMetrics.length > 0) {
+            const counts = await StrategicSubMetricItem.getCountsBySubMetricIds(checklistMetrics.map(m => m.id));
+            checklistMetrics.forEach(m => {
+                const c = counts[m.id] || { total: 0, done: 0 };
+                m._items_total = c.total;
+                m._items_done = c.done;
+            });
+        }
+
         // Recarrega timeline
         this.timelineEntries = await StrategicTimelineEntry.getByObjectiveId(this.objective.id);
 
@@ -2619,6 +2897,98 @@ const StrategicObjectiveDetailPage = {
         const style = document.createElement('style');
         style.id = 'sod-detail-styles';
         style.textContent = `
+            /* Sub-métrica clicável (checklist) */
+            .sod-metric-row-clickable {
+                cursor: pointer;
+                transition: background 0.15s;
+            }
+            .sod-metric-row-clickable:hover {
+                background: #f9fafb;
+            }
+
+            /* Modal de itens de checklist */
+            .sod-item-row {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 10px 12px;
+                background: #fff;
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                margin-bottom: 6px;
+                transition: background 0.15s, border-color 0.15s;
+            }
+            .sod-item-row:hover { border-color: #d1d5db; }
+            .sod-item-row-done {
+                background: #f0fdf4;
+                border-color: #bbf7d0;
+            }
+            .sod-item-check {
+                display: inline-flex;
+                cursor: pointer;
+                user-select: none;
+                flex-shrink: 0;
+            }
+            .sod-item-check input[type="checkbox"] {
+                position: absolute;
+                opacity: 0;
+                pointer-events: none;
+            }
+            .sod-item-check-visual {
+                width: 22px;
+                height: 22px;
+                border: 2px solid #d1d5db;
+                border-radius: 6px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                color: transparent;
+                background: #fff;
+                transition: all 0.15s;
+            }
+            .sod-item-check:hover .sod-item-check-visual { border-color: #9ca3af; }
+            .sod-item-row-done .sod-item-check-visual {
+                background: #10b981;
+                border-color: #10b981;
+                color: #fff;
+            }
+            .sod-item-name-input {
+                flex: 1;
+                border: none;
+                background: transparent;
+                font-size: 14px;
+                color: #1f2937;
+                padding: 4px 6px;
+                border-radius: 4px;
+                font-family: inherit;
+            }
+            .sod-item-name-input:focus {
+                outline: none;
+                background: #f9fafb;
+                box-shadow: 0 0 0 2px rgba(15,118,110,0.15);
+            }
+            .sod-item-row-done .sod-item-name-input {
+                color: #6b7280;
+                text-decoration: line-through;
+            }
+            .sod-item-del {
+                background: transparent;
+                border: none;
+                color: #9ca3af;
+                padding: 6px;
+                border-radius: 6px;
+                cursor: pointer;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.15s;
+                flex-shrink: 0;
+            }
+            .sod-item-del:hover {
+                background: #fef2f2;
+                color: #dc2626;
+            }
+
             /* Action Button */
             .so-page-bar-btn {
                 display: inline-flex;

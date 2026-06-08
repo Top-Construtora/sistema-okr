@@ -33,6 +33,9 @@ class StrategicSubMetric {
         this._okr_count = data._okr_count || 0;
         this._is_auto = data._is_auto || false;
         this.sub_metric_type = data.sub_metric_type || null;
+        // Propriedades de checklist (preenchidas em runtime, não persistidas)
+        this._items_total = data._items_total || 0;
+        this._items_done = data._items_done || 0;
     }
 
     get dateStatus() {
@@ -55,6 +58,14 @@ class StrategicSubMetric {
 
     get progress() {
         if (this.unit === 'texto' || this.unit === 'data') return null;
+        // Checklist: current_value já é o percentual (concluidos/total) setado pelo trigger.
+        // NUNCA aplica metric_mode inverse — checked é sempre positivo.
+        if (this.unit === 'checklist') {
+            if (this._items_total > 0) {
+                return Math.round((this._items_done / this._items_total) * 100);
+            }
+            return Math.min(Math.max(Number(this.current_value || 0), 0), 100);
+        }
         if (!this.target_value || this.target_value === 0) return 0;
 
         // Modo inverso: 100% quando current = 0, 0% quando current >= target

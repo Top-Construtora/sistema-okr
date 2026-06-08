@@ -12,6 +12,7 @@ import { Reminder, REMINDER_TYPES, REMINDER_PRIORITIES } from './Entities/Remind
 import { CompanyPolicy } from './Entities/CompanyPolicy.js'
 import { StrategicObjective } from './Entities/StrategicObjective.js'
 import { StrategicSubMetric, CATEGORY_METRIC_CONFIG } from './Entities/StrategicSubMetric.js'
+import { StrategicSubMetricItem } from './Entities/StrategicSubMetricItem.js'
 import { StrategicTimelineEntry } from './Entities/StrategicTimelineEntry.js'
 import { ProblemTree } from './Entities/ProblemTree.js'
 import { SwotItem } from './Entities/SwotItem.js'
@@ -65,6 +66,7 @@ window.ObjectivesPage = ObjectivesPage;
 window.CompanyPolicy = CompanyPolicy;
 window.StrategicObjective = StrategicObjective;
 window.StrategicSubMetric = StrategicSubMetric;
+window.StrategicSubMetricItem = StrategicSubMetricItem;
 window.CATEGORY_METRIC_CONFIG = CATEGORY_METRIC_CONFIG;
 window.StrategicTimelineEntry = StrategicTimelineEntry;
 window.StrategicObjectivesPage = StrategicObjectivesPage;
