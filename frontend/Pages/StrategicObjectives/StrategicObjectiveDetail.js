@@ -201,8 +201,8 @@ const StrategicObjectiveDetailPage = {
             ? 'Os departamentos aparecerão automaticamente quando houver OKRs vinculados'
             : 'Adicione sub-métricas para acompanhar o progresso deste objetivo';
 
-        // KPI Operacionais section
-        const kpiSectionHTML = this.renderKpiSection(kpiMetrics, isAdmin);
+        // KPI Operacionais section - oculto para categoria OBRA
+        const kpiSectionHTML = obj.category === 'Obra' ? '' : this.renderKpiSection(kpiMetrics, isAdmin);
 
         // Timeline HTML
         const timelineHTML = this.renderTimeline(canEdit);
