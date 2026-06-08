@@ -490,8 +490,8 @@ const StrategicObjectiveDetailPage = {
             const summary = total === 0
                 ? '<span style="font-size:12px;color:#9ca3af;font-style:italic;">Nenhum item — clique para adicionar</span>'
                 : (isItemsPct
-                    ? `<span style="font-size:12px;color:#6b7280;"><strong>${above}</strong> de <strong>${measured}</strong> avaliados atingiram (≥${threshold}%) · ${total - measured} em progresso</span>`
-                    : `<span style="font-size:12px;color:#6b7280;"><strong>${done}</strong> de <strong>${decided}</strong> decididos concluído${decided !== 1 ? 's' : ''} · ${total - decided} em progresso</span>`
+                    ? `<span style="font-size:12px;color:#6b7280;"><strong>${above}</strong> de <strong>${measured}</strong> atingiram a meta (≥${threshold}%)</span>`
+                    : `<span style="font-size:12px;color:#6b7280;"><strong>${done}</strong> de <strong>${decided}</strong> concluído${decided !== 1 ? 's' : ''}</span>`
                 );
             return `
                 <div class="sod-metric-row sod-metric-row-clickable" onclick="StrategicObjectiveDetailPage.openItemsModal(${metric.id})" title="Gerenciar itens">
@@ -1825,18 +1825,17 @@ const StrategicObjectiveDetailPage = {
             barColor = pct >= 70 ? '#10b981' : pct >= 40 ? '#f59e0b' : '#94a3b8';
             summaryText = total === 0
                 ? `Adicione itens e defina o % de cada um (meta por item: ≥${threshold}%).`
-                : `<strong>${above}</strong> de <strong>${measured.length}</strong> avaliados atingiram a meta (≥${threshold}%) · <strong>${pending}</strong> em progresso — ${pct}%`;
+                : `<strong>${above}</strong> de <strong>${measured.length}</strong> atingiram a meta (≥${threshold}%) — ${pct}%`;
         } else {
             const done = items.filter(it => it.status === 'completed').length;
             const failed = items.filter(it => it.status === 'not_completed').length;
             const decided = done + failed;
-            const pending = total - decided;
             // Denominador = decididos (completed + not_completed), pending excluído
             pct = decided > 0 ? Math.round((done / decided) * 100) : 0;
             barColor = pct >= 70 ? '#10b981' : pct >= 40 ? '#f59e0b' : '#94a3b8';
             summaryText = total === 0
                 ? 'Adicione itens (obras, projetos, etc.) e marque o status de cada um.'
-                : `<strong>${done}</strong> de <strong>${decided}</strong> decididos concluídos · <strong>${pending}</strong> em progresso — ${pct}%`;
+                : `<strong>${done}</strong> de <strong>${decided}</strong> concluídos — ${pct}%`;
         }
 
         modal.innerHTML = `
