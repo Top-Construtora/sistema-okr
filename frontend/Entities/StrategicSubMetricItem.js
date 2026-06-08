@@ -55,16 +55,21 @@ class StrategicSubMetricItem {
             const counts = {};
             (data || []).forEach(it => {
                 if (!counts[it.sub_metric_id]) counts[it.sub_metric_id] = {
-                    total: 0, done: 0, sum_pct: 0, values: []
+                    total: 0, done: 0, failed: 0, sum_pct: 0, values: []
                 };
                 counts[it.sub_metric_id].total += 1;
                 if (it.status === 'completed') counts[it.sub_metric_id].done += 1;
-                const v = Number(it.value_pct || 0);
-                counts[it.sub_metric_id].sum_pct += v;
-                counts[it.sub_metric_id].values.push(v);
+                if (it.status === 'not_completed') counts[it.sub_metric_id].failed += 1;
+                // Apenas itens avaliados (value_pct não null) contribuem
+                if (it.value_pct !== null && it.value_pct !== undefined) {
+                    const v = Number(it.value_pct);
+                    counts[it.sub_metric_id].sum_pct += v;
+                    counts[it.sub_metric_id].values.push(v);
+                }
             });
             Object.values(counts).forEach(c => {
-                c.avg_pct = c.total > 0 ? Math.round(c.sum_pct / c.total) : 0;
+                c.measured = c.values.length;
+                c.avg_pct = c.measured > 0 ? Math.round(c.sum_pct / c.measured) : 0;
             });
             return counts;
         } catch (error) {

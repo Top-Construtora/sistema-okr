@@ -68,9 +68,11 @@ const StrategicObjectiveDetailPage = {
         if (checklistMetricsInit.length > 0) {
             const counts = await StrategicSubMetricItem.getCountsBySubMetricIds(checklistMetricsInit.map(m => m.id));
             checklistMetricsInit.forEach(m => {
-                const c = counts[m.id] || { total: 0, done: 0, avg_pct: 0, values: [] };
+                const c = counts[m.id] || { total: 0, done: 0, failed: 0, measured: 0, avg_pct: 0, values: [] };
                 m._items_total = c.total;
                 m._items_done = c.done;
+                m._items_failed = c.failed;
+                m._items_measured = c.measured;
                 m._items_avg_pct = c.avg_pct;
                 if (m.unit === 'items_pct') {
                     const threshold = Number(m.target_value) || 75;
@@ -476,16 +478,20 @@ const StrategicObjectiveDetailPage = {
             const total = metric._items_total || 0;
             const threshold = metric._items_threshold || metric.target_value || 75;
             const above = metric._items_above || 0;
+            const done = metric._items_done || 0;
+            const failed = metric._items_failed || 0;
+            const decided = done + failed;
+            const measured = metric._items_measured || 0;
             const pct = isItemsPct
-                ? (total > 0 ? Math.round((above / total) * 100) : 0)
-                : (total > 0 ? Math.round(((metric._items_done || 0) / total) * 100) : 0);
+                ? (measured > 0 ? Math.round((above / measured) * 100) : 0)
+                : (decided > 0 ? Math.round((done / decided) * 100) : 0);
             const barColor = pct >= 70 ? '#10b981' : pct >= 40 ? '#f59e0b' : '#94a3b8';
             const iconColor = isItemsPct ? '#3b82f6' : '#10b981';
             const summary = total === 0
                 ? '<span style="font-size:12px;color:#9ca3af;font-style:italic;">Nenhum item — clique para adicionar</span>'
                 : (isItemsPct
-                    ? `<span style="font-size:12px;color:#6b7280;"><strong>${above}</strong> de <strong>${total}</strong> atingiram a meta (≥${threshold}%)</span>`
-                    : `<span style="font-size:12px;color:#6b7280;"><strong>${metric._items_done || 0}</strong> de <strong>${total}</strong> concluído${total > 1 ? 's' : ''}</span>`
+                    ? `<span style="font-size:12px;color:#6b7280;"><strong>${above}</strong> de <strong>${measured}</strong> avaliados atingiram (≥${threshold}%) · ${total - measured} em progresso</span>`
+                    : `<span style="font-size:12px;color:#6b7280;"><strong>${done}</strong> de <strong>${decided}</strong> decididos concluído${decided !== 1 ? 's' : ''} · ${total - decided} em progresso</span>`
                 );
             return `
                 <div class="sod-metric-row sod-metric-row-clickable" onclick="StrategicObjectiveDetailPage.openItemsModal(${metric.id})" title="Gerenciar itens">
@@ -1811,21 +1817,26 @@ const StrategicObjectiveDetailPage = {
         if (isItemsPct) {
             const threshold = Number(metric.target_value) || 75;
             this._itemsThreshold = threshold;
-            const above = items.filter(it => Number(it.value_pct || 0) >= threshold).length;
-            pct = total > 0 ? Math.round((above / total) * 100) : 0;
+            const measured = items.filter(it => it.value_pct !== null && it.value_pct !== undefined);
+            const above = measured.filter(it => Number(it.value_pct) >= threshold).length;
+            const pending = total - measured.length;
+            // Denominador = avaliados (com valor), pending excluído
+            pct = measured.length > 0 ? Math.round((above / measured.length) * 100) : 0;
             barColor = pct >= 70 ? '#10b981' : pct >= 40 ? '#f59e0b' : '#94a3b8';
             summaryText = total === 0
                 ? `Adicione itens e defina o % de cada um (meta por item: ≥${threshold}%).`
-                : `<strong>${above}</strong> de <strong>${total}</strong> atingiram a meta (≥${threshold}%) — ${pct}%`;
+                : `<strong>${above}</strong> de <strong>${measured.length}</strong> avaliados atingiram a meta (≥${threshold}%) · <strong>${pending}</strong> em progresso — ${pct}%`;
         } else {
             const done = items.filter(it => it.status === 'completed').length;
             const failed = items.filter(it => it.status === 'not_completed').length;
-            const pending = total - done - failed;
-            pct = total > 0 ? Math.round((done / total) * 100) : 0;
+            const decided = done + failed;
+            const pending = total - decided;
+            // Denominador = decididos (completed + not_completed), pending excluído
+            pct = decided > 0 ? Math.round((done / decided) * 100) : 0;
             barColor = pct >= 70 ? '#10b981' : pct >= 40 ? '#f59e0b' : '#94a3b8';
             summaryText = total === 0
                 ? 'Adicione itens (obras, projetos, etc.) e marque o status de cada um.'
-                : `<strong>${done}</strong> concluídos · <strong>${failed}</strong> não concluídos · <strong>${pending}</strong> em progresso — ${pct}%`;
+                : `<strong>${done}</strong> de <strong>${decided}</strong> decididos concluídos · <strong>${pending}</strong> em progresso — ${pct}%`;
         }
 
         modal.innerHTML = `
@@ -1909,15 +1920,16 @@ const StrategicObjectiveDetailPage = {
 
     _renderItemRowPct(it) {
         const safeName = (it.name || '').replace(/"/g, '&quot;');
-        const val = it.value_pct !== null && it.value_pct !== undefined ? Number(it.value_pct) : 0;
+        const isMeasured = it.value_pct !== null && it.value_pct !== undefined;
+        const val = isMeasured ? Number(it.value_pct) : null;
         const threshold = this._itemsThreshold || 75;
-        const aboveThreshold = val >= threshold && val > 0;
-        const rowClass = aboveThreshold ? 'sod-item-row-done' : (val > 0 ? 'sod-item-row-fail' : '');
-        const badge = val > 0
-            ? (aboveThreshold
+        const aboveThreshold = isMeasured && val >= threshold;
+        const rowClass = !isMeasured ? '' : (aboveThreshold ? 'sod-item-row-done' : 'sod-item-row-fail');
+        const badge = !isMeasured
+            ? '<span class="sod-item-pct-badge pending">em progresso</span>'
+            : (aboveThreshold
                 ? '<span class="sod-item-pct-badge ok">✓ atingiu meta</span>'
-                : '<span class="sod-item-pct-badge fail">abaixo da meta</span>')
-            : '';
+                : '<span class="sod-item-pct-badge fail">abaixo da meta</span>');
         return `
             <div class="sod-item-row ${rowClass}" data-id="${it.id}">
                 <input type="text" class="sod-item-name-input" value="${safeName}" maxlength="200"
@@ -1926,7 +1938,8 @@ const StrategicObjectiveDetailPage = {
                 ${badge}
                 <div class="sod-item-pct-wrapper">
                     <input type="number" class="sod-item-pct-input" min="0" max="100" step="1"
-                        value="${val}"
+                        value="${isMeasured ? val : ''}"
+                        placeholder="—"
                         onchange="StrategicObjectiveDetailPage.setItemPct('${it.id}', this.value)"
                         onclick="event.stopPropagation();this.select();">
                     <span class="sod-item-pct-suffix">%</span>
@@ -1941,10 +1954,13 @@ const StrategicObjectiveDetailPage = {
     async setItemPct(itemId, value) {
         const it = (this._itemsList || []).find(x => x.id === itemId);
         if (!it) return;
-        const v = Math.max(0, Math.min(100, Number(value) || 0));
+        // Vazio ou inválido vira null (= em progresso, não conta no %)
+        const raw = String(value || '').trim();
+        const v = raw === '' ? null : Math.max(0, Math.min(100, Number(raw)));
+        const finalVal = (v === null || Number.isNaN(v)) ? null : v;
         try {
-            await StrategicSubMetricItem.update(itemId, { value_pct: v });
-            it.value_pct = v;
+            await StrategicSubMetricItem.update(itemId, { value_pct: finalVal });
+            it.value_pct = finalVal;
             this._renderItemsModal();
         } catch (e) {
             console.error(e);
@@ -1971,7 +1987,7 @@ const StrategicObjectiveDetailPage = {
                 name,
                 position: (this._itemsList || []).length
             };
-            if (metric.unit === 'items_pct') payload.value_pct = 0;
+            // items_pct: deixa value_pct como null (= em progresso) até o usuário avaliar
             const newItem = await StrategicSubMetricItem.create(payload);
             this._itemsList = [...(this._itemsList || []), newItem];
             input.value = '';
@@ -3004,9 +3020,11 @@ const StrategicObjectiveDetailPage = {
         if (itemBasedMetrics.length > 0) {
             const counts = await StrategicSubMetricItem.getCountsBySubMetricIds(itemBasedMetrics.map(m => m.id));
             itemBasedMetrics.forEach(m => {
-                const c = counts[m.id] || { total: 0, done: 0, avg_pct: 0, values: [] };
+                const c = counts[m.id] || { total: 0, done: 0, failed: 0, measured: 0, avg_pct: 0, values: [] };
                 m._items_total = c.total;
                 m._items_done = c.done;
+                m._items_failed = c.failed;
+                m._items_measured = c.measured;
                 m._items_avg_pct = c.avg_pct;
                 if (m.unit === 'items_pct') {
                     const threshold = Number(m.target_value) || 75;
@@ -3121,6 +3139,10 @@ const StrategicObjectiveDetailPage = {
             .sod-item-pct-badge.fail {
                 background: #fee2e2;
                 color: #991b1b;
+            }
+            .sod-item-pct-badge.pending {
+                background: #f3f4f6;
+                color: #6b7280;
             }
             .sod-item-status-buttons {
                 display: inline-flex;

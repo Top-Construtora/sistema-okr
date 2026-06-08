@@ -36,6 +36,9 @@ class StrategicSubMetric {
         // Propriedades de checklist / items_pct (preenchidas em runtime, não persistidas)
         this._items_total = data._items_total || 0;
         this._items_done = data._items_done || 0;
+        this._items_failed = data._items_failed || 0;
+        this._items_measured = data._items_measured || 0;
+        this._items_above = data._items_above !== undefined ? data._items_above : 0;
         this._items_avg_pct = data._items_avg_pct !== undefined ? data._items_avg_pct : 0;
     }
 
@@ -59,18 +62,20 @@ class StrategicSubMetric {
 
     get progress() {
         if (this.unit === 'texto' || this.unit === 'data') return null;
-        // Checklist: current_value já é o percentual (concluidos/total) setado pelo trigger.
+        // Checklist: % = concluidos / decididos (em progresso é ignorado).
         // NUNCA aplica metric_mode inverse — checked é sempre positivo.
         if (this.unit === 'checklist') {
-            if (this._items_total > 0) {
-                return Math.round((this._items_done / this._items_total) * 100);
+            const decided = (this._items_done || 0) + (this._items_failed || 0);
+            if (decided > 0) {
+                return Math.round((this._items_done / decided) * 100);
             }
             return Math.min(Math.max(Number(this.current_value || 0), 0), 100);
         }
-        // items_pct: % = (itens >= target_value) / total. NUNCA aplica inverse.
+        // items_pct: % = (itens avaliados >= target_value) / avaliados. NUNCA aplica inverse.
         if (this.unit === 'items_pct') {
-            if (this._items_total > 0 && this._items_above !== undefined) {
-                return Math.round((this._items_above / this._items_total) * 100);
+            const measured = this._items_measured || 0;
+            if (measured > 0 && this._items_above !== undefined) {
+                return Math.round((this._items_above / measured) * 100);
             }
             return Math.min(Math.max(Number(this.current_value || 0), 0), 100);
         }
