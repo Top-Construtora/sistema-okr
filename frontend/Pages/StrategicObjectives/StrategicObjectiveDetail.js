@@ -221,8 +221,8 @@ const StrategicObjectiveDetailPage = {
             ? 'Os departamentos aparecerão automaticamente quando houver OKRs vinculados'
             : 'Adicione sub-métricas para acompanhar o progresso deste objetivo';
 
-        // KPI Operacionais section - oculto para categorias Obra e Incorporadora
-        const KPI_HIDDEN_CATEGORIES = ['Obra', 'Incorporadora'];
+        // KPI Operacionais section - oculto para categorias Obra, Incorporadora e Melhoria Contínua
+        const KPI_HIDDEN_CATEGORIES = ['Obra', 'Incorporadora', 'Melhoria Contínua'];
         const kpiSectionHTML = KPI_HIDDEN_CATEGORIES.includes(obj.category) ? '' : this.renderKpiSection(kpiMetrics, isAdmin);
 
         // Timeline HTML
