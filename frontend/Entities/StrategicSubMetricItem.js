@@ -54,12 +54,15 @@ class StrategicSubMetricItem {
             if (error) throw error;
             const counts = {};
             (data || []).forEach(it => {
-                if (!counts[it.sub_metric_id]) counts[it.sub_metric_id] = { total: 0, done: 0, sum_pct: 0 };
+                if (!counts[it.sub_metric_id]) counts[it.sub_metric_id] = {
+                    total: 0, done: 0, sum_pct: 0, values: []
+                };
                 counts[it.sub_metric_id].total += 1;
                 if (it.status === 'completed') counts[it.sub_metric_id].done += 1;
-                counts[it.sub_metric_id].sum_pct += Number(it.value_pct || 0);
+                const v = Number(it.value_pct || 0);
+                counts[it.sub_metric_id].sum_pct += v;
+                counts[it.sub_metric_id].values.push(v);
             });
-            // Calcula avg_pct
             Object.values(counts).forEach(c => {
                 c.avg_pct = c.total > 0 ? Math.round(c.sum_pct / c.total) : 0;
             });

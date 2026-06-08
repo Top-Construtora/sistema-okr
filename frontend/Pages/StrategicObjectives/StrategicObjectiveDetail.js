@@ -68,10 +68,15 @@ const StrategicObjectiveDetailPage = {
         if (checklistMetricsInit.length > 0) {
             const counts = await StrategicSubMetricItem.getCountsBySubMetricIds(checklistMetricsInit.map(m => m.id));
             checklistMetricsInit.forEach(m => {
-                const c = counts[m.id] || { total: 0, done: 0, avg_pct: 0 };
+                const c = counts[m.id] || { total: 0, done: 0, avg_pct: 0, values: [] };
                 m._items_total = c.total;
                 m._items_done = c.done;
                 m._items_avg_pct = c.avg_pct;
+                if (m.unit === 'items_pct') {
+                    const threshold = Number(m.target_value) || 75;
+                    m._items_threshold = threshold;
+                    m._items_above = (c.values || []).filter(v => v >= threshold).length;
+                }
             });
         }
 
@@ -470,15 +475,17 @@ const StrategicObjectiveDetailPage = {
         // Checklist / items_pct - lista de itens
         if (isChecklist || isItemsPct) {
             const total = metric._items_total || 0;
+            const threshold = metric._items_threshold || metric.target_value || 75;
+            const above = metric._items_above || 0;
             const pct = isItemsPct
-                ? (total > 0 ? Math.round(metric._items_avg_pct || 0) : 0)
+                ? (total > 0 ? Math.round((above / total) * 100) : 0)
                 : (total > 0 ? Math.round(((metric._items_done || 0) / total) * 100) : 0);
             const barColor = pct >= 70 ? '#10b981' : pct >= 40 ? '#f59e0b' : '#94a3b8';
             const iconColor = isItemsPct ? '#3b82f6' : '#10b981';
             const summary = total === 0
                 ? '<span style="font-size:12px;color:#9ca3af;font-style:italic;">Nenhum item — clique para adicionar</span>'
                 : (isItemsPct
-                    ? `<span style="font-size:12px;color:#6b7280;"><strong>${total}</strong> ${total > 1 ? 'itens' : 'item'} · média <strong>${pct}%</strong></span>`
+                    ? `<span style="font-size:12px;color:#6b7280;"><strong>${above}</strong> de <strong>${total}</strong> atingiram a meta (≥${threshold}%)</span>`
                     : `<span style="font-size:12px;color:#6b7280;"><strong>${metric._items_done || 0}</strong> de <strong>${total}</strong> concluído${total > 1 ? 's' : ''}</span>`
                 );
             return `
@@ -1584,12 +1591,24 @@ const StrategicObjectiveDetailPage = {
         }
 
         if (selectedUnit === 'items_pct') {
+            const currentThreshold = metric?.target_value != null && metric.target_value > 0
+                ? metric.target_value
+                : 75;
             return `
                 <div class="form-group-gio">
-                    <div style="padding:14px 16px;background:#eff6ff;border-left:4px solid #3b82f6;border-radius:8px;font-size:13px;color:#1e40af;line-height:1.55;">
+                    <div style="padding:14px 16px;background:#eff6ff;border-left:4px solid #3b82f6;border-radius:8px;font-size:13px;color:#1e40af;line-height:1.55;margin-bottom:14px;">
                         <strong style="display:block;margin-bottom:4px;">Lista de itens — % por item</strong>
-                        Cada item terá um valor de 0 a 100%. A % geral da sub-métrica é a <strong>média dos valores</strong>.
+                        Cada item recebe um valor de 0–100%. Itens que atingem ou superam a <strong>meta por item</strong> abaixo contam como sucesso. A % geral da sub-métrica é <strong>itens que atingiram a meta ÷ total</strong>.
                     </div>
+                </div>
+                <div class="form-group-gio">
+                    <label class="form-label-gio">Meta por item (%) *</label>
+                    <input type="number" id="sod-metric-target" class="form-control-gio"
+                        min="0" max="100" step="1" placeholder="75"
+                        value="${currentThreshold}">
+                    <small style="color:#6b7280;font-size:11px;display:block;margin-top:4px;">
+                        Cada item precisa atingir esse valor pra contar como "ok"
+                    </small>
                 </div>
             `;
         }
@@ -1791,12 +1810,14 @@ const StrategicObjectiveDetailPage = {
 
         let pct, summaryText, barColor;
         if (isItemsPct) {
-            const sum = items.reduce((s, it) => s + Number(it.value_pct || 0), 0);
-            pct = total > 0 ? Math.round(sum / total) : 0;
+            const threshold = Number(metric.target_value) || 75;
+            this._itemsThreshold = threshold;
+            const above = items.filter(it => Number(it.value_pct || 0) >= threshold).length;
+            pct = total > 0 ? Math.round((above / total) * 100) : 0;
             barColor = pct >= 70 ? '#10b981' : pct >= 40 ? '#f59e0b' : '#94a3b8';
             summaryText = total === 0
-                ? 'Adicione itens e defina o % de cada um (0–100).'
-                : `<strong>${total}</strong> ${total > 1 ? 'itens' : 'item'} · média <strong>${pct}%</strong>`;
+                ? `Adicione itens e defina o % de cada um (meta por item: ≥${threshold}%).`
+                : `<strong>${above}</strong> de <strong>${total}</strong> atingiram a meta (≥${threshold}%) — ${pct}%`;
         } else {
             const done = items.filter(it => it.status === 'completed').length;
             const failed = items.filter(it => it.status === 'not_completed').length;
@@ -1890,15 +1911,20 @@ const StrategicObjectiveDetailPage = {
     _renderItemRowPct(it) {
         const safeName = (it.name || '').replace(/"/g, '&quot;');
         const val = it.value_pct !== null && it.value_pct !== undefined ? Number(it.value_pct) : 0;
-        const rowClass = val >= 70 ? 'sod-item-row-done'
-            : val >= 40 ? 'sod-item-row-warn'
-            : val > 0 ? 'sod-item-row-low'
+        const threshold = this._itemsThreshold || 75;
+        const aboveThreshold = val >= threshold && val > 0;
+        const rowClass = aboveThreshold ? 'sod-item-row-done' : (val > 0 ? 'sod-item-row-fail' : '');
+        const badge = val > 0
+            ? (aboveThreshold
+                ? '<span class="sod-item-pct-badge ok">✓ atingiu meta</span>'
+                : '<span class="sod-item-pct-badge fail">abaixo da meta</span>')
             : '';
         return `
             <div class="sod-item-row ${rowClass}" data-id="${it.id}">
                 <input type="text" class="sod-item-name-input" value="${safeName}" maxlength="200"
                     onblur="StrategicObjectiveDetailPage.renameItem('${it.id}', this.value)"
                     onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
+                ${badge}
                 <div class="sod-item-pct-wrapper">
                     <input type="number" class="sod-item-pct-input" min="0" max="100" step="1"
                         value="${val}"
@@ -2044,10 +2070,23 @@ const StrategicObjectiveDetailPage = {
                 responsavel_ids: responsavelIds
             };
 
-            if (isChecklist || unit === 'items_pct') {
-                // Lista de itens: meta = 100, atual = 0 (será atualizado pelo trigger ao adicionar items)
+            if (isChecklist) {
+                // Checklist: meta sempre 100, atual = 0 (trigger atualiza ao add/toggle items)
                 data.target_value = 100;
                 data.current_value = 0;
+                data.target_date = null;
+                data.conclusion_date = null;
+            } else if (unit === 'items_pct') {
+                // items_pct: target_value = threshold por item definido pelo usuário
+                const thresholdInput = document.getElementById('sod-metric-target');
+                const threshold = thresholdInput ? Math.max(0, Math.min(100, parseFloat(thresholdInput.value) || 0)) : 75;
+                if (threshold <= 0) {
+                    errorDiv.textContent = 'Meta por item deve ser maior que 0';
+                    errorDiv.style.display = 'block';
+                    return;
+                }
+                data.target_value = threshold;
+                if (!this.currentMetric) data.current_value = 0;
                 data.target_date = null;
                 data.conclusion_date = null;
             } else if (isDate) {
@@ -2966,10 +3005,15 @@ const StrategicObjectiveDetailPage = {
         if (itemBasedMetrics.length > 0) {
             const counts = await StrategicSubMetricItem.getCountsBySubMetricIds(itemBasedMetrics.map(m => m.id));
             itemBasedMetrics.forEach(m => {
-                const c = counts[m.id] || { total: 0, done: 0, avg_pct: 0 };
+                const c = counts[m.id] || { total: 0, done: 0, avg_pct: 0, values: [] };
                 m._items_total = c.total;
                 m._items_done = c.done;
                 m._items_avg_pct = c.avg_pct;
+                if (m.unit === 'items_pct') {
+                    const threshold = Number(m.target_value) || 75;
+                    m._items_threshold = threshold;
+                    m._items_above = (c.values || []).filter(v => v >= threshold).length;
+                }
             });
         }
 
@@ -3059,6 +3103,23 @@ const StrategicObjectiveDetailPage = {
                 font-size: 13px;
                 color: #6b7280;
                 font-weight: 600;
+            }
+            .sod-item-pct-badge {
+                display: inline-block;
+                padding: 3px 9px;
+                border-radius: 10px;
+                font-size: 11px;
+                font-weight: 600;
+                white-space: nowrap;
+                flex-shrink: 0;
+            }
+            .sod-item-pct-badge.ok {
+                background: #d1fae5;
+                color: #065f46;
+            }
+            .sod-item-pct-badge.fail {
+                background: #fee2e2;
+                color: #991b1b;
             }
             .sod-item-status-buttons {
                 display: inline-flex;

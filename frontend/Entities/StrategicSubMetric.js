@@ -67,10 +67,10 @@ class StrategicSubMetric {
             }
             return Math.min(Math.max(Number(this.current_value || 0), 0), 100);
         }
-        // items_pct: current_value é a média dos value_pct dos itens (setada pelo trigger).
+        // items_pct: % = (itens >= target_value) / total. NUNCA aplica inverse.
         if (this.unit === 'items_pct') {
-            if (this._items_total > 0 && this._items_avg_pct !== undefined) {
-                return Math.round(this._items_avg_pct);
+            if (this._items_total > 0 && this._items_above !== undefined) {
+                return Math.round((this._items_above / this._items_total) * 100);
             }
             return Math.min(Math.max(Number(this.current_value || 0), 0), 100);
         }
