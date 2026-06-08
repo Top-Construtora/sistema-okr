@@ -1770,7 +1770,9 @@ const StrategicObjectiveDetailPage = {
         const metric = this._itemsCurrentMetric;
         const items = this._itemsList || [];
         const total = items.length;
-        const done = items.filter(it => it.completed).length;
+        const done = items.filter(it => it.status === 'completed').length;
+        const failed = items.filter(it => it.status === 'not_completed').length;
+        const pending = total - done - failed;
         const pct = total > 0 ? Math.round((done / total) * 100) : 0;
         const barColor = pct >= 70 ? '#10b981' : pct >= 40 ? '#f59e0b' : '#94a3b8';
 
@@ -1780,7 +1782,7 @@ const StrategicObjectiveDetailPage = {
                 <div class="modal-header-gio">
                     <div>
                         <h3>Itens · ${metric.name}</h3>
-                        <p>${total === 0 ? 'Adicione itens (obras, projetos, etc.) e marque os concluídos.' : `${done} de ${total} concluído${total > 1 ? 's' : ''} — ${pct}%`}</p>
+                        <p>${total === 0 ? 'Adicione itens (obras, projetos, etc.) e marque o status de cada um.' : `<strong>${done}</strong> concluídos · <strong>${failed}</strong> não concluídos · <strong>${pending}</strong> em progresso — ${pct}%`}</p>
                     </div>
                     <button class="modal-close-gio" onclick="StrategicObjectiveDetailPage.closeItemsModal()">
                         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -1825,15 +1827,24 @@ const StrategicObjectiveDetailPage = {
 
     _renderItemRow(it) {
         const safeName = (it.name || '').replace(/"/g, '&quot;');
+        const status = it.status || 'pending';
+        const rowClass = status === 'completed' ? 'sod-item-row-done'
+            : status === 'not_completed' ? 'sod-item-row-fail'
+            : '';
         return `
-            <div class="sod-item-row${it.completed ? ' sod-item-row-done' : ''}" data-id="${it.id}">
-                <label class="sod-item-check">
-                    <input type="checkbox" ${it.completed ? 'checked' : ''}
-                        onchange="StrategicObjectiveDetailPage.toggleItem('${it.id}', this.checked)">
-                    <span class="sod-item-check-visual">
-                        <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                    </span>
-                </label>
+            <div class="sod-item-row ${rowClass}" data-id="${it.id}">
+                <div class="sod-item-status-buttons">
+                    <button class="sod-item-status-btn done ${status === 'completed' ? 'active' : ''}"
+                        onclick="StrategicObjectiveDetailPage.setItemStatus('${it.id}', 'completed')"
+                        title="Concluída no prazo">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    </button>
+                    <button class="sod-item-status-btn fail ${status === 'not_completed' ? 'active' : ''}"
+                        onclick="StrategicObjectiveDetailPage.setItemStatus('${it.id}', 'not_completed')"
+                        title="Não concluída no prazo">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
                 <input type="text" class="sod-item-name-input" value="${safeName}" maxlength="200"
                     onblur="StrategicObjectiveDetailPage.renameItem('${it.id}', this.value)"
                     onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
@@ -1872,11 +1883,14 @@ const StrategicObjectiveDetailPage = {
         }
     },
 
-    async toggleItem(itemId, checked) {
+    async setItemStatus(itemId, newStatus) {
+        const it = (this._itemsList || []).find(x => x.id === itemId);
+        if (!it) return;
+        // Toggle: clicar no mesmo status volta pra pending
+        const finalStatus = it.status === newStatus ? 'pending' : newStatus;
         try {
-            await StrategicSubMetricItem.toggleCompleted(itemId, checked);
-            const it = (this._itemsList || []).find(x => x.id === itemId);
-            if (it) it.completed = !!checked;
+            await StrategicSubMetricItem.setStatus(itemId, finalStatus);
+            it.status = finalStatus;
             this._renderItemsModal();
         } catch (e) {
             console.error(e);
@@ -2922,34 +2936,50 @@ const StrategicObjectiveDetailPage = {
                 background: #f0fdf4;
                 border-color: #bbf7d0;
             }
-            .sod-item-check {
+            .sod-item-row-fail {
+                background: #fef2f2;
+                border-color: #fecaca;
+            }
+            .sod-item-status-buttons {
                 display: inline-flex;
-                cursor: pointer;
-                user-select: none;
+                gap: 4px;
                 flex-shrink: 0;
             }
-            .sod-item-check input[type="checkbox"] {
-                position: absolute;
-                opacity: 0;
-                pointer-events: none;
-            }
-            .sod-item-check-visual {
-                width: 22px;
-                height: 22px;
-                border: 2px solid #d1d5db;
+            .sod-item-status-btn {
+                width: 28px;
+                height: 28px;
+                border: 1.5px solid #d1d5db;
                 border-radius: 6px;
+                background: #fff;
+                color: #9ca3af;
+                cursor: pointer;
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
-                color: transparent;
-                background: #fff;
                 transition: all 0.15s;
+                padding: 0;
             }
-            .sod-item-check:hover .sod-item-check-visual { border-color: #9ca3af; }
-            .sod-item-row-done .sod-item-check-visual {
+            .sod-item-status-btn:hover {
+                border-color: #9ca3af;
+                color: #374151;
+            }
+            .sod-item-status-btn.done.active {
                 background: #10b981;
                 border-color: #10b981;
                 color: #fff;
+            }
+            .sod-item-status-btn.done.active:hover {
+                background: #059669;
+                border-color: #059669;
+            }
+            .sod-item-status-btn.fail.active {
+                background: #dc2626;
+                border-color: #dc2626;
+                color: #fff;
+            }
+            .sod-item-status-btn.fail.active:hover {
+                background: #b91c1c;
+                border-color: #b91c1c;
             }
             .sod-item-name-input {
                 flex: 1;
@@ -2965,10 +2995,6 @@ const StrategicObjectiveDetailPage = {
                 outline: none;
                 background: #f9fafb;
                 box-shadow: 0 0 0 2px rgba(15,118,110,0.15);
-            }
-            .sod-item-row-done .sod-item-name-input {
-                color: #6b7280;
-                text-decoration: line-through;
             }
             .sod-item-del {
                 background: transparent;
