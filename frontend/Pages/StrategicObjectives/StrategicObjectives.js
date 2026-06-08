@@ -142,7 +142,9 @@ const StrategicObjectivesPage = {
             if (categoryConfig.metric_mode === 'auto_okr' && obj.cycle_id) {
                 metricsMap[obj.id] = await StrategicSubMetric.getAutoOkrMetrics(obj.id, obj.cycle_id);
             } else {
-                metricsMap[obj.id] = await StrategicSubMetric.getByObjectiveId(obj.id);
+                const all = await StrategicSubMetric.getByObjectiveId(obj.id);
+                // Exclui KPIs operacionais — eles têm sua própria seção e não devem aparecer como sub-métricas no card
+                metricsMap[obj.id] = all.filter(m => m.sub_metric_type !== 'operational_kpi');
             }
         }));
 

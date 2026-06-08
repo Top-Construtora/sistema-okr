@@ -367,7 +367,6 @@ const StrategicObjectiveDetailPage = {
                         <div class="sod-metrics-list">
                             ${metricsHTML}
                         </div>
-                        ${totalHTML}
                     `}
                 </div>
 
@@ -3097,8 +3096,10 @@ const StrategicObjectiveDetailPage = {
             .sod-item-pct-input:focus { outline: none; }
             .sod-item-pct-input::-webkit-inner-spin-button,
             .sod-item-pct-input::-webkit-outer-spin-button {
-                opacity: 0.4;
+                -webkit-appearance: none;
+                margin: 0;
             }
+            .sod-item-pct-input { -moz-appearance: textfield; }
             .sod-item-pct-suffix {
                 font-size: 13px;
                 color: #6b7280;
